@@ -1,0 +1,11 @@
+{
+  "chat.disableAIFeatures": true,
+  "rust-analyzer.linkedProjects": [
+    "modules/basic1/Cargo.toml",
+    "modules/hello_world/Cargo.toml",
+    "argh/Cargo.toml"
+  ],
+  "files.exclude": {
+    "**/target/": true
+  }
+}
