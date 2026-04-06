@@ -3,6 +3,7 @@ name: Deploy Docs
 on:
   push:
     branches: [main]
+    paths: [argh/]
 
 permissions:
   contents: read

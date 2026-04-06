@@ -37,7 +37,7 @@ fn main() {
 
 ## Reference
 
-- to be added
+- [Library API reference docs here](https://code.benco.io/argh/argh/index.html)
 
 ## License
 
