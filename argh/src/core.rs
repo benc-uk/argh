@@ -37,7 +37,7 @@ impl Engine {
     }
 
     pub fn get_size(self) -> (usize, usize) {
-        return (self.win_size.0, self.win_size.1);
+        (self.win_size.0, self.win_size.1)
     }
 
     pub fn t(&self) -> f64 {
@@ -59,7 +59,7 @@ impl Engine {
         while window.is_open() && !window.is_key_down(Key::Escape) {
             let now = Instant::now();
             let dt = now.duration_since(last_time).as_secs_f64();
-            self.t = self.t + dt;
+            self.t += dt;
             last_time = now;
 
             scene.update(&mut self, dt);

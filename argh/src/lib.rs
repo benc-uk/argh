@@ -17,6 +17,7 @@
 //!     eng.start(MyScene {});
 //! }
 //! ```
+
 pub(crate) mod buffer;
 pub mod colour;
 pub mod core;

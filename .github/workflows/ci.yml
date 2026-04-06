@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: [argh/**, examples/**]
+  pull_request:
+    branches: [main]
+    paths: [argh/**, examples/**]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: make lint
+      - run: make build
+      - run: make test
