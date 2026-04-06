@@ -10,21 +10,28 @@ impl Colour {
         Self((a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | b as u32)
     }
 
-    pub const fn r(self) -> u8 {
+    pub fn r(self) -> u8 {
         (self.0 >> 16) as u8
     }
-    pub const fn g(self) -> u8 {
+    pub fn g(self) -> u8 {
         (self.0 >> 8) as u8
     }
-    pub const fn b(self) -> u8 {
+    pub fn b(self) -> u8 {
         self.0 as u8
     }
-    pub const fn a(self) -> u8 {
+    pub fn a(self) -> u8 {
         (self.0 >> 24) as u8
     }
 
-    pub const fn as_u32(self) -> u32 {
+    pub fn as_u32(self) -> u32 {
         self.0
+    }
+
+    pub fn scale(&mut self, amount: f64) {
+        let r = ((self.r() as f64) * amount).clamp(0.0, 255.0) as u8;
+        let g = ((self.g() as f64) * amount).clamp(0.0, 255.0) as u8;
+        let b = ((self.b() as f64) * amount).clamp(0.0, 255.0) as u8;
+        *self = Self::new(r, g, b);
     }
 }
 
