@@ -8,7 +8,7 @@ To use ARGH, add it as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-argh = "0.1"
+argh = "0.0.1"
 ```
 
 Then, you can create a simple application by implementing the `Scene` trait and starting the engine:
@@ -38,6 +38,29 @@ fn main() {
 ## Reference
 
 - [Library API reference docs here](https://code.benco.io/argh/argh/index.html)
+
+## Building and Running Locally
+
+- Have Rust & Cargo installed
+- Don't be on Windows (generally good advice)
+- Run `make`
+
+```
+  🎮 Argh Engine
+
+  build           🔨 Build all crates
+  check           ✅ Type check all crates
+  clean           🗑️  Clean build artefacts
+  clippy          📎 Run clippy lints
+  doc-open        📖 Generate and open documentation
+  doc             📚 Generate documentation
+  fmt-check       🔍 Check formatting (CI)
+  fmt             🎨 Format all code
+  help            💡 Show this help message
+  lint            🧹 Run all lints (fmt + clippy)
+  run             🚀 Run an example (MODULE=basic1)
+  test            🧪 Run all tests
+```
 
 ## License
 

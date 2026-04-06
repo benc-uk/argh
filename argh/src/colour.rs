@@ -13,12 +13,15 @@ impl Colour {
     pub fn r(self) -> u8 {
         (self.0 >> 16) as u8
     }
+
     pub fn g(self) -> u8 {
         (self.0 >> 8) as u8
     }
+
     pub fn b(self) -> u8 {
         self.0 as u8
     }
+
     pub fn a(self) -> u8 {
         (self.0 >> 24) as u8
     }
@@ -34,6 +37,8 @@ impl Colour {
         *self = Self::new(r, g, b);
     }
 }
+
+// Helper static colours
 
 pub const BLACK: Colour = Colour::new(0, 0, 0);
 pub const WHITE: Colour = Colour::new(255, 255, 255);
