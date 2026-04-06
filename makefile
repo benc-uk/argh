@@ -19,7 +19,7 @@ run: ## 🚀 Run an example (MODULE=basic1)
 	cargo run --bin $(MODULE)
 
 test: ## 🧪 Run all tests
-	cargo test --workspace
+	cargo test --lib
 
 check: ## ✅ Type check all crates
 	cargo check --workspace

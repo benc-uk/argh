@@ -18,6 +18,10 @@
 //! }
 //! ```
 
+// Crate level modules
 pub(crate) mod buffer;
+
+// Public exported modules
 pub mod colour;
 pub mod core;
+pub mod vector;
