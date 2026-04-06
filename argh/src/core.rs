@@ -14,6 +14,7 @@ pub struct Engine {
     win_size: (usize, usize),
     win_title: String,
     buffer: Buffer,
+    t: f64,
 }
 
 impl Engine {
@@ -27,6 +28,7 @@ impl Engine {
             win_size: (w, h),
             win_title: title,
             buffer: Buffer::new(w, h),
+            t: 0.0,
         }
     }
 
@@ -36,6 +38,10 @@ impl Engine {
 
     pub fn get_size(self) -> (usize, usize) {
         return (self.win_size.0, self.win_size.1);
+    }
+
+    pub fn t(&self) -> f64 {
+        self.t
     }
 
     pub fn set_pixel(&mut self, x: usize, y: usize, c: Colour) {
@@ -53,6 +59,7 @@ impl Engine {
         while window.is_open() && !window.is_key_down(Key::Escape) {
             let now = Instant::now();
             let dt = now.duration_since(last_time).as_secs_f64();
+            self.t = self.t + dt;
             last_time = now;
 
             scene.update(&mut self, dt);
