@@ -1,5 +1,9 @@
 # Top level workspace config for main library and examples/test apps
-
 [workspace]
-members = ["argh", "examples/basic1", "examples/hello_world"]
+members = [
+  "argh",
+  "examples/basic1",
+  "examples/hello_world",
+  "examples/poly_2d",
+]
 resolver = "3"

@@ -1,5 +1,5 @@
 use argh::colour::BLUE;
-use argh::core::{Engine, Scene};
+use argh::engine::{Engine, Scene};
 
 // You must always implement the update method it will be called once per frame
 struct MyScene {}
@@ -10,6 +10,6 @@ impl Scene for MyScene {
 }
 
 fn main() {
-  let eng = Engine::new(800, 600, String::from("Argh: Hello World"));
+  let eng = Engine::new(800, 600, String::from("Argh: Hello World"), 1);
   eng.start(MyScene {});
 }

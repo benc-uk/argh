@@ -24,4 +24,30 @@ impl Buffer {
       self.pixels[y * self.w + x] = c.as_u32();
     }
   }
+
+  pub fn fill_rect(&mut self, x: usize, y: usize, w: usize, h: usize, c: Colour) {
+    let colour = c.as_u32();
+    for row in y..((y + h).min(self.h)) {
+      let start = row * self.w + x.min(self.w);
+      let end = row * self.w + (x + w).min(self.w);
+      self.pixels[start..end].fill(colour);
+    }
+  }
+
+  pub fn draw_char(&mut self, ch: char, x: usize, y: usize, c: Colour) {
+    let (w, h) = crate::text::glyph_size();
+    if let Some(rows) = crate::text::glyph(ch) {
+      for ri in 0..h {
+        let row = rows[ri];
+        for ci in 0..w {
+          // Check each bit
+          if row & (1 << w - ci - 1) != 0 {
+            if ci + x < self.w {
+              self.pixels[(ri + y) * self.w + ci + x] = c.as_u32();
+            }
+          }
+        }
+      }
+    }
+  }
 }

@@ -15,6 +15,9 @@ help: ## 💡 Show this help message
 build: ## 🔨 Build all crates
 	cargo build --workspace
 
+build-win: ## 🔨 Build all crates for Windows x64
+	cargo build --workspace --target x86_64-pc-windows-gnu
+
 run: ## 🚀 Run an example (MODULE=basic1)
 	cargo run --bin $(MODULE)
 

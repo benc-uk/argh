@@ -13,7 +13,7 @@
 //! }
 //!
 //! fn main() {
-//!     let eng = Engine::new(800, 600, String::from("Hello World"));
+//!     let eng = Engine::new(800, 600, String::from("Hello World"), 1);
 //!     eng.start(MyScene {});
 //! }
 //! ```
@@ -23,5 +23,6 @@ pub(crate) mod buffer;
 
 // Public exported modules
 pub mod colour;
-pub mod core;
+pub mod engine;
+pub mod text;
 pub mod vector;

@@ -1,7 +1,9 @@
 {
-  "chat.disableAIFeatures": true,
+  "github.copilot.enable": {
+    "*": false
+  },
   "files.exclude": {
-    "**/targetzz/": true
+    "**/target/": true
   },
   "rust-analyzer.lens.enable": false,
   "rust-analyzer.inlayHints.typeHints.enable": false,

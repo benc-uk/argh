@@ -36,6 +36,13 @@ impl Colour {
     let b = ((self.b() as f64) * amount).clamp(0.0, 255.0) as u8;
     *self = Self::new(r, g, b);
   }
+
+  pub fn rand() -> Colour {
+    let r = (rand::random::<f64>() * 255.0) as u8;
+    let g = (rand::random::<f64>() * 255.0) as u8;
+    let b = (rand::random::<f64>() * 255.0) as u8;
+    Self::new(r, g, b)
+  }
 }
 
 // Helper static colours

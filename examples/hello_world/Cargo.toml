@@ -3,5 +3,10 @@ name = "hello_world"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "hello_world"
+path = "src/main.rs"
+doc = false
+
 [dependencies]
 argh = { path = "../../argh" }

@@ -1,12 +1,13 @@
 [package]
-name = "basic1"
+name = "poly_2d"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "basic1"
+name = "poly_2d"
 path = "src/main.rs"
 doc = false
 
 [dependencies]
 argh = { path = "../../argh" }
+rand = "0.10.1"
