@@ -25,6 +25,22 @@ impl Buffer {
     }
   }
 
+  // #[inline(always)]
+  // pub unsafe fn set_pixel_unchecked(&mut self, x: usize, y: usize, c: u32) {
+  //   unsafe {
+  //     *self.pixels.get_unchecked_mut(y * self.w + x) = c;
+  //   }
+  // }
+
+  // pub fn fill_scanline(&mut self, y: usize, x_start: usize, x_end: usize, c: u32) {
+  //   if y >= self.h {
+  //     return;
+  //   }
+  //   let start = y * self.w + x_start.min(self.w);
+  //   let end = y * self.w + x_end.min(self.w);
+  //   self.pixels[start..end].fill(c);
+  // }
+
   pub fn fill_rect(&mut self, x: usize, y: usize, w: usize, h: usize, c: Colour) {
     let colour = c.as_u32();
     for row in y..((y + h).min(self.h)) {

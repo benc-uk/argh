@@ -24,5 +24,5 @@ pub(crate) mod buffer;
 // Public exported modules
 pub mod colour;
 pub mod engine;
+pub mod math;
 pub mod text;
-pub mod vector;

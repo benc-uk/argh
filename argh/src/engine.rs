@@ -89,7 +89,7 @@ impl Engine {
       panic!("{}", e);
     });
 
-    //window.set_target_fps(60);
+    window.set_target_fps(60);
     let mut last_time = Instant::now();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
@@ -125,5 +125,9 @@ impl Engine {
       self.buffer.draw_char(ch, x + (i * (crate::text::glyph_size().0 + 1)), y, colour);
       i += 1;
     }
+  }
+
+  pub fn draw_rect(&mut self, x: usize, y: usize, w: usize, h: usize, colour: Colour) {
+    self.buffer.fill_rect(x, y, w, h, colour);
   }
 }

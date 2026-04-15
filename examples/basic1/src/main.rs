@@ -24,7 +24,7 @@ impl Scene for MyScene {
 }
 
 fn main() {
-  let e = Engine::new(W, H, String::from("Argh: modules/basic1"), 1);
+  let e = Engine::new(W, H, String::from("Argh: basic1"), 1);
   let s = MyScene {};
   e.start(s);
 }
