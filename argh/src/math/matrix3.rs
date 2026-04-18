@@ -2,69 +2,144 @@
 // 3x3 Matrix
 // ==============================================================================================
 
-use crate::math::{Vec2, Vec3};
+use crate::math::Vec2;
 use core::fmt;
 use std::fmt::Formatter;
-use std::ops::Mul;
+use std::ops::{Mul, MulAssign};
 
-/// 3x3 matrix
+/// A classic 3x3 affine transformation matrix, designed for transformations on Vec2
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat3 {
-  col0: Vec3,
-  col1: Vec3,
-  col2: Vec3,
+  ele: [[f64; 3]; 3],
 }
 
 impl Mat3 {
+  /// New identity matrix
   pub fn new() -> Self {
     Mat3 {
-      col0: Vec3::new(1.0, 0.0, 0.0),
-      col1: Vec3::new(0.0, 1.0, 0.0),
-      col2: Vec3::new(0.0, 0.0, 1.0),
+      ele: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
     }
   }
 
+  /// New matrix with scale transform set
+  pub fn new_scale(sx: f64, sy: f64) -> Self {
+    Mat3 {
+      ele: [[sx, 0.0, 0.0], [0.0, sy, 0.0], [0.0, 0.0, 1.0]],
+    }
+  }
+
+  /// New matrix with rotation transform set
+  pub fn new_rot(a: f64) -> Self {
+    let c = f64::cos(a);
+    let s = f64::sin(a);
+    Mat3 {
+      ele: [[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]],
+    }
+  }
+
+  /// New matrix with translation transform set
+  pub fn new_trans(x: f64, y: f64) -> Self {
+    Mat3 {
+      ele: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [x, y, 1.0]],
+    }
+  }
+
+  /// Convenience & optimisation method - new matrix with scale, rotate, and translation transform set
+  pub fn new_scale_rot_trans(sx: f64, sy: f64, a: f64, x: f64, y: f64) -> Self {
+    let ca = f64::cos(a);
+    let sa = f64::sin(a);
+    Mat3 {
+      ele: [[ca * sx, -sa * sy, 0.0], [sa * sx, ca * sy, 0.0], [x, y, 1.0]],
+    }
+  }
+
+  /// Create a zero matrix which is of almost no use
   pub fn zero() -> Self {
     Mat3 {
-      col0: Vec3::zero(),
-      col1: Vec3::zero(),
-      col2: Vec3::zero(),
+      ele: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
     }
   }
 
+  /// Matrix will translate by the given x & y amounts
   pub fn trans(&mut self, x: f64, y: f64) {
-    self.col2.x = x;
-    self.col2.y = y;
+    self.ele[2][0] = x;
+    self.ele[2][1] = y;
   }
 
+  /// Matrix will rotate by the given angle
   pub fn rot(&mut self, a: f64) {
     let c = f64::cos(a);
     let s = f64::sin(a);
 
-    self.col0.x = c;
-    self.col1.x = -s;
-    self.col0.y = s;
-    self.col1.y = c;
+    self.ele[0][0] = c;
+    self.ele[1][0] = -s;
+    self.ele[0][1] = s;
+    self.ele[1][1] = c;
+  }
+
+  /// Matrix will scale by the given x & y scaling factors
+  pub fn scale(&mut self, sx: f64, sy: f64) {
+    self.ele[0][0] = sx;
+    self.ele[1][1] = sy;
   }
 }
 
 impl fmt::Display for Mat3 {
+  /// Output this matrix in readable form
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
     write!(
       f,
       "[{}, {}, {}\n {}, {}, {}\n {}, {}, {}]",
-      self.col0.x, self.col1.x, self.col2.x, self.col0.y, self.col1.y, self.col2.y, self.col0.z, self.col1.z, self.col2.z
+      self.ele[0][0], self.ele[1][0], self.ele[2][0], self.ele[0][1], self.ele[1][1], self.ele[2][1], self.ele[0][2], self.ele[1][2], self.ele[2][2]
     )
   }
 }
 
-impl Mul<Vec2> for Mat3 {
+impl Mul<&Vec2> for Mat3 {
   type Output = Vec2;
 
-  fn mul(self, v: Vec2) -> Vec2 {
+  /// Multiply and transform given Vec2 by this matrix, assumes that w = 1, so will be treated like a point and translated
+  fn mul(self, v: &Vec2) -> Vec2 {
     Vec2 {
-      x: self.col0.x * v.x + self.col1.x * v.y + self.col2.x * 1.0,
-      y: self.col0.y * v.x + self.col1.y * v.y + self.col2.y * 1.0,
+      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0],
+      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1],
     }
+  }
+}
+
+impl Mul<Mat3> for Mat3 {
+  type Output = Mat3;
+
+  /// Multiply together two Mat3 to combine or compose them
+  fn mul(self, m: Mat3) -> Mat3 {
+    let mut r = Mat3::zero();
+    for col in 0..3 {
+      for row in 0..3 {
+        r.ele[col][row] = self.ele[0][row] * m.ele[col][0] + self.ele[1][row] * m.ele[col][1] + self.ele[2][row] * m.ele[col][2];
+      }
+    }
+    r
+  }
+}
+
+impl MulAssign<Mat3> for Mat3 {
+  /// Multiply together two Mat3 to combine or compose them, mutate & store in place
+  fn mul_assign(&mut self, m: Mat3) {
+    *self = *self * m;
+  }
+}
+
+impl Mul<&Vec<Vec2>> for Mat3 {
+  type Output = Vec<Vec2>;
+
+  /// Multiply a list of points by a matrix
+  fn mul(self, points: &Vec<Vec2>) -> Vec<Vec2> {
+    let mut out = Vec::with_capacity(points.len());
+
+    for p in points {
+      out.push(self * p);
+    }
+
+    out
   }
 }

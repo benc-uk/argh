@@ -6,6 +6,5 @@ members = [
   "examples/hello_world",
   "examples/poly_2d",
   "examples/rects",
-  "examples/matcrap",
 ]
 resolver = "3"

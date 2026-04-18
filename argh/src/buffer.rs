@@ -15,10 +15,12 @@ impl Buffer {
     Self { pixels: vec![0; w * h], w, h }
   }
 
+  #[inline(always)]
   pub fn clear(&mut self, colour: Colour) {
     self.pixels.fill(colour.as_u32());
   }
 
+  #[inline(always)]
   pub fn set_pixel(&mut self, x: usize, y: usize, c: Colour) {
     if x < self.w && y < self.h {
       self.pixels[y * self.w + x] = c.as_u32();

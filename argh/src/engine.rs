@@ -1,5 +1,6 @@
 use crate::buffer::Buffer;
 use crate::colour::Colour;
+use crate::math::Vec2;
 use minifb::{Key, Window, WindowOptions};
 use std::time::Instant;
 
@@ -71,10 +72,6 @@ impl Engine {
     self.buffer.set_pixel(x, y, colour);
   }
 
-  // pub fn draw_text(&mut self, str: String, x: usize, y: usize, colour: Colour) {
-  //   self.buffer
-  // }
-
   /// Begin the main loop, open the window and blocks until the window is closed or escape is pressed
   /// # Arguments
   /// * `scene` - Implementation of Scene with your own `update()` function
@@ -129,5 +126,45 @@ impl Engine {
 
   pub fn draw_rect(&mut self, x: usize, y: usize, w: usize, h: usize, colour: Colour) {
     self.buffer.fill_rect(x, y, w, h, colour);
+  }
+
+  pub fn draw_line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, colour: Colour) {
+    let mut x0 = x0;
+    let mut y0 = y0;
+
+    let dx = (x1 - x0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let dy = -(y1 - y0).abs();
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut error = dx + dy;
+
+    loop {
+      self.buffer.set_pixel(x0 as usize, y0 as usize, colour);
+      let e2 = 2 * error;
+      if e2 >= dy {
+        if x0 == x1 {
+          break;
+        }
+        error += dy;
+        x0 += sx;
+      }
+      if e2 <= dx {
+        if y0 == y1 {
+          break;
+        }
+        error += dx;
+        y0 += sy;
+      }
+    }
+  }
+
+  pub fn draw_poly(&mut self, points: Vec<Vec2>, colour: Colour) {
+    for p in 0..points.len() {
+      if p + 1 >= points.len() {
+        break;
+      }
+
+      self.draw_line(points[p].x as i32, points[p].y as i32, points[p + 1].x as i32, points[p + 1].y as i32, colour);
+    }
   }
 }

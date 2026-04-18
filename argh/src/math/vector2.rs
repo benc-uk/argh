@@ -4,8 +4,8 @@
 
 use crate::{colour::Colour, engine::Engine};
 use core::fmt;
-use std::fmt::Formatter;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::fmt::{Display, Formatter};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAssign};
 
 #[cfg(test)]
 #[path = "vector2_tests.rs"]
@@ -67,21 +67,36 @@ impl Vec2 {
   }
 }
 
-impl fmt::Display for Vec2 {
+impl Display for Vec2 {
+  /// Display as [x, y]
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
     write!(f, "[{}, {}]", self.x, self.y)
+  }
+}
+
+impl Index<usize> for Vec2 {
+  type Output = f64;
+
+  fn index(&self, i: usize) -> &f64 {
+    match i {
+      0 => &self.x,
+      1 => &self.y,
+      _ => panic!("Vec2 index must be 0 or 1"),
+    }
   }
 }
 
 impl Mul<Vec2> for Vec2 {
   type Output = Vec2;
 
+  /// Multiply by Vec2 and return as new value
   fn mul(self, v: Vec2) -> Vec2 {
     Vec2 { x: self.x * v.x, y: self.y * v.y }
   }
 }
 
 impl MulAssign<Vec2> for Vec2 {
+  /// Multiply by Vec2 and mutate in place
   fn mul_assign(&mut self, v: Vec2) {
     self.x *= v.x;
     self.y *= v.y;
@@ -91,12 +106,14 @@ impl MulAssign<Vec2> for Vec2 {
 impl Mul<f64> for Vec2 {
   type Output = Vec2;
 
+  /// Multiply by float (scale) and return as new value
   fn mul(self, s: f64) -> Vec2 {
     Vec2 { x: self.x * s, y: self.y * s }
   }
 }
 
 impl MulAssign<f64> for Vec2 {
+  /// Multiply by float (scale) and mutate in place
   fn mul_assign(&mut self, s: f64) {
     self.x *= s;
     self.y *= s;
@@ -106,12 +123,14 @@ impl MulAssign<f64> for Vec2 {
 impl Add<Vec2> for Vec2 {
   type Output = Vec2;
 
+  /// Add another Vec2 and return as new value
   fn add(self, v: Vec2) -> Vec2 {
     Vec2 { x: self.x + v.x, y: self.y + v.y }
   }
 }
 
 impl AddAssign<Vec2> for Vec2 {
+  /// Add another Vec2 and mutate in place
   fn add_assign(&mut self, v: Vec2) {
     self.x += v.x;
     self.y += v.y;
@@ -121,12 +140,14 @@ impl AddAssign<Vec2> for Vec2 {
 impl Sub<Vec2> for Vec2 {
   type Output = Vec2;
 
+  /// Subtract another Vec2 and return as new value
   fn sub(self, v: Vec2) -> Vec2 {
     Vec2 { x: self.x - v.x, y: self.y - v.y }
   }
 }
 
 impl SubAssign<Vec2> for Vec2 {
+  /// Subtract another Vec2 and mutate in place
   fn sub_assign(&mut self, v: Vec2) {
     self.x -= v.x;
     self.y -= v.y;
@@ -136,12 +157,14 @@ impl SubAssign<Vec2> for Vec2 {
 impl Div<Vec2> for Vec2 {
   type Output = Vec2;
 
+  /// Divide by Vec2 and return as new value
   fn div(self, v: Vec2) -> Vec2 {
     Vec2 { x: self.x / v.x, y: self.y / v.y }
   }
 }
 
 impl DivAssign<Vec2> for Vec2 {
+  /// Divide by Vec2 and mutate in place
   fn div_assign(&mut self, v: Vec2) {
     self.x /= v.x;
     self.y /= v.y;
