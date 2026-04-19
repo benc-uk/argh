@@ -1,3 +1,11 @@
+// ==============================================================================================
+// Module & file:   math / vector3.rs
+// Purpose:         General purpose 3D vector maths library & operations
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
+// ==============================================================================================
+
 use core::fmt;
 use std::fmt::Formatter;
 

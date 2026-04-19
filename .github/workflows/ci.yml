@@ -18,5 +18,6 @@ jobs:
           components: rustfmt, clippy
       - run: make check
       - run: make lint
+      - run: make test
       - run: make build
       #- run: make test # DISABLED doesn't work in CI right now

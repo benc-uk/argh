@@ -1,3 +1,11 @@
+// ==============================================================================================
+// Module & file:   engine.rs
+// Purpose:         Core rendering engine, window management and drawing operations
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
+// ==============================================================================================
+
 use crate::buffer::Buffer;
 use crate::colour::Colour;
 use crate::math::Vec2;

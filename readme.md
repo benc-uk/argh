@@ -2,6 +2,8 @@
 
 ARGH is a learning project to build a software renderer in Rust. It is not intended to be a full-featured game engine, but rather a simple framework for experimenting with graphics programming concepts.
 
+It is purposely being developed without the use of AI coding assistant
+
 ## Usage
 
 To use ARGH, add it as a dependency in your `Cargo.toml`:

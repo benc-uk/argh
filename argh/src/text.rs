@@ -1,3 +1,11 @@
+// ==============================================================================================
+// Module & file:   text.rs
+// Purpose:         Bitmap font rendering for ASCII text output
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
+// ==============================================================================================
+
 /// Bitmap font glyphs for printable ASCII (space 0x20 through tilde 0x7E).
 /// Each glyph is 5 pixels wide and 7 pixels tall.
 /// Each row is stored as a u8 where the lower 5 bits represent pixels (MSB = left).

@@ -1,4 +1,10 @@
-//
+// ==============================================================================================
+// Module & file:   buffer.rs
+// Purpose:         Internal pixel buffer wrapping Vec<u32> for use with minifb
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
+// ==============================================================================================
 
 use crate::colour::Colour;
 

@@ -1,5 +1,9 @@
 // ==============================================================================================
-// 2D Vectors
+// Module & file:   math / vector2.rs
+// Purpose:         General purpose 2D vector maths library & operations
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
 // ==============================================================================================
 
 use crate::{colour::Colour, engine::Engine};
@@ -11,7 +15,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAs
 #[path = "vector2_tests.rs"]
 mod vector2_tests;
 
-/// Simple standard 2D vector with x, y coords
+/// Standard 2D vector with a pair of x, y coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec2 {
   pub x: f64,

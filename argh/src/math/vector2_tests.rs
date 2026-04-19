@@ -1,3 +1,11 @@
+// ==============================================================================================
+// Module & file:   math / vector2_tests.rs
+// Purpose:         Tests for Vec2 2D vector operations and Mat3 interactions
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:           AI generated
+// ==============================================================================================
+
 use super::*;
 
 // --- Constructors ---

@@ -1,5 +1,9 @@
 // ==============================================================================================
-// 3x3 Matrix
+// Module & file:   math / matrix3.rs
+// Purpose:         3x3 affine transformation matrix for 2D graphics
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
 // ==============================================================================================
 
 use crate::math::Vec2;
@@ -11,7 +15,7 @@ use std::ops::{Mul, MulAssign};
 #[path = "matrix3_tests.rs"]
 mod matrix3_tests;
 
-/// A classic 3x3 affine transformation matrix, designed for transformations on Vec2
+/// A classic 3x3 affine transformation matrix, designed for transformations on [Vec2]
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat3 {
   ele: [[f64; 3]; 3],

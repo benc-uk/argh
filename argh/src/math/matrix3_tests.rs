@@ -1,3 +1,11 @@
+// ==============================================================================================
+// Module & file:   math / matrix3_tests.rs
+// Purpose:         Tests for Mat3 3x3 transformation matrix
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:           AI generated
+// ==============================================================================================
+
 use super::*;
 
 const EPSILON: f64 = 1e-10;
