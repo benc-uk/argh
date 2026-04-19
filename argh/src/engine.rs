@@ -18,6 +18,7 @@ pub struct Engine {
   t: f64,
   scale: minifb::Scale,
   fps: f64,
+  pub target_fps: usize,
   pub debug: bool,
 }
 
@@ -45,6 +46,7 @@ impl Engine {
       scale: scl,
       fps: 0.0,
       debug: false,
+      target_fps: 60,
     }
   }
 
@@ -88,7 +90,9 @@ impl Engine {
       panic!("{}", e);
     });
 
-    window.set_target_fps(60);
+    if self.target_fps > 0 {
+      window.set_target_fps(self.target_fps);
+    }
     let mut last_time = Instant::now();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {

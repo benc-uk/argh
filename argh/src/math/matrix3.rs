@@ -7,6 +7,10 @@ use core::fmt;
 use std::fmt::Formatter;
 use std::ops::{Mul, MulAssign};
 
+#[cfg(test)]
+#[path = "matrix3_tests.rs"]
+mod matrix3_tests;
+
 /// A classic 3x3 affine transformation matrix, designed for transformations on Vec2
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat3 {

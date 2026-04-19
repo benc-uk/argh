@@ -31,6 +31,7 @@ impl Scene for MyScene {
 fn main() {
   let mut e = Engine::new(800, 600, String::from("Argh: 2dpoly"), 2);
   e.debug = true;
+  e.target_fps = 60;
 
   let mut s = MyScene { polys: vec![] };
 
