@@ -59,7 +59,8 @@ impl Buffer {
         let row = rows[ri];
         for ci in 0..w {
           // Check each bit
-          if row & (1 << w - ci - 1) != 0 {
+
+          if row & (1 << (w - ci - 1)) != 0 {
             if ci + x < self.w {
               self.pixels[(ri + y) * self.w + ci + x] = c.as_u32();
             }

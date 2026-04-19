@@ -38,9 +38,9 @@ impl Colour {
   }
 
   pub fn rand() -> Colour {
-    let r = rand::random_range(0..255 as u8);
-    let g = rand::random_range(0..255 as u8);
-    let b = rand::random_range(0..255 as u8);
+    let r = rand::random_range(0..255);
+    let g = rand::random_range(0..255);
+    let b = rand::random_range(0..255);
     Self::new(r, g, b)
   }
 }

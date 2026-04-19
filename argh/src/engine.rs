@@ -76,11 +76,13 @@ impl Engine {
   /// # Arguments
   /// * `scene` - Implementation of Scene with your own `update()` function
   pub fn start<S: Scene>(mut self, mut scene: S) {
-    let mut opt = WindowOptions::default();
-    opt.scale_mode = minifb::ScaleMode::Stretch;
-    opt.topmost = true;
-    opt.resize = true;
-    opt.scale = self.scale;
+    let opt = WindowOptions {
+      scale_mode: minifb::ScaleMode::Stretch,
+      topmost: true,
+      resize: true,
+      scale: self.scale,
+      ..Default::default()
+    };
 
     let mut window = Window::new(&self.win_title, self.win_size.0, self.win_size.1, opt).unwrap_or_else(|e| {
       panic!("{}", e);
@@ -117,10 +119,8 @@ impl Engine {
   /// * `y` - Y position of pixel
   /// * `colour` - New colour of the pixel
   pub fn draw_string(&mut self, s: &str, x: usize, y: usize, colour: Colour) {
-    let mut i = 0;
-    for ch in s.chars() {
+    for (i, ch) in s.chars().enumerate() {
       self.buffer.draw_char(ch, x + (i * (crate::text::glyph_size().0 + 1)), y, colour);
-      i += 1;
     }
   }
 

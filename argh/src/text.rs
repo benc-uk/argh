@@ -1,7 +1,6 @@
 /// Bitmap font glyphs for printable ASCII (space 0x20 through tilde 0x7E).
 /// Each glyph is 5 pixels wide and 7 pixels tall.
 /// Each row is stored as a u8 where the lower 5 bits represent pixels (MSB = left).
-
 const GLYPH_W: usize = 5;
 const GLYPH_H: usize = 7;
 const FIRST_CHAR: u8 = 0x20; // space
