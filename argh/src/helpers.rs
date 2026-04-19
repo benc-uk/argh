@@ -25,3 +25,7 @@ pub fn simple_poly(count: u32, size: f64) -> Vec<Vec2> {
 
   out
 }
+
+pub fn edge_function(a: &Vec2, b: &Vec2, p: &Vec2) -> i32 {
+  ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) as i32
+}

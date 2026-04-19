@@ -6,9 +6,9 @@
 // Notes:
 // ==============================================================================================
 
-use crate::buffer::Buffer;
 use crate::colour::Colour;
 use crate::math::Vec2;
+use crate::{buffer::Buffer, helpers};
 use minifb::{Key, Window, WindowOptions};
 use std::time::Instant;
 
@@ -170,13 +170,55 @@ impl Engine {
     }
   }
 
-  pub fn draw_poly(&mut self, points: Vec<Vec2>, colour: Colour) {
+  pub fn draw_poly_line(&mut self, points: Vec<Vec2>, colour: Colour) {
     for p in 0..points.len() {
       if p + 1 >= points.len() {
         break;
       }
 
       self.draw_line(points[p].x as i32, points[p].y as i32, points[p + 1].x as i32, points[p + 1].y as i32, colour);
+    }
+  }
+
+  pub fn fill_triangle(&mut self, v0: Vec2, v1: Vec2, v2: Vec2, colour: Colour) {
+    let min_x = (v0.x.min(v1.x).min(v2.x).max(0.0)) as i32;
+    let min_y = (v0.y.min(v1.y).min(v2.y).max(0.0)) as i32;
+    let max_x = (v0.x.max(v1.x).max(v2.x).min(self.buffer.w() as f64 - 1.0)) as i32;
+    let max_y = (v0.y.max(v1.y).max(v2.y).min(self.buffer.h() as f64 - 1.0)) as i32;
+
+    let p0 = Vec2 { x: min_x as f64, y: min_y as f64 };
+
+    // Edge values at top-left of bounding box
+    let mut w0_row = helpers::edge_function(&v1, &v2, &p0);
+    let mut w1_row = helpers::edge_function(&v2, &v0, &p0);
+    let mut w2_row = helpers::edge_function(&v0, &v1, &p0);
+
+    // Step amounts: how much each edge value changes per pixel
+    let dx0 = (v1.y - v2.y) as i32;
+    let dx1 = (v2.y - v0.y) as i32;
+    let dx2 = (v0.y - v1.y) as i32;
+
+    let dy0 = (v2.x - v1.x) as i32;
+    let dy1 = (v0.x - v2.x) as i32;
+    let dy2 = (v1.x - v0.x) as i32;
+
+    for y in min_y..=max_y {
+      let mut w0 = w0_row;
+      let mut w1 = w1_row;
+      let mut w2 = w2_row;
+
+      for x in min_x..=max_x {
+        if (w0 | w1 | w2) >= 0 {
+          self.buffer.set_pixel(x as usize, y as usize, colour);
+        }
+        w0 += dx0;
+        w1 += dx1;
+        w2 += dx2;
+      }
+
+      w0_row += dy0;
+      w1_row += dy1;
+      w2_row += dy2;
     }
   }
 }
