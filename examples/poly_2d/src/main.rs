@@ -29,13 +29,13 @@ impl Scene for MyScene {
 }
 
 fn main() {
-  let mut e = Engine::new(800, 600, String::from("Argh: 2dpoly"), 2);
+  let mut e = Engine::new(800, 400, String::from("Argh: 2dpoly"), 2);
   e.debug = true;
   e.target_fps = 60;
 
   let mut s = MyScene { polys: vec![] };
 
-  for _ in 0..200 {
+  for _ in 0..300 {
     let p = Poly {
       points: helpers::simple_poly(random_range(3..7), 20.0),
       scale: random_range(1.0..3.0),

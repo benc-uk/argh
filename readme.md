@@ -2,7 +2,20 @@
 
 ARGH is a learning project to build a software renderer in Rust. It is not intended to be a full-featured game engine, but rather a simple framework for experimenting with graphics programming concepts.
 
-It is purposely being developed without the use of AI coding assistant
+**It is purposely being developed without the use of AI coding assistants, code is written by hand in the traditional way**
+
+Features:
+
+- Window and framebuffer creation handled for you, backed by [minifb](https://docs.rs/minifb/latest/minifb/)
+- Entirely software (CPU) based rendering loop and buffer operations
+- Maths libraries for vectors and matrices
+- Simple scene management
+- Methods for drawing 2d primitives, pixels, lines and polygons
+- 3D coming soon!
+
+## Examples
+
+![screenshot](misc/image_001.png)
 
 ## Usage
 
@@ -31,12 +44,6 @@ fn main() {
 }
 ```
 
-## Features
-
-- Software rendering to a window
-- Simple scene management
-- Easy to extend with custom rendering logic
-
 ## Reference
 
 - [Library API reference docs here](https://code.benco.io/argh/argh/index.html)
@@ -50,6 +57,7 @@ fn main() {
 ```
   🎮 Argh Engine
 
+  build-win       🔨 Build all crates for Windows x64
   build           🔨 Build all crates
   check           ✅ Type check all crates
   clean           🗑️  Clean build artefacts
