@@ -43,7 +43,7 @@ impl Vec2 {
     f64::sqrt(self.x * self.x + self.y * self.y)
   }
 
-  /// Rotate by angle and store in place
+  /// Rotate by angle and store in place, convenience method to do this without a Mat3
   pub fn rotate(&mut self, angle_rad: f64) {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
@@ -54,8 +54,8 @@ impl Vec2 {
     self.y = new_y;
   }
 
-  /// Rotate by angle, return result in a new vector
-  pub fn rotate_new(&mut self, angle_rad: f64) -> Vec2 {
+  /// Rotate by angle, return result in a new vector, convenience method to do this without a Mat3
+  pub fn rotate_new(&mut self, angle_rad: f64) -> Self {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
 
@@ -90,29 +90,29 @@ impl Index<usize> for Vec2 {
   }
 }
 
-impl Mul<Vec2> for Vec2 {
-  type Output = Vec2;
+impl Mul<Self> for Vec2 {
+  type Output = Self;
 
-  /// Multiply by Vec2 and return as new value
-  fn mul(self, v: Vec2) -> Vec2 {
-    Vec2 { x: self.x * v.x, y: self.y * v.y }
+  /// Multiply by another Vec2 and return as new value
+  fn mul(self, v: Self) -> Self {
+    Self { x: self.x * v.x, y: self.y * v.y }
   }
 }
 
-impl MulAssign<Vec2> for Vec2 {
-  /// Multiply by Vec2 and mutate in place
-  fn mul_assign(&mut self, v: Vec2) {
+impl MulAssign<Self> for Vec2 {
+  /// Multiply by another Vec2 and mutate in place
+  fn mul_assign(&mut self, v: Self) {
     self.x *= v.x;
     self.y *= v.y;
   }
 }
 
 impl Mul<f64> for Vec2 {
-  type Output = Vec2;
+  type Output = Self;
 
   /// Multiply by float (scale) and return as new value
-  fn mul(self, s: f64) -> Vec2 {
-    Vec2 { x: self.x * s, y: self.y * s }
+  fn mul(self, s: f64) -> Self {
+    Self { x: self.x * s, y: self.y * s }
   }
 }
 
@@ -124,52 +124,52 @@ impl MulAssign<f64> for Vec2 {
   }
 }
 
-impl Add<Vec2> for Vec2 {
-  type Output = Vec2;
+impl Add<Self> for Vec2 {
+  type Output = Self;
 
   /// Add another Vec2 and return as new value
-  fn add(self, v: Vec2) -> Vec2 {
-    Vec2 { x: self.x + v.x, y: self.y + v.y }
+  fn add(self, v: Self) -> Self {
+    Self { x: self.x + v.x, y: self.y + v.y }
   }
 }
 
-impl AddAssign<Vec2> for Vec2 {
+impl AddAssign<Self> for Vec2 {
   /// Add another Vec2 and mutate in place
-  fn add_assign(&mut self, v: Vec2) {
+  fn add_assign(&mut self, v: Self) {
     self.x += v.x;
     self.y += v.y;
   }
 }
 
-impl Sub<Vec2> for Vec2 {
-  type Output = Vec2;
+impl Sub<Self> for Vec2 {
+  type Output = Self;
 
   /// Subtract another Vec2 and return as new value
-  fn sub(self, v: Vec2) -> Vec2 {
-    Vec2 { x: self.x - v.x, y: self.y - v.y }
+  fn sub(self, v: Self) -> Self {
+    Self { x: self.x - v.x, y: self.y - v.y }
   }
 }
 
-impl SubAssign<Vec2> for Vec2 {
+impl SubAssign<Self> for Vec2 {
   /// Subtract another Vec2 and mutate in place
-  fn sub_assign(&mut self, v: Vec2) {
+  fn sub_assign(&mut self, v: Self) {
     self.x -= v.x;
     self.y -= v.y;
   }
 }
 
-impl Div<Vec2> for Vec2 {
-  type Output = Vec2;
+impl Div<Self> for Vec2 {
+  type Output = Self;
 
   /// Divide by Vec2 and return as new value
-  fn div(self, v: Vec2) -> Vec2 {
-    Vec2 { x: self.x / v.x, y: self.y / v.y }
+  fn div(self, v: Self) -> Self {
+    Self { x: self.x / v.x, y: self.y / v.y }
   }
 }
 
-impl DivAssign<Vec2> for Vec2 {
+impl DivAssign<Self> for Vec2 {
   /// Divide by Vec2 and mutate in place
-  fn div_assign(&mut self, v: Vec2) {
+  fn div_assign(&mut self, v: Self) {
     self.x /= v.x;
     self.y /= v.y;
   }

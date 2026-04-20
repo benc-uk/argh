@@ -4,6 +4,7 @@ MODULE ?= basic1
 
 .PHONY: help build run clean fmt fmt-check lint clippy doc doc-open test check
 
+
 help: ## 💡 Show this help message
 	@echo ""
 	@echo "  🎮 \033[1;36mArgh Engine\033[0m"

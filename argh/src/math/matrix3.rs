@@ -24,14 +24,14 @@ pub struct Mat3 {
 impl Mat3 {
   /// New identity matrix
   pub fn new() -> Self {
-    Mat3 {
+    Self {
       ele: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
     }
   }
 
   /// New matrix with scale transform set
   pub fn new_scale(sx: f64, sy: f64) -> Self {
-    Mat3 {
+    Self {
       ele: [[sx, 0.0, 0.0], [0.0, sy, 0.0], [0.0, 0.0, 1.0]],
     }
   }
@@ -40,14 +40,14 @@ impl Mat3 {
   pub fn new_rot(a: f64) -> Self {
     let c = f64::cos(a);
     let s = f64::sin(a);
-    Mat3 {
+    Self {
       ele: [[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]],
     }
   }
 
   /// New matrix with translation transform set
   pub fn new_trans(x: f64, y: f64) -> Self {
-    Mat3 {
+    Self {
       ele: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [x, y, 1.0]],
     }
   }
@@ -56,14 +56,14 @@ impl Mat3 {
   pub fn new_scale_rot_trans(sx: f64, sy: f64, a: f64, x: f64, y: f64) -> Self {
     let ca = f64::cos(a);
     let sa = f64::sin(a);
-    Mat3 {
+    Self {
       ele: [[ca * sx, -sa * sy, 0.0], [sa * sx, ca * sy, 0.0], [x, y, 1.0]],
     }
   }
 
   /// Create a zero matrix which is of almost no use
   pub fn zero() -> Self {
-    Mat3 {
+    Self {
       ele: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
     }
   }
@@ -115,12 +115,12 @@ impl Mul<&Vec2> for Mat3 {
   }
 }
 
-impl Mul<Mat3> for Mat3 {
-  type Output = Mat3;
+impl Mul<Self> for Mat3 {
+  type Output = Self;
 
   /// Multiply together two Mat3 to combine or compose them
-  fn mul(self, m: Mat3) -> Mat3 {
-    let mut r = Mat3::zero();
+  fn mul(self, m: Self) -> Self {
+    let mut r = Self::zero();
     for col in 0..3 {
       for row in 0..3 {
         r.ele[col][row] = self.ele[0][row] * m.ele[col][0] + self.ele[1][row] * m.ele[col][1] + self.ele[2][row] * m.ele[col][2];
@@ -130,9 +130,9 @@ impl Mul<Mat3> for Mat3 {
   }
 }
 
-impl MulAssign<Mat3> for Mat3 {
+impl MulAssign<Self> for Mat3 {
   /// Multiply together two Mat3 to combine or compose them, mutate & store in place
-  fn mul_assign(&mut self, m: Mat3) {
+  fn mul_assign(&mut self, m: Self) {
     *self = *self * m;
   }
 }

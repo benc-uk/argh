@@ -45,7 +45,7 @@ impl Colour {
   }
 
   /// Create a random RGB colour
-  pub fn rand() -> Colour {
+  pub fn rand() -> Self {
     let r = rand::random_range(0..255);
     let g = rand::random_range(0..255);
     let b = rand::random_range(0..255);

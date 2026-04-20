@@ -1,0 +1,5 @@
+[profile.ci]
+default-filter = "kind(lib)"
+
+[profile.ci.junit]
+path = "junit.xml"

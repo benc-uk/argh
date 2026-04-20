@@ -8,6 +8,9 @@ on:
     branches: [main]
     paths: [argh/**, examples/**]
 
+permissions:
+  checks: write
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -16,8 +19,24 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
       - run: make check
       - run: make lint
-      - run: make test
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: Run tests
+        run: cargo nextest run --lib --profile ci
+
+      - name: Test report
+        if: always()
+        uses: dorny/test-reporter@v2
+        with:
+          name: Test Results
+          path: target/nextest/ci/junit.xml
+          reporter: java-junit
+
       - run: make build
-      #- run: make test # DISABLED doesn't work in CI right now
