@@ -10,3 +10,4 @@ rand = "0.10.1"
 [lints.clippy]
 collapsible-if = "allow"
 needless_range_loop = "allow"
+use_self = "warn"

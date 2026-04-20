@@ -25,17 +25,17 @@ pub struct Vec2 {
 impl Vec2 {
   /// Construct a new vector, slightly shorter than writing Vec2 { x: 1.0, y:2.0 }
   pub fn new(x: f64, y: f64) -> Self {
-    Vec2 { x, y }
+    Self { x, y }
   }
 
   /// Construct a [0, 0] vector
   pub fn zero() -> Self {
-    Vec2 { x: 0.0, y: 0.0 }
+    Self { x: 0.0, y: 0.0 }
   }
 
   /// Construct a [1.0, 1.0] vector
   pub fn ident() -> Self {
-    Vec2 { x: 1.0, y: 1.0 }
+    Self { x: 1.0, y: 1.0 }
   }
 
   /// Return the length of this vector
@@ -59,7 +59,7 @@ impl Vec2 {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
 
-    Vec2 {
+    Self {
       x: self.x * cos_theta - self.y * sin_theta,
       y: self.x * sin_theta + self.y * cos_theta,
     }
