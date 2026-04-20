@@ -973,3 +973,59 @@ fn test_mat3_mul_assign_then_transform_vec2() {
   assert!(approx(result.x, 7.0));
   assert!(approx(result.y, 7.0));
 }
+
+// --- Dot product ---
+
+#[test]
+fn test_dot_basic() {
+  let a = Vec2::new(1.0, 2.0);
+  let b = Vec2::new(3.0, 4.0);
+  assert_eq!(a.dot(b), 11.0); // 1*3 + 2*4
+}
+
+#[test]
+fn test_dot_with_zero() {
+  let a = Vec2::new(5.0, 7.0);
+  assert_eq!(a.dot(Vec2::zero()), 0.0);
+}
+
+#[test]
+fn test_dot_perpendicular() {
+  let a = Vec2::new(1.0, 0.0);
+  let b = Vec2::new(0.0, 1.0);
+  assert_eq!(a.dot(b), 0.0);
+}
+
+#[test]
+fn test_dot_parallel_same_direction() {
+  let a = Vec2::new(2.0, 0.0);
+  let b = Vec2::new(5.0, 0.0);
+  assert_eq!(a.dot(b), 10.0);
+}
+
+#[test]
+fn test_dot_parallel_opposite_direction() {
+  let a = Vec2::new(3.0, 0.0);
+  let b = Vec2::new(-3.0, 0.0);
+  assert_eq!(a.dot(b), -9.0);
+}
+
+#[test]
+fn test_dot_with_negatives() {
+  let a = Vec2::new(-2.0, 3.0);
+  let b = Vec2::new(4.0, -5.0);
+  assert_eq!(a.dot(b), -23.0); // -2*4 + 3*-5
+}
+
+#[test]
+fn test_dot_commutative() {
+  let a = Vec2::new(3.0, 7.0);
+  let b = Vec2::new(2.0, 5.0);
+  assert_eq!(a.dot(b), b.dot(a));
+}
+
+#[test]
+fn test_dot_self_equals_len_squared() {
+  let v = Vec2::new(3.0, 4.0);
+  assert!((v.dot(v) - v.len() * v.len()).abs() < f64::EPSILON);
+}

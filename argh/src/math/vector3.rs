@@ -44,6 +44,11 @@ impl Vec3 {
   pub fn len(self) -> f64 {
     f64::sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
   }
+
+  /// Calculate the dot product between this Vec3 and another
+  pub fn dot(self, v: Self) -> f64 {
+    self.x * v.x + self.y * v.y + self.z * v.z
+  }
 }
 
 impl fmt::Display for Vec3 {

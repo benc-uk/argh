@@ -69,6 +69,11 @@ impl Vec2 {
   pub fn draw(self, e: &mut Engine, colour: Colour) {
     e.set_pixel(self.x as usize, self.y as usize, colour);
   }
+
+  /// Calculate the dot product between this Vec2 and another
+  pub fn dot(self, v: Self) -> f64 {
+    self.x * v.x + self.y * v.y
+  }
 }
 
 impl Display for Vec2 {

@@ -739,3 +739,73 @@ fn test_debug() {
   assert!(s.contains("2.0"));
   assert!(s.contains("3.0"));
 }
+
+// --- Dot product ---
+
+#[test]
+fn test_dot_basic() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(4.0, 5.0, 6.0);
+  assert_eq!(a.dot(b), 32.0); // 1*4 + 2*5 + 3*6
+}
+
+#[test]
+fn test_dot_with_zero() {
+  let a = Vec3::new(5.0, 7.0, 9.0);
+  assert_eq!(a.dot(Vec3::zero()), 0.0);
+}
+
+#[test]
+fn test_dot_perpendicular_xy() {
+  let a = Vec3::new(1.0, 0.0, 0.0);
+  let b = Vec3::new(0.0, 1.0, 0.0);
+  assert_eq!(a.dot(b), 0.0);
+}
+
+#[test]
+fn test_dot_perpendicular_xz() {
+  let a = Vec3::new(1.0, 0.0, 0.0);
+  let b = Vec3::new(0.0, 0.0, 1.0);
+  assert_eq!(a.dot(b), 0.0);
+}
+
+#[test]
+fn test_dot_perpendicular_yz() {
+  let a = Vec3::new(0.0, 1.0, 0.0);
+  let b = Vec3::new(0.0, 0.0, 1.0);
+  assert_eq!(a.dot(b), 0.0);
+}
+
+#[test]
+fn test_dot_parallel_same_direction() {
+  let a = Vec3::new(2.0, 0.0, 0.0);
+  let b = Vec3::new(5.0, 0.0, 0.0);
+  assert_eq!(a.dot(b), 10.0);
+}
+
+#[test]
+fn test_dot_parallel_opposite_direction() {
+  let a = Vec3::new(3.0, 0.0, 0.0);
+  let b = Vec3::new(-3.0, 0.0, 0.0);
+  assert_eq!(a.dot(b), -9.0);
+}
+
+#[test]
+fn test_dot_with_negatives() {
+  let a = Vec3::new(-2.0, 3.0, -1.0);
+  let b = Vec3::new(4.0, -5.0, 2.0);
+  assert_eq!(a.dot(b), -25.0); // -2*4 + 3*-5 + -1*2
+}
+
+#[test]
+fn test_dot_commutative() {
+  let a = Vec3::new(3.0, 7.0, 2.0);
+  let b = Vec3::new(2.0, 5.0, 4.0);
+  assert_eq!(a.dot(b), b.dot(a));
+}
+
+#[test]
+fn test_dot_self_equals_len_squared() {
+  let v = Vec3::new(3.0, 4.0, 5.0);
+  assert!((v.dot(v) - v.len() * v.len()).abs() < 1e-10);
+}
