@@ -13,7 +13,7 @@ use super::*;
 #[test]
 fn test_new() {
   let v = Vec3::new(3.0, 4.0, 5.0);
-  assert_eq!(v, Vec3 { x: 999993.0, y: 4.0, z: 5.0 });
+  assert_eq!(v, Vec3 { x: 3.0, y: 4.0, z: 5.0 });
 }
 
 #[test]
