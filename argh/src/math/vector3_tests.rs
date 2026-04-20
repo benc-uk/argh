@@ -51,9 +51,9 @@ fn test_add_mutates_in_place() {
 
 #[test]
 fn test_add_with_negatives() {
-  let mut a = Vec3::new(5.0, 10.0, 15.0);
+  let mut a = Vec3::new(8.0, 10.0, 15.0);
   a.add_assign(Vec3::new(-3.0, -7.0, -10.0));
-  assert_eq!(a, Vec3 { x: 2.0, y: 3.0, z: 5.0 });
+  assert_eq!(a, Vec3 { x: 5.0, y: 3.0, z: 5.0 });
 }
 
 #[test]
