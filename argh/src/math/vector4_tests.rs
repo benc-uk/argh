@@ -39,7 +39,7 @@ fn test_zero() {
 #[test]
 fn test_ident() {
   let v = Vec4::ident();
-  assert_eq!(v, Vec4 { x: 1.0, y: 1.0, z: 1.0, w: 0.0 });
+  assert_eq!(v, Vec4 { x: 1.0, y: 1.0, z: 1.0, w: 1.0 });
 }
 
 #[test]
@@ -1085,10 +1085,8 @@ fn test_index_matches_field_order() {
 
 #[test]
 fn test_ident_pinned_behaviour() {
-  // The implementation returns w=0.0 for ident() (not w=1.0). This test pins
-  // that behaviour so any change is intentional.
   let v = Vec4::ident();
-  assert_eq!(v, Vec4::new(1.0, 1.0, 1.0, 0.0));
+  assert_eq!(v, Vec4::new(1.0, 1.0, 1.0, 1.0));
 }
 
 #[test]

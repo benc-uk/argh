@@ -405,12 +405,10 @@ fn test_mul_composition_order_via_vector_rotation() {
   let stepwise_b_then_a = Mat4::new_rot(qa) * &(Mat4::new_rot(qb) * &v);
 
   // Exactly one of the two stepwise orderings should match qa*qb composition
-  let matches_a_then_b = (combined.x - stepwise_a_then_b.x).abs() < EPSILON
-    && (combined.y - stepwise_a_then_b.y).abs() < EPSILON
-    && (combined.z - stepwise_a_then_b.z).abs() < EPSILON;
-  let matches_b_then_a = (combined.x - stepwise_b_then_a.x).abs() < EPSILON
-    && (combined.y - stepwise_b_then_a.y).abs() < EPSILON
-    && (combined.z - stepwise_b_then_a.z).abs() < EPSILON;
+  let matches_a_then_b =
+    (combined.x - stepwise_a_then_b.x).abs() < EPSILON && (combined.y - stepwise_a_then_b.y).abs() < EPSILON && (combined.z - stepwise_a_then_b.z).abs() < EPSILON;
+  let matches_b_then_a =
+    (combined.x - stepwise_b_then_a.x).abs() < EPSILON && (combined.y - stepwise_b_then_a.y).abs() < EPSILON && (combined.z - stepwise_b_then_a.z).abs() < EPSILON;
   assert!(matches_a_then_b || matches_b_then_a, "qa*qb did not compose to either rotation order");
   // And the two orderings should differ for these axes (proves non-commutativity)
   assert!(!(matches_a_then_b && matches_b_then_a));

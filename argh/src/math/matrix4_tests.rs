@@ -687,9 +687,9 @@ fn test_mul_general_matrix_vec_hand_computed() {
   // Hand-built general matrix to catch index mistakes in Mul<&Vec3>
   let m = Mat4 {
     ele: [
-      [1.0, 2.0, 3.0, 0.0], // column 0
-      [4.0, 5.0, 6.0, 0.0], // column 1
-      [7.0, 8.0, 9.0, 0.0], // column 2
+      [1.0, 2.0, 3.0, 0.0],    // column 0
+      [4.0, 5.0, 6.0, 0.0],    // column 1
+      [7.0, 8.0, 9.0, 0.0],    // column 2
       [10.0, 11.0, 12.0, 1.0], // column 3 (translation)
     ],
   };
