@@ -127,19 +127,27 @@ impl Engine {
   /// Draw text onto the screen
   /// # Arguments
   /// * `s` - String to draw
-  /// * `x` - X position of pixel
-  /// * `y` - Y position of pixel
-  /// * `colour` - New colour of the pixel
+  /// * `x` - X position of start of text
+  /// * `y` - Y position of text
+  /// * `colour` - Colour to draw the text
   pub fn draw_string(&mut self, s: &str, x: usize, y: usize, colour: Colour) {
     for (i, ch) in s.chars().enumerate() {
       self.buffer.draw_char(ch, x + (i * (crate::text::glyph_size().0 + 1)), y, colour);
     }
   }
 
+  /// Draw a filled rectangle
+  /// # Arguments
+  /// * `x` - X coord of top left corner of rectangle
+  /// * `y` - Y coord of top left corner of rectangle
+  /// * `w` - Width of rectangle in pixels
+  /// * `h` - Height of rectangle in pixels
+  /// * `colour` - Colour to fill the rectangle
   pub fn draw_rect(&mut self, x: usize, y: usize, w: usize, h: usize, colour: Colour) {
     self.buffer.fill_rect(x, y, w, h, colour);
   }
 
+  /// Draw a line between two points
   pub fn draw_line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, colour: Colour) {
     let mut x0 = x0;
     let mut y0 = y0;
@@ -170,6 +178,7 @@ impl Engine {
     }
   }
 
+  /// Draw a series of lines between a list of Vec2 points, designed for drawing a polygon but this method does not ensure the shape is closed
   pub fn draw_poly_line(&mut self, points: Vec<Vec2>, colour: Colour) {
     for p in 0..points.len() {
       if p + 1 >= points.len() {
@@ -180,27 +189,29 @@ impl Engine {
     }
   }
 
+  /// Fill a triangle between three Vec2 points which form a triangle
   pub fn fill_triangle(&mut self, v0: Vec2, v1: Vec2, v2: Vec2, colour: Colour) {
-    let min_x = (v0.x.min(v1.x).min(v2.x).max(0.0)) as i32;
-    let min_y = (v0.y.min(v1.y).min(v2.y).max(0.0)) as i32;
-    let max_x = (v0.x.max(v1.x).max(v2.x).min(self.buffer.w() as f64 - 1.0)) as i32;
-    let max_y = (v0.y.max(v1.y).max(v2.y).min(self.buffer.h() as f64 - 1.0)) as i32;
+    // The ordering in this method seems to work with CCW winding and back face culling
+    let min_x = (v1.x.min(v0.x).min(v2.x).max(0.0)) as i32;
+    let min_y = (v1.y.min(v0.y).min(v2.y).max(0.0)) as i32;
+    let max_x = (v1.x.max(v0.x).max(v2.x).min(self.buffer.w() as f64 - 1.0)) as i32;
+    let max_y = (v1.y.max(v0.y).max(v2.y).min(self.buffer.h() as f64 - 1.0)) as i32;
 
     let p0 = Vec2 { x: min_x as f64, y: min_y as f64 };
 
     // Edge values at top-left of bounding box
-    let mut w0_row = helpers::edge_function(&v1, &v2, &p0);
-    let mut w1_row = helpers::edge_function(&v2, &v0, &p0);
-    let mut w2_row = helpers::edge_function(&v0, &v1, &p0);
+    let mut w0_row = helpers::edge_function(&v0, &v2, &p0);
+    let mut w1_row = helpers::edge_function(&v2, &v1, &p0);
+    let mut w2_row = helpers::edge_function(&v1, &v0, &p0);
 
     // Step amounts: how much each edge value changes per pixel
-    let dx0 = (v1.y - v2.y) as i32;
-    let dx1 = (v2.y - v0.y) as i32;
-    let dx2 = (v0.y - v1.y) as i32;
+    let dx0 = (v0.y - v2.y) as i32;
+    let dx1 = (v2.y - v1.y) as i32;
+    let dx2 = (v1.y - v0.y) as i32;
 
-    let dy0 = (v2.x - v1.x) as i32;
-    let dy1 = (v0.x - v2.x) as i32;
-    let dy2 = (v1.x - v0.x) as i32;
+    let dy0 = (v2.x - v0.x) as i32;
+    let dy1 = (v1.x - v2.x) as i32;
+    let dy2 = (v0.x - v1.x) as i32;
 
     for y in min_y..=max_y {
       let mut w0 = w0_row;

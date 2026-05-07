@@ -25,14 +25,15 @@ impl Scene for MyScene {
     let angle = engine.t();
     let mut axis = Vec3::new(0.6, 0.3, 0.9);
     axis.normalize();
-    let model = Mat4::new_scale_rot_trans(1.0, 1.0, 1.0, Quat::new(axis, angle), 0.0, 0.0, 0.0);
+    let py = f64::sin(engine.t());
+    let px = f64::sin(engine.t() * 0.7);
+    let pz = -1.0 - (f64::sin(engine.t() * 0.4) * 1.5);
+    let model = Mat4::new_scale_rot_trans(1.0, 1.0, 1.0, Quat::new(axis, angle), px, py, pz);
 
     // Right-handed, camera at +Z=3 looking at the origin down -Z.
     // View is the INVERSE of camera-to-world. With the camera only translated
     // by (0,0,3), the inverse is a translation by (0,0,-3).
-    let py = f64::sin(engine.t());
-    let px = f64::sin(engine.t() * 0.7);
-    let view = Mat4::new_trans(-px, py, -3.0);
+    let view = Mat4::new_trans(0.0, 0.0, -3.0);
     let proj = Mat4::new_perspective(60f64.to_radians(), aspect, 0.1, 100.0);
     let mvp = proj * view * model;
 
@@ -50,7 +51,7 @@ impl Scene for MyScene {
         let ndc_z = c.z * inv_w;
         // Viewport: NDC [-1,+1] -> pixels. Flip Y because screen origin is top-left.
         let sx = (ndc_x * 0.5 + 0.5) * w as f64;
-        let sy = (ndc_y * 0.5 + 0.5) * h as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * h as f64; // Flip Y here
         (Vec2 { x: sx, y: sy }, ndc_z)
       })
       .collect();
@@ -65,7 +66,7 @@ impl Scene for MyScene {
 
       // 2D back-face cull. Signed area of the screen-space triangle.
       let area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      if area <= 0.0 {
+      if area >= 0.0 {
         continue;
       }
 
