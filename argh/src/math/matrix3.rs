@@ -16,6 +16,7 @@ use std::ops::{Mul, MulAssign};
 mod matrix3_tests;
 
 /// A classic 3x3 affine transformation matrix, designed for transformations on [Vec2]
+/// Rotations are based on Euler angles, which is ok for 2D
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat3 {
   ele: [[f64; 3]; 3],
@@ -80,8 +81,8 @@ impl Mat3 {
     let s = f64::sin(a);
 
     self.ele[0][0] = c;
-    self.ele[1][0] = -s;
-    self.ele[0][1] = s;
+    self.ele[0][1] = -s;
+    self.ele[1][0] = s;
     self.ele[1][1] = c;
   }
 
@@ -109,8 +110,8 @@ impl Mul<&Vec2> for Mat3 {
   /// Multiply and transform given Vec2 by this matrix, assumes that w = 1, so will be treated like a point and translated
   fn mul(self, v: &Vec2) -> Vec2 {
     Vec2 {
-      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0],
-      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1],
+      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0], // implicit * 1 removed
+      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1], // implicit * 1 removed
     }
   }
 }

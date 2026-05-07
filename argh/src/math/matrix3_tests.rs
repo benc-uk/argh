@@ -209,9 +209,18 @@ fn test_rot_sets_rotation() {
   let mut m = Mat3::new();
   m.rot(std::f64::consts::FRAC_PI_2);
   assert!(approx_eq(m.ele[0][0], 0.0));
-  assert!(approx_eq(m.ele[1][0], -1.0));
-  assert!(approx_eq(m.ele[0][1], 1.0));
+  assert!(approx_eq(m.ele[0][1], -1.0));
+  assert!(approx_eq(m.ele[1][0], 1.0));
   assert!(approx_eq(m.ele[1][1], 0.0));
+}
+
+#[test]
+fn test_rot_matches_new_rot() {
+  let a = std::f64::consts::FRAC_PI_3; // any non-trivial angle
+  let m1 = Mat3::new_rot(a);
+  let mut m2 = Mat3::new();
+  m2.rot(a);
+  assert!(mat3_approx_eq(&m1, &m2));
 }
 
 #[test]

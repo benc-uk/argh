@@ -1,7 +1,4 @@
 {
-  "github.copilot.enable": {
-    "*": false
-  },
   "files.exclude": {
     "**/target/": true
   },

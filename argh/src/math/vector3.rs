@@ -24,6 +24,10 @@ pub struct Vec3 {
   pub z: f64,
 }
 
+pub static AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
+pub static AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
+pub static AXIS_Z: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
+
 impl Vec3 {
   /// Construct a new vector, slightly shorter than writing Vec3 { x:1.0, y:2.0, z:3.0 }
   pub fn new(x: f64, y: f64, z: f64) -> Self {
