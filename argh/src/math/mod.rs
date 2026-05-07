@@ -14,9 +14,11 @@ mod matrix4;
 mod quat;
 mod vector2;
 mod vector3;
+mod vector4;
 
 pub use matrix3::Mat3;
 pub use matrix4::Mat4;
 pub use quat::Quat;
 pub use vector2::Vec2;
 pub use vector3::Vec3;
+pub use vector4::Vec4;

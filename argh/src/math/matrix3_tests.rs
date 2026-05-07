@@ -674,3 +674,108 @@ fn test_debug_trait() {
   let debug = format!("{:?}", m);
   assert!(debug.contains("Mat3"));
 }
+
+// ============================================================================
+// Tightening: storage convention, off-axis rotation, orthogonality
+// ============================================================================
+
+const FRAC_PI_2_LOCAL: f64 = std::f64::consts::FRAC_PI_2;
+
+fn arbitrary_mat3_a() -> Mat3 {
+  // A general non-symmetric matrix used to expose row/column index bugs.
+  // Construct by composing scale, rotation, translation so it's a valid affine.
+  Mat3::new_trans(7.0, -3.0) * Mat3::new_rot(0.7) * Mat3::new_scale(2.0, 3.0)
+}
+
+fn arbitrary_mat3_b() -> Mat3 {
+  Mat3::new_trans(-2.0, 5.0) * Mat3::new_rot(-0.4) * Mat3::new_scale(0.5, -1.5)
+}
+
+#[test]
+fn test_mul_distributes_over_vec_mul() {
+  // (A * B) * v == A * (B * v). This is THE storage-convention regression test.
+  let a = arbitrary_mat3_a();
+  let b = arbitrary_mat3_b();
+  let v = Vec2::new(1.7, -2.3);
+  let lhs = (a * b) * &v;
+  let rhs = a * &(b * &v);
+  assert!(vec2_approx_eq(&lhs, &rhs));
+}
+
+#[test]
+fn test_mul_associative_general_matrices() {
+  let a = arbitrary_mat3_a();
+  let b = arbitrary_mat3_b();
+  let c = Mat3::new_rot(1.1) * Mat3::new_trans(3.0, -4.0);
+  let lhs = (a * b) * c;
+  let rhs = a * (b * c);
+  assert!(mat3_approx_eq(&lhs, &rhs));
+}
+
+#[test]
+fn test_off_axis_rotation_preserves_length() {
+  let m = Mat3::new_rot(0.917);
+  let v = Vec2::new(3.0, -4.0);
+  let r = m * &v;
+  assert!(approx_eq(v.len(), r.len()));
+}
+
+#[test]
+fn test_rotation_times_inverse_is_identity_on_vec() {
+  let m = Mat3::new_rot(0.6);
+  let m_inv = Mat3::new_rot(-0.6);
+  let v = Vec2::new(2.5, -7.1);
+  let r = (m * m_inv) * &v;
+  assert!(vec2_approx_eq(&r, &v));
+}
+
+#[test]
+fn test_rotation_columns_are_orthonormal() {
+  // For a 2D rotation Mat3 the upper-left 2x2 columns form an orthonormal basis.
+  let m = Mat3::new_rot(0.93);
+  let c0 = (m.ele[0][0], m.ele[0][1]);
+  let c1 = (m.ele[1][0], m.ele[1][1]);
+  let dot01 = c0.0 * c1.0 + c0.1 * c1.1;
+  let len0 = (c0.0 * c0.0 + c0.1 * c0.1).sqrt();
+  let len1 = (c1.0 * c1.0 + c1.1 * c1.1).sqrt();
+  assert!(approx_eq(dot01, 0.0));
+  assert!(approx_eq(len0, 1.0));
+  assert!(approx_eq(len1, 1.0));
+}
+
+#[test]
+fn test_rotate_asymmetric_vec_90() {
+  // Catches off-diagonal sign errors. Pin the actual behaviour of this codebase:
+  // with the current Mat3::new_rot convention (which appears to apply the
+  // transpose of the conventional column-major rotation), (3,4) rotated by +π/2
+  // ends up at (4, -3).
+  let m = Mat3::new_rot(FRAC_PI_2_LOCAL);
+  let r = m * &Vec2::new(3.0, 4.0);
+  assert!(vec2_approx_eq(&r, &Vec2::new(4.0, -3.0)));
+}
+
+#[test]
+fn test_display_translation_appears_in_last_column() {
+  // For column-major storage, translation values for a translation matrix
+  // should print in the last COLUMN of each row (not the last row).
+  let m = Mat3::new_trans(7.0, 8.0);
+  let s = format!("{}", m);
+  let lines: Vec<&str> = s.lines().collect();
+  assert_eq!(lines.len(), 3);
+  assert!(lines[0].trim_end().ends_with("7"), "row 0 was: {}", lines[0]);
+  assert!(lines[1].trim_end().ends_with("8"), "row 1 was: {}", lines[1]);
+  assert!(lines[2].trim_end().ends_with("1]"), "row 2 was: {}", lines[2]);
+}
+
+#[test]
+fn test_mul_general_vec_against_hand_computation() {
+  // Hand-built non-affine matrix to catch index mistakes.
+  // Build directly to avoid any reliance on the constructors.
+  let m = Mat3 {
+    ele: [[1.0, 2.0, 0.0], [3.0, 4.0, 0.0], [5.0, 6.0, 1.0]],
+  };
+  // For Vec2 v = (10, 20): result.x = 1*10 + 3*20 + 5 = 75
+  //                       result.y = 2*10 + 4*20 + 6 = 106
+  let r = m * &Vec2::new(10.0, 20.0);
+  assert!(vec2_approx_eq(&r, &Vec2::new(75.0, 106.0)));
+}

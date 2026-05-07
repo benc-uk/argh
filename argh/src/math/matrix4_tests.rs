@@ -479,6 +479,24 @@ fn test_display_identity_format() {
   assert_eq!(s.matches('\n').count(), 3);
 }
 
+#[test]
+fn test_display_pins_translation_in_last_column() {
+  // For a translation matrix the four translation values should appear in the
+  // last column of the printed output (not the last row). This pins the
+  // intended row/column convention of the Display impl and would fail loudly
+  // if someone transposed it.
+  let m = Mat4::new_trans(7.0, 8.0, 9.0);
+  let s = format!("{}", m);
+  let lines: Vec<&str> = s.lines().collect();
+  assert_eq!(lines.len(), 4);
+  // First three rows end with 7, 8, 9 respectively (translation column)
+  assert!(lines[0].trim_end().ends_with("7"), "row 0 was: {}", lines[0]);
+  assert!(lines[1].trim_end().ends_with("8"), "row 1 was: {}", lines[1]);
+  assert!(lines[2].trim_end().ends_with(", 9,") || lines[2].trim_end().ends_with("9,"), "row 2 was: {}", lines[2]);
+  // Last row is [0, 0, 0, 1]
+  assert!(lines[3].trim_end().ends_with("1]"), "row 3 was: {}", lines[3]);
+}
+
 // ============================================================================
 // Copy / Clone / PartialEq derives
 // ============================================================================
@@ -504,4 +522,180 @@ fn test_partial_eq_negative_for_different_matrices() {
   let a = Mat4::new();
   let b = Mat4::new_scale(2.0, 2.0, 2.0);
   assert_ne!(a, b);
+}
+
+// ============================================================================
+// Tightening: storage convention, off-axis rotation, associativity, invariants
+// ============================================================================
+
+fn arbitrary_mat4_a() -> Mat4 {
+  // Compose scale, rotation, translation to get a general non-symmetric matrix
+  let q = Quat::new(Vec3::new(0.6, -0.8, 0.0), 0.7);
+  Mat4::new_trans(7.0, -3.0, 2.0) * Mat4::new_rot(q) * Mat4::new_scale(2.0, 3.0, 0.5)
+}
+
+fn arbitrary_mat4_b() -> Mat4 {
+  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
+  let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), -0.4);
+  Mat4::new_trans(-2.0, 5.0, 1.0) * Mat4::new_rot(q) * Mat4::new_scale(0.5, -1.5, 2.0)
+}
+
+#[test]
+fn test_mul_distributes_over_vec_mul_general() {
+  // (A * B) * v == A * (B * v). THE storage-convention regression test.
+  let a = arbitrary_mat4_a();
+  let b = arbitrary_mat4_b();
+  let v = Vec3::new(1.7, -2.3, 4.1);
+  let lhs = (a * b) * &v;
+  let rhs = a * &(b * &v);
+  assert!(vec3_approx_eq(&lhs, &rhs));
+}
+
+#[test]
+fn test_mul_associative_general_matrices() {
+  let a = arbitrary_mat4_a();
+  let b = arbitrary_mat4_b();
+  let q = Quat::new(Vec3::new(0.0, 1.0, 0.0), 0.3);
+  let c = Mat4::new_rot(q) * Mat4::new_trans(3.0, -4.0, 1.0);
+  assert!(mat4_approx_eq(&((a * b) * c), &(a * (b * c))));
+}
+
+#[test]
+fn test_new_rot_180_around_x() {
+  let q = Quat::new(Vec3::new(1.0, 0.0, 0.0), PI);
+  let m = Mat4::new_rot(q);
+  let v = m * &Vec3::new(1.0, 2.0, 3.0);
+  assert!(vec3_approx_eq(&v, &Vec3::new(1.0, -2.0, -3.0)));
+}
+
+#[test]
+fn test_new_rot_180_around_y() {
+  let q = Quat::new(Vec3::new(0.0, 1.0, 0.0), PI);
+  let m = Mat4::new_rot(q);
+  let v = m * &Vec3::new(1.0, 2.0, 3.0);
+  assert!(vec3_approx_eq(&v, &Vec3::new(-1.0, 2.0, -3.0)));
+}
+
+#[test]
+fn test_new_rot_negative_angle_reverses_direction() {
+  let pos = Mat4::new_rot(Quat::new(Vec3::new(0.0, 0.0, 1.0), 0.5));
+  let neg = Mat4::new_rot(Quat::new(Vec3::new(0.0, 0.0, 1.0), -0.5));
+  let v = Vec3::new(1.0, 0.0, 0.0);
+  let rp = pos * &v;
+  let rn = neg * &v;
+  // y components should be opposite signs
+  assert!(approx_eq(rp.y, -rn.y));
+  assert!(approx_eq(rp.x, rn.x));
+}
+
+#[test]
+fn test_new_rot_off_axis_preserves_length_and_orthonormal_columns() {
+  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
+  let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), 1.234);
+  let m = Mat4::new_rot(q);
+  // Upper-left 3x3 columns must be orthonormal
+  for i in 0..3 {
+    let mut len_sq = 0.0;
+    for r in 0..3 {
+      len_sq += m.ele[i][r] * m.ele[i][r];
+    }
+    assert!(approx_eq(len_sq, 1.0), "column {} not unit length", i);
+  }
+  for i in 0..3 {
+    for j in (i + 1)..3 {
+      let mut dot = 0.0;
+      for r in 0..3 {
+        dot += m.ele[i][r] * m.ele[j][r];
+      }
+      assert!(approx_eq(dot, 0.0), "columns {} and {} not orthogonal", i, j);
+    }
+  }
+}
+
+#[test]
+fn test_new_rot_leaves_affine_tail_clean() {
+  let q = Quat::new(Vec3::new(0.6, -0.8, 0.0), 1.1);
+  let m = Mat4::new_rot(q);
+  // Last column above the bottom-right should be zero
+  assert_eq!(m.ele[3][0], 0.0);
+  assert_eq!(m.ele[3][1], 0.0);
+  assert_eq!(m.ele[3][2], 0.0);
+  // Bottom-right is 1
+  assert_eq!(m.ele[3][3], 1.0);
+  // Bottom row of upper 3 columns is zero (homogeneous w row)
+  assert_eq!(m.ele[0][3], 0.0);
+  assert_eq!(m.ele[1][3], 0.0);
+  assert_eq!(m.ele[2][3], 0.0);
+}
+
+#[test]
+fn test_new_scale_rot_trans_off_axis_preserves_rotation_off_diagonals() {
+  // Pin that the overwrite quirk does not destroy off-diagonal rotation entries
+  // for a non-axis-aligned rotation
+  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
+  let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), FRAC_PI_2);
+  let m = Mat4::new_scale_rot_trans(2.0, 3.0, 4.0, q, 7.0, 8.0, 9.0);
+  let m_rot_only = Mat4::new_rot(q);
+  // Off-diagonal rotation entries (col != row, both < 3) should match new_rot
+  for col in 0..3 {
+    for row in 0..3 {
+      if col != row {
+        assert!(
+          approx_eq(m.ele[col][row], m_rot_only.ele[col][row]),
+          "off-diagonal ({},{}) clobbered: {} vs {}",
+          col,
+          row,
+          m.ele[col][row],
+          m_rot_only.ele[col][row]
+        );
+      }
+    }
+  }
+}
+
+#[test]
+fn test_mul_assign_chained_matches_mul_chained() {
+  let a = Mat4::new_trans(1.0, 2.0, 3.0);
+  let b = Mat4::new_scale(2.0, 3.0, 4.0);
+  let c = Mat4::new_rot(Quat::new(Vec3::new(0.0, 0.0, 1.0), 0.5));
+  let expected = a * b * c;
+  let mut m = a;
+  m *= b;
+  m *= c;
+  assert!(mat4_approx_eq(&m, &expected));
+}
+
+#[test]
+fn test_vec_of_points_matches_individual_mul() {
+  let m = arbitrary_mat4_a();
+  let pts = vec![
+    Vec3::new(1.0, 2.0, 3.0),
+    Vec3::new(-4.0, 0.5, 7.0),
+    Vec3::new(0.0, 0.0, 0.0),
+    Vec3::new(100.0, -200.0, 50.0),
+  ];
+  let batch = m * &pts;
+  assert_eq!(batch.len(), pts.len());
+  for (i, p) in pts.iter().enumerate() {
+    let single = m * p;
+    assert!(vec3_approx_eq(&batch[i], &single), "mismatch at index {}", i);
+  }
+}
+
+#[test]
+fn test_mul_general_matrix_vec_hand_computed() {
+  // Hand-built general matrix to catch index mistakes in Mul<&Vec3>
+  let m = Mat4 {
+    ele: [
+      [1.0, 2.0, 3.0, 0.0], // column 0
+      [4.0, 5.0, 6.0, 0.0], // column 1
+      [7.0, 8.0, 9.0, 0.0], // column 2
+      [10.0, 11.0, 12.0, 1.0], // column 3 (translation)
+    ],
+  };
+  // For v = (1, 1, 1): result.x = 1*1 + 4*1 + 7*1 + 10 = 22
+  //                    result.y = 2*1 + 5*1 + 8*1 + 11 = 26
+  //                    result.z = 3*1 + 6*1 + 9*1 + 12 = 30
+  let r = m * &Vec3::new(1.0, 1.0, 1.0);
+  assert!(vec3_approx_eq(&r, &Vec3::new(22.0, 26.0, 30.0)));
 }

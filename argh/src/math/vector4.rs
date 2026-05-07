@@ -1,6 +1,6 @@
 // ==============================================================================================
-// Module & file:   math / vector3.rs
-// Purpose:         General purpose 3D vector maths library & operations
+// Module & file:   math / vector4.rs
+// Purpose:         General purpose 4D vector maths library & operations
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:
@@ -13,77 +13,63 @@ use std::{
 };
 
 #[cfg(test)]
-#[path = "vector3_tests.rs"]
-mod vector3_tests;
+#[path = "vector4_tests.rs"]
+mod vector4_tests;
 
-/// Simple standard 3D vector with x, y & z coords
+/// Simple standard 4D vector with x, y, z & w coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
-pub struct Vec3 {
+pub struct Vec4 {
   pub x: f64,
   pub y: f64,
   pub z: f64,
+  pub w: f64,
 }
 
-#[allow(unused)]
-pub static AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
-#[allow(unused)]
-pub static AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
-#[allow(unused)]
-pub static AXIS_Z: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
-
-impl Vec3 {
+impl Vec4 {
   /// Construct a new vector, slightly shorter than writing Vec3 { x:1.0, y:2.0, z:3.0 }
-  pub fn new(x: f64, y: f64, z: f64) -> Self {
-    Self { x, y, z }
+  pub fn new(x: f64, y: f64, z: f64, w: f64) -> Self {
+    Self { x, y, z, w }
   }
 
-  /// Construct a [0, 0, 0] vector at the origin
+  /// Construct a [0, 0, 0, 0.0] vector at the origin
   pub fn zero() -> Self {
-    Self { x: 0.0, y: 0.0, z: 0.0 }
+    Self { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }
   }
 
-  /// Construct a [1.0, 1.0, 1.0] vector
+  /// Construct a [1.0, 1.0, 1.0, 1.0] vector
   pub fn ident() -> Self {
-    Self { x: 1.0, y: 1.0, z: 1.0 }
+    Self { x: 1.0, y: 1.0, z: 1.0, w: 1.0 }
   }
 
   /// Return the length of this vector
   pub fn len(self) -> f64 {
-    f64::sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+    f64::sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
   }
 
-  /// Calculate the dot product between this Vec3 and another
+  /// Calculate the dot product between this Vec4 and another
   pub fn dot(self, v: Self) -> f64 {
-    self.x * v.x + self.y * v.y + self.z * v.z
+    self.x * v.x + self.y * v.y + self.z * v.z + self.w * v.w
   }
 
-  /// Calculate the cross product between this Vec3 and another
-  pub fn cross(self, v: Self) -> Self {
-    Self {
-      x: self.y * v.z - self.z * v.y,
-      y: self.z * v.x - self.x * v.z,
-      z: self.x * v.y - self.y * v.x,
-    }
-  }
-
-  /// The distance between this Vec3 and another
+  /// The distance between this Vec4 and another
   pub fn dist(self, v: Self) -> f64 {
     let a = v.x - self.x;
     let b = v.y - self.y;
     let c = v.z - self.z;
+    let d = v.w - self.w;
 
-    f64::sqrt(a * a + b * b + c * c)
+    f64::sqrt(a * a + b * b + c * c + d * d)
   }
 }
 
-impl fmt::Display for Vec3 {
-  /// Human readable form [x, y, z]
+impl fmt::Display for Vec4 {
+  /// Human readable form [x, y, z, w]
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-    write!(f, "[{}, {}, {}]", self.x, self.y, self.z)
+    write!(f, "[{}, {}, {}, {}]", self.x, self.y, self.z, self.w)
   }
 }
 
-impl Index<usize> for Vec3 {
+impl Index<usize> for Vec4 {
   type Output = f64;
 
   fn index(&self, i: usize) -> &f64 {
@@ -91,34 +77,37 @@ impl Index<usize> for Vec3 {
       0 => &self.x,
       1 => &self.y,
       2 => &self.z,
-      _ => panic!("Vec3 index must be 0, 1 or 2"),
+      3 => &self.w,
+      _ => panic!("Vec4 index must be in range: 0~3"),
     }
   }
 }
 
-impl Mul<Self> for Vec3 {
+impl Mul<Self> for Vec4 {
   type Output = Self;
 
-  /// Multiply by another Vec3 and return as new value
+  /// Multiply by another Vec4 and return as new value
   fn mul(self, v: Self) -> Self {
     Self {
       x: self.x * v.x,
       y: self.y * v.y,
       z: self.z * v.z,
+      w: self.w * v.w,
     }
   }
 }
 
-impl MulAssign<Self> for Vec3 {
+impl MulAssign<Self> for Vec4 {
   /// Multiply by another Vec3 and mutate in place
   fn mul_assign(&mut self, v: Self) {
     self.x *= v.x;
     self.y *= v.y;
     self.z *= v.z;
+    self.w *= v.w;
   }
 }
 
-impl Mul<f64> for Vec3 {
+impl Mul<f64> for Vec4 {
   type Output = Self;
 
   /// Multiply by a float (scale) and return as new value
@@ -127,20 +116,22 @@ impl Mul<f64> for Vec3 {
       x: self.x * s,
       y: self.y * s,
       z: self.z * s,
+      w: self.w * s,
     }
   }
 }
 
-impl MulAssign<f64> for Vec3 {
+impl MulAssign<f64> for Vec4 {
   /// Multiply by a float (scale) and mutate in place
   fn mul_assign(&mut self, s: f64) {
     self.x *= s;
     self.y *= s;
     self.z *= s;
+    self.w *= s;
   }
 }
 
-impl Add<Self> for Vec3 {
+impl Add<Self> for Vec4 {
   type Output = Self;
 
   /// Add another Vec3 and return as new value
@@ -149,20 +140,22 @@ impl Add<Self> for Vec3 {
       x: self.x + v.x,
       y: self.y + v.y,
       z: self.z + v.z,
+      w: self.w + v.w,
     }
   }
 }
 
-impl AddAssign<Self> for Vec3 {
+impl AddAssign<Self> for Vec4 {
   /// Add another Vec3 and mutate in place
   fn add_assign(&mut self, v: Self) {
     self.x += v.x;
     self.y += v.y;
     self.z += v.z;
+    self.w += v.w;
   }
 }
 
-impl Sub<Self> for Vec3 {
+impl Sub<Self> for Vec4 {
   type Output = Self;
 
   /// Subtract another Vec3 and return as new value
@@ -171,20 +164,22 @@ impl Sub<Self> for Vec3 {
       x: self.x - v.x,
       y: self.y - v.y,
       z: self.z - v.z,
+      w: self.w - v.w,
     }
   }
 }
 
-impl SubAssign<Self> for Vec3 {
+impl SubAssign<Self> for Vec4 {
   /// Subtract another Vec3 and mutate in place
   fn sub_assign(&mut self, v: Self) {
     self.x -= v.x;
     self.y -= v.y;
     self.z -= v.z;
+    self.w -= v.w;
   }
 }
 
-impl Div<Self> for Vec3 {
+impl Div<Self> for Vec4 {
   type Output = Self;
 
   /// Divide by another Vec3 and return as new value
@@ -193,15 +188,17 @@ impl Div<Self> for Vec3 {
       x: self.x / v.x,
       y: self.y / v.y,
       z: self.z / v.z,
+      w: self.w / v.w,
     }
   }
 }
 
-impl DivAssign<Self> for Vec3 {
+impl DivAssign<Self> for Vec4 {
   /// Divide by another Vec3 and mutate in place
   fn div_assign(&mut self, v: Self) {
     self.x /= v.x;
     self.y /= v.y;
     self.z /= v.z;
+    self.w /= v.w;
   }
 }

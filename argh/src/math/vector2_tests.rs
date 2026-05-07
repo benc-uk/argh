@@ -1029,3 +1029,95 @@ fn test_dot_self_equals_len_squared() {
   let v = Vec2::new(3.0, 4.0);
   assert!((v.dot(v) - v.len() * v.len()).abs() < f64::EPSILON);
 }
+
+// ============================================================================
+// Tightening: dist, asymmetric transposition checks, non-mutation
+// ============================================================================
+
+const TIGHT_EPSILON: f64 = 1e-10;
+
+fn vec2_close(a: Vec2, b: Vec2) -> bool {
+  (a.x - b.x).abs() < TIGHT_EPSILON && (a.y - b.y).abs() < TIGHT_EPSILON
+}
+
+#[test]
+fn test_dist_self_is_zero() {
+  let v = Vec2::new(7.0, -3.5);
+  assert_eq!(v.dist(v), 0.0);
+}
+
+#[test]
+fn test_dist_345_triangle() {
+  let a = Vec2::new(0.0, 0.0);
+  let b = Vec2::new(3.0, 4.0);
+  assert!((a.dist(b) - 5.0).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_dist_is_symmetric() {
+  let a = Vec2::new(2.0, 5.0);
+  let b = Vec2::new(-7.0, 11.0);
+  assert!((a.dist(b) - b.dist(a)).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_dist_asymmetric_components() {
+  // Catches x/y swap in dist: deltas of 5 and 12 give length 13
+  let a = Vec2::new(1.0, 2.0);
+  let b = Vec2::new(6.0, 14.0);
+  assert!((a.dist(b) - 13.0).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_dist_equals_len_of_difference() {
+  let a = Vec2::new(2.0, -3.0);
+  let b = Vec2::new(-4.0, 5.0);
+  let diff = Vec2::new(a.x - b.x, a.y - b.y);
+  assert!((a.dist(b) - diff.len()).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_rotate_new_does_not_mutate_self() {
+  let original = Vec2::new(3.0, 4.0);
+  let mut v = original;
+  let _ = v.rotate_new(std::f64::consts::FRAC_PI_2);
+  assert_eq!(v, original);
+}
+
+#[test]
+fn test_rotate_full_turn_returns_to_origin() {
+  let mut v = Vec2::new(2.0, 5.0);
+  let original = v;
+  v.rotate(2.0 * std::f64::consts::PI);
+  assert!(vec2_close(v, original));
+}
+
+#[test]
+fn test_rotate_negative_is_inverse() {
+  let mut v = Vec2::new(7.0, -3.0);
+  let original = v;
+  v.rotate(0.7);
+  v.rotate(-0.7);
+  assert!(vec2_close(v, original));
+}
+
+#[test]
+fn test_rotate_asymmetric_90() {
+  // Catches x/y swap: (3, 4) rotated +90 -> (-4, 3)
+  let mut v = Vec2::new(3.0, 4.0);
+  v.rotate(std::f64::consts::FRAC_PI_2);
+  assert!(vec2_close(v, Vec2::new(-4.0, 3.0)));
+}
+
+#[test]
+fn test_returning_ops_do_not_mutate_operands() {
+  let a = Vec2::new(1.0, 2.0);
+  let b = Vec2::new(3.0, 4.0);
+  let _ = a + b;
+  let _ = a - b;
+  let _ = a * b;
+  let _ = a / b;
+  let _ = a * 2.0;
+  assert_eq!(a, Vec2::new(1.0, 2.0));
+  assert_eq!(b, Vec2::new(3.0, 4.0));
+}

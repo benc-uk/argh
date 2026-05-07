@@ -809,3 +809,250 @@ fn test_dot_self_equals_len_squared() {
   let v = Vec3::new(3.0, 4.0, 5.0);
   assert!((v.dot(v) - v.len() * v.len()).abs() < 1e-10);
 }
+
+// --- Cross product ---
+
+#[test]
+fn test_cross_x_cross_y_gives_z() {
+  let a = Vec3::new(1.0, 0.0, 0.0);
+  let b = Vec3::new(0.0, 1.0, 0.0);
+  assert_eq!(a.cross(b), Vec3::new(0.0, 0.0, 1.0));
+}
+
+#[test]
+fn test_cross_y_cross_z_gives_x() {
+  let a = Vec3::new(0.0, 1.0, 0.0);
+  let b = Vec3::new(0.0, 0.0, 1.0);
+  assert_eq!(a.cross(b), Vec3::new(1.0, 0.0, 0.0));
+}
+
+#[test]
+fn test_cross_z_cross_x_gives_y() {
+  let a = Vec3::new(0.0, 0.0, 1.0);
+  let b = Vec3::new(1.0, 0.0, 0.0);
+  assert_eq!(a.cross(b), Vec3::new(0.0, 1.0, 0.0));
+}
+
+#[test]
+fn test_cross_anticommutative() {
+  let a = Vec3::new(1.0, 0.0, 0.0);
+  let b = Vec3::new(0.0, 1.0, 0.0);
+  assert_eq!(a.cross(b), Vec3::new(0.0, 0.0, 1.0));
+  assert_eq!(b.cross(a), Vec3::new(0.0, 0.0, -1.0));
+}
+
+#[test]
+fn test_cross_self_gives_zero() {
+  let a = Vec3::new(3.0, 5.0, 7.0);
+  assert_eq!(a.cross(a), Vec3::zero());
+}
+
+#[test]
+fn test_cross_parallel_gives_zero() {
+  let a = Vec3::new(2.0, 4.0, 6.0);
+  let b = Vec3::new(1.0, 2.0, 3.0);
+  assert_eq!(a.cross(b), Vec3::zero());
+}
+
+#[test]
+fn test_cross_with_zero_vector() {
+  let a = Vec3::new(3.0, 4.0, 5.0);
+  assert_eq!(a.cross(Vec3::zero()), Vec3::zero());
+  assert_eq!(Vec3::zero().cross(a), Vec3::zero());
+}
+
+#[test]
+fn test_cross_general_case() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(4.0, 5.0, 6.0);
+  // (2*6 - 3*5, 3*4 - 1*6, 1*5 - 2*4) = (-3, 6, -3)
+  assert_eq!(a.cross(b), Vec3::new(-3.0, 6.0, -3.0));
+}
+
+#[test]
+fn test_cross_with_negatives() {
+  let a = Vec3::new(-1.0, 2.0, -3.0);
+  let b = Vec3::new(4.0, -5.0, 6.0);
+  // (2*6 - (-3)*(-5), (-3)*4 - (-1)*6, (-1)*(-5) - 2*4) = (-3, -6, -3)
+  assert_eq!(a.cross(b), Vec3::new(-3.0, -6.0, -3.0));
+}
+
+#[test]
+fn test_cross_perpendicular_to_inputs() {
+  let a = Vec3::new(2.0, 3.0, 4.0);
+  let b = Vec3::new(5.0, 6.0, 7.0);
+  let c = a.cross(b);
+  assert!(c.dot(a).abs() < 1e-10);
+  assert!(c.dot(b).abs() < 1e-10);
+}
+
+// --- Distance ---
+
+#[test]
+fn test_dist_to_self_is_zero() {
+  let a = Vec3::new(3.0, 4.0, 5.0);
+  assert_eq!(a.dist(a), 0.0);
+}
+
+#[test]
+fn test_dist_3_4_5() {
+  let a = Vec3::zero();
+  let b = Vec3::new(3.0, 4.0, 0.0);
+  assert_eq!(a.dist(b), 5.0);
+}
+
+#[test]
+fn test_dist_along_axis_x() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(5.0, 2.0, 3.0);
+  assert_eq!(a.dist(b), 4.0);
+}
+
+#[test]
+fn test_dist_along_axis_y() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(1.0, 9.0, 3.0);
+  assert_eq!(a.dist(b), 7.0);
+}
+
+#[test]
+fn test_dist_along_axis_z() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(1.0, 2.0, 11.0);
+  assert_eq!(a.dist(b), 8.0);
+}
+
+#[test]
+fn test_dist_symmetric() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(7.0, 8.0, 9.0);
+  assert_eq!(a.dist(b), b.dist(a));
+}
+
+#[test]
+fn test_dist_with_negatives() {
+  let a = Vec3::new(-1.0, -2.0, -2.0);
+  let b = Vec3::new(2.0, 2.0, 4.0);
+  // diffs: 3, 4, 6 -> sqrt(9 + 16 + 36) = sqrt(61)
+  assert!((a.dist(b) - f64::sqrt(61.0)).abs() < 1e-10);
+}
+
+#[test]
+fn test_dist_from_zero_equals_len() {
+  let v = Vec3::new(2.0, 3.0, 6.0);
+  assert!((Vec3::zero().dist(v) - v.len()).abs() < 1e-10);
+}
+
+// ============================================================================
+// Tightening: asymmetric transposition catchers, cross/dot interactions
+// ============================================================================
+
+const TIGHT_EPSILON: f64 = 1e-10;
+
+fn vec3_close(a: Vec3, b: Vec3) -> bool {
+  (a.x - b.x).abs() < TIGHT_EPSILON && (a.y - b.y).abs() < TIGHT_EPSILON && (a.z - b.z).abs() < TIGHT_EPSILON
+}
+
+#[test]
+fn test_new_field_order_asymmetric() {
+  // Catches any x/y/z field reordering in the constructor
+  let v = Vec3::new(10.0, 20.0, 30.0);
+  assert_eq!(v.x, 10.0);
+  assert_eq!(v.y, 20.0);
+  assert_eq!(v.z, 30.0);
+}
+
+#[test]
+fn test_index_matches_field_order() {
+  let v = Vec3::new(7.0, 11.0, 13.0);
+  assert_eq!(v[0], v.x);
+  assert_eq!(v[1], v.y);
+  assert_eq!(v[2], v.z);
+}
+
+#[test]
+fn test_add_asymmetric_components() {
+  // Catches per-component swaps in Add
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(10.0, 20.0, 30.0);
+  assert_eq!(a + b, Vec3::new(11.0, 22.0, 33.0));
+}
+
+#[test]
+fn test_sub_asymmetric_components() {
+  let a = Vec3::new(10.0, 20.0, 30.0);
+  let b = Vec3::new(1.0, 2.0, 3.0);
+  assert_eq!(a - b, Vec3::new(9.0, 18.0, 27.0));
+}
+
+#[test]
+fn test_componentwise_mul_asymmetric() {
+  let a = Vec3::new(2.0, 3.0, 4.0);
+  let b = Vec3::new(5.0, 7.0, 11.0);
+  assert_eq!(a * b, Vec3::new(10.0, 21.0, 44.0));
+}
+
+#[test]
+fn test_componentwise_div_asymmetric() {
+  let a = Vec3::new(10.0, 21.0, 44.0);
+  let b = Vec3::new(2.0, 3.0, 4.0);
+  let r = a / b;
+  assert!(vec3_close(r, Vec3::new(5.0, 7.0, 11.0)));
+}
+
+#[test]
+fn test_dot_asymmetric() {
+  // (2,3,4) . (5,7,11) = 10+21+44 = 75. Catches missing/swapped component.
+  let a = Vec3::new(2.0, 3.0, 4.0);
+  let b = Vec3::new(5.0, 7.0, 11.0);
+  assert!((a.dot(b) - 75.0).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_cross_general_perpendicular_to_both_inputs() {
+  // For any non-parallel a, b: (a x b) . a == 0 and (a x b) . b == 0
+  let a = Vec3::new(2.0, -1.0, 3.0);
+  let b = Vec3::new(4.0, 5.0, -2.0);
+  let c = a.cross(b);
+  assert!(c.dot(a).abs() < TIGHT_EPSILON);
+  assert!(c.dot(b).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_cross_anti_commutative_general() {
+  let a = Vec3::new(2.0, -1.0, 3.0);
+  let b = Vec3::new(4.0, 5.0, -2.0);
+  let ab = a.cross(b);
+  let ba = b.cross(a);
+  assert!(vec3_close(ab, Vec3::new(-ba.x, -ba.y, -ba.z)));
+}
+
+#[test]
+fn test_len_invariant_under_negation() {
+  // Verifies all three components are squared (i.e. signs cancel)
+  let v = Vec3::new(2.0, -3.0, 6.0);
+  let neg = Vec3::new(-2.0, 3.0, -6.0);
+  assert!((v.len() - neg.len()).abs() < TIGHT_EPSILON);
+  assert!((v.len() - 7.0).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_dist_asymmetric() {
+  // Deltas (3, 4, 12) -> length 13
+  let a = Vec3::new(0.0, 0.0, 0.0);
+  let b = Vec3::new(3.0, 4.0, 12.0);
+  assert!((a.dist(b) - 13.0).abs() < TIGHT_EPSILON);
+}
+
+#[test]
+fn test_returning_ops_do_not_mutate_operands() {
+  let a = Vec3::new(1.0, 2.0, 3.0);
+  let b = Vec3::new(4.0, 5.0, 6.0);
+  let _ = a + b;
+  let _ = a - b;
+  let _ = a * b;
+  let _ = a / b;
+  let _ = a * 2.0;
+  assert_eq!(a, Vec3::new(1.0, 2.0, 3.0));
+  assert_eq!(b, Vec3::new(4.0, 5.0, 6.0));
+}

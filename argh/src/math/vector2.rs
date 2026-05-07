@@ -74,6 +74,14 @@ impl Vec2 {
   pub fn dot(self, v: Self) -> f64 {
     self.x * v.x + self.y * v.y
   }
+
+  /// The distance between this Vec2 and another
+  pub fn dist(self, v: Self) -> f64 {
+    let a = v.x - self.x;
+    let b = v.y - self.y;
+
+    f64::sqrt(a * a + b * b)
+  }
 }
 
 impl Display for Vec2 {
