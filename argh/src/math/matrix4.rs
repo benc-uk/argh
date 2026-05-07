@@ -15,7 +15,7 @@ use std::ops::{Mul, MulAssign};
 #[path = "matrix4_tests.rs"]
 mod matrix4_tests;
 
-/// A classic 4x4 affine transformation matrix, designed for transformations on [Vec2]
+/// A classic 4x4 affine transformation matrix, designed for transformations on [Vec3] and [Vec4]
 /// Rotations are based on quaternions
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat4 {

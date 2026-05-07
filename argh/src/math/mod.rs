@@ -6,8 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-//! This module holds structs & methods for working with vectors and transformation matrices.
-//! It follows classic patterns for working with these in a computer graphics context
+//! This module holds structs & methods for working with vectors and transformation matrices
 
 mod matrix3;
 mod matrix4;

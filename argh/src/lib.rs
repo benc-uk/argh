@@ -21,9 +21,16 @@
 // Crate level modules
 pub(crate) mod buffer;
 
-// Public exported modules
+/// Module for working with 8-bit RGB colour
 pub mod colour;
+
+/// The core of argh is the engine module
 pub mod engine;
+
+/// Some helpers for various graphics routines
 pub mod helpers;
+
 pub mod math;
+
+/// Very basic text rendering
 pub mod text;

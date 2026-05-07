@@ -16,7 +16,7 @@ use std::{
 #[path = "vector3_tests.rs"]
 mod vector3_tests;
 
-/// Simple standard 3D vector with x, y & z coords
+/// Standard 3D vector with x, y & z coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec3 {
   pub x: f64,
@@ -24,8 +24,11 @@ pub struct Vec3 {
   pub z: f64,
 }
 
+/// A Vec3 pointing along the x axis [1.0, 0.0, 0.0]
 pub static AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
+/// A Vec3 pointing along the y axis [0.0, 1.0, 0.0]
 pub static AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
+/// A Vec3 pointing along the z axis [0.0, 0.0, 1.0]
 pub static AXIS_Z: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
 
 impl Vec3 {

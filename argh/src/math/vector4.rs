@@ -16,7 +16,7 @@ use std::{
 #[path = "vector4_tests.rs"]
 mod vector4_tests;
 
-/// Simple standard 4D vector with x, y, z & w coords
+/// Standard 4D vector with x, y, z & w coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec4 {
   pub x: f64,
