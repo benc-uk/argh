@@ -214,29 +214,23 @@ fn test_scale_overwrites_diagonal() {
 }
 
 #[test]
-fn test_new_scale_rot_trans_composition_quirk() {
-  // The current implementation of new_scale_rot_trans applies scale() and
-  // trans() AFTER new_rot(), and those mutators OVERWRITE diagonal/last
-  // column entries instead of composing. This test pins down that actual
-  // behaviour so future regressions are caught.
+fn test_new_scale_rot_trans_matches_t_r_s() {
   let q = Quat::new(Vec3::new(0.0, 0.0, 1.0), FRAC_PI_2);
-  let m = Mat4::new_scale_rot_trans(2.0, 3.0, 4.0, q, 7.0, 8.0, 9.0);
-
-  // Diagonal got overwritten by scale()
-  assert_eq!(m.ele[0][0], 2.0);
-  assert_eq!(m.ele[1][1], 3.0);
-  assert_eq!(m.ele[2][2], 4.0);
-  // Last column (translation) overwritten by trans()
-  assert_eq!(m.ele[3][0], 7.0);
-  assert_eq!(m.ele[3][1], 8.0);
-  assert_eq!(m.ele[3][2], 9.0);
-  assert_eq!(m.ele[3][3], 1.0);
-  // Off-diagonal rotation entries from new_rot are preserved
-  // For a 90 deg rot about Z: ele[0][1] = 1, ele[1][0] = -1
-  assert!(approx_eq(m.ele[0][1], 1.0));
-  assert!(approx_eq(m.ele[1][0], -1.0));
-  assert!(approx_eq(m.ele[0][2], 0.0));
-  assert!(approx_eq(m.ele[2][0], 0.0));
+  let combined = Mat4::new_scale_rot_trans(2.0, 3.0, 4.0, q, 7.0, 8.0, 9.0);
+  let separate = Mat4::new_trans(7.0, 8.0, 9.0) * Mat4::new_rot(q) * Mat4::new_scale(2.0, 3.0, 4.0);
+  // approx compare element-wise rather than == (floating point)
+  for c in 0..4 {
+    for r in 0..4 {
+      assert!(
+        approx_eq(combined.ele[c][r], separate.ele[c][r]),
+        "mismatch at ele[{}][{}]: {} vs {}",
+        c,
+        r,
+        combined.ele[c][r],
+        separate.ele[c][r]
+      );
+    }
+  }
 }
 
 // ============================================================================
@@ -626,31 +620,6 @@ fn test_new_rot_leaves_affine_tail_clean() {
   assert_eq!(m.ele[0][3], 0.0);
   assert_eq!(m.ele[1][3], 0.0);
   assert_eq!(m.ele[2][3], 0.0);
-}
-
-#[test]
-fn test_new_scale_rot_trans_off_axis_preserves_rotation_off_diagonals() {
-  // Pin that the overwrite quirk does not destroy off-diagonal rotation entries
-  // for a non-axis-aligned rotation
-  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
-  let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), FRAC_PI_2);
-  let m = Mat4::new_scale_rot_trans(2.0, 3.0, 4.0, q, 7.0, 8.0, 9.0);
-  let m_rot_only = Mat4::new_rot(q);
-  // Off-diagonal rotation entries (col != row, both < 3) should match new_rot
-  for col in 0..3 {
-    for row in 0..3 {
-      if col != row {
-        assert!(
-          approx_eq(m.ele[col][row], m_rot_only.ele[col][row]),
-          "off-diagonal ({},{}) clobbered: {} vs {}",
-          col,
-          row,
-          m.ele[col][row],
-          m_rot_only.ele[col][row]
-        );
-      }
-    }
-  }
 }
 
 #[test]

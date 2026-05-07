@@ -58,7 +58,7 @@ impl Mat3 {
     let ca = f64::cos(a);
     let sa = f64::sin(a);
     Self {
-      ele: [[ca * sx, -sa * sy, 0.0], [sa * sx, ca * sy, 0.0], [x, y, 1.0]],
+      ele: [[ca * sx, -sa * sx, 0.0], [sa * sy, ca * sy, 0.0], [x, y, 1.0]],
     }
   }
 

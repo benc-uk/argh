@@ -82,6 +82,13 @@ impl Vec2 {
 
     f64::sqrt(a * a + b * b)
   }
+
+  /// Normalize this Vec2
+  pub fn normalize(&mut self) {
+    let len = self.len();
+    self.x /= len;
+    self.y /= len;
+  }
 }
 
 impl Display for Vec2 {
@@ -94,6 +101,7 @@ impl Display for Vec2 {
 impl Index<usize> for Vec2 {
   type Output = f64;
 
+  /// Get the value of the element at given index
   fn index(&self, i: usize) -> &f64 {
     match i {
       0 => &self.x,

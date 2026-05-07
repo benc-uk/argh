@@ -26,7 +26,7 @@ pub struct Vec4 {
 }
 
 impl Vec4 {
-  /// Construct a new vector, slightly shorter than writing Vec3 { x:1.0, y:2.0, z:3.0 }
+  /// Construct a new vector, slightly shorter than writing Vec3 { x:5.0, y:2.0, z:3.0, w:1.0 }
   pub fn new(x: f64, y: f64, z: f64, w: f64) -> Self {
     Self { x, y, z, w }
   }
@@ -60,6 +60,15 @@ impl Vec4 {
 
     f64::sqrt(a * a + b * b + c * c + d * d)
   }
+
+  /// Normalize this Vec4 in place
+  pub fn normalize(&mut self) {
+    let len = self.len();
+    self.x /= len;
+    self.y /= len;
+    self.z /= len;
+    self.w /= len;
+  }
 }
 
 impl fmt::Display for Vec4 {
@@ -72,6 +81,7 @@ impl fmt::Display for Vec4 {
 impl Index<usize> for Vec4 {
   type Output = f64;
 
+  /// Get the value of the element at given index
   fn index(&self, i: usize) -> &f64 {
     match i {
       0 => &self.x,

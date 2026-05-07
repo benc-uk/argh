@@ -29,7 +29,7 @@ impl Scene for MyScene {
 }
 
 fn main() {
-  let mut e = Engine::new(640, 360, String::from("Argh: 2dpoly"), 2);
+  let mut e = Engine::new(640, 360, String::from("Argh: poly_2d"), 2);
   e.debug = true;
   e.target_fps = 60;
 

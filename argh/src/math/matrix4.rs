@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::math::{Quat, Vec3};
+use crate::math::{Quat, Vec3, Vec4};
 use core::fmt;
 use std::fmt::Formatter;
 use std::ops::{Mul, MulAssign};
@@ -38,11 +38,11 @@ impl Mat4 {
   }
 
   /// New matrix with rotation transform set
-  pub fn new_rot(q: Quat) -> Self {
-    let x = q.x;
-    let y = q.y;
-    let z = q.z;
-    let w = q.w;
+  pub fn new_rot(r: Quat) -> Self {
+    let x = r.x;
+    let y = r.y;
+    let z = r.z;
+    let w = r.w;
 
     let xx = x * x;
     let yy = y * y;
@@ -72,11 +72,43 @@ impl Mat4 {
   }
 
   /// Convenience & optimisation method - new matrix with scale, rotate, and translation transform set
-  pub fn new_scale_rot_trans(sx: f64, sy: f64, sz: f64, rot: Quat, x: f64, y: f64, z: f64) -> Self {
-    let mut out = Self::new_rot(rot);
-    out.scale(sx, sy, sz);
-    out.trans(x, y, z);
-    out
+  pub fn new_scale_rot_trans(sx: f64, sy: f64, sz: f64, r: Quat, tx: f64, ty: f64, tz: f64) -> Self {
+    let x = r.x;
+    let y = r.y;
+    let z = r.z;
+    let w = r.w;
+
+    let xx = x * x;
+    let yy = y * y;
+    let zz = z * z;
+    let xy = x * y;
+    let xz = x * z;
+    let yz = y * z;
+    let wx = w * x;
+    let wy = w * y;
+    let wz = w * z;
+
+    Self {
+      ele: [
+        [(1.0 - 2.0 * (yy + zz)) * sx, (2.0 * (xy + wz)) * sx, (2.0 * (xz - wy)) * sx, 0.0],
+        [(2.0 * (xy - wz)) * sy, (1.0 - 2.0 * (xx + zz)) * sy, (2.0 * (yz + wx)) * sy, 0.0],
+        [(2.0 * (xz + wy)) * sz, (2.0 * (yz - wx)) * sz, (1.0 - 2.0 * (xx + yy)) * sz, 0.0],
+        [tx, ty, tz, 1.0],
+      ],
+    }
+  }
+
+  pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Self {
+    let f = 1.0 / (fovy * 0.5).tan(); // cotangent of half-FOV
+    let nf = 1.0 / (near - far);
+
+    let mut m = Self::zero();
+    m.ele[0][0] = f / aspect; // x scale
+    m.ele[1][1] = f; // y scale
+    m.ele[2][2] = (far + near) * nf; // z remap
+    m.ele[2][3] = -1.0; // copies -z_view into clip.w (this is the "perspective" bit)
+    m.ele[3][2] = 2.0 * far * near * nf; // z offset
+    m
   }
 
   /// Create a zero matrix which is of almost no use
@@ -140,6 +172,20 @@ impl Mul<&Vec3> for Mat4 {
   }
 }
 
+impl Mul<&Vec4> for Mat4 {
+  type Output = Vec4;
+
+  /// Multiply and transform given Vec4 by this matrix
+  fn mul(self, v: &Vec4) -> Vec4 {
+    Vec4 {
+      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0] * v.z + self.ele[3][0] * v.w,
+      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1] * v.z + self.ele[3][1] * v.w,
+      z: self.ele[0][2] * v.x + self.ele[1][2] * v.y + self.ele[2][2] * v.z + self.ele[3][2] * v.w,
+      w: self.ele[0][3] * v.x + self.ele[1][3] * v.y + self.ele[2][3] * v.z + self.ele[3][3] * v.w,
+    }
+  }
+}
+
 impl Mul<Self> for Mat4 {
   type Output = Self;
 
@@ -167,6 +213,21 @@ impl Mul<&Vec<Vec3>> for Mat4 {
 
   /// Multiply a list of points by a matrix
   fn mul(self, points: &Vec<Vec3>) -> Vec<Vec3> {
+    let mut out = Vec::with_capacity(points.len());
+
+    for p in points {
+      out.push(self * p);
+    }
+
+    out
+  }
+}
+
+impl Mul<&Vec<Vec4>> for Mat4 {
+  type Output = Vec<Vec4>;
+
+  /// Multiply a list of points by a matrix
+  fn mul(self, points: &Vec<Vec4>) -> Vec<Vec4> {
     let mut out = Vec::with_capacity(points.len());
 
     for p in points {

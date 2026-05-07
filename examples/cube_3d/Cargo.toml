@@ -1,0 +1,12 @@
+[package]
+name = "cube_3d"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "cube_3d"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+argh = { path = "../../argh" }

@@ -22,6 +22,10 @@ pub struct Quat {
 }
 
 impl Quat {
+  /// Create a Quaternion with given angle, around given axis
+  /// # Arguments
+  /// * `axis` - Vector representing the axis, should be normalized
+  /// * `a` - Angle in radians
   pub fn new(axis: Vec3, a: f64) -> Self {
     let half = a * 0.5;
     let s = half.sin();
@@ -33,7 +37,7 @@ impl Quat {
     }
   }
 
-  /// Keep it unit-length (accumulated multiplies drift over time)
+  /// Normalize this Quaternion
   pub fn normalise(&self) -> Self {
     let len = (self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
     let inv = 1.0 / len;
@@ -49,6 +53,7 @@ impl Quat {
 impl Mul for Quat {
   type Output = Self;
 
+  /// Combine Quaternions using multiply
   fn mul(self, q: Self) -> Self {
     Self {
       w: q.w * self.w - q.x * self.x - q.y * self.y - q.z * self.z,

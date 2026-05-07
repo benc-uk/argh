@@ -601,8 +601,8 @@ fn test_scale_rot_trans_convenience_matches_manual() {
   let ca = f64::cos(angle);
   let sa = f64::sin(angle);
   assert!(approx_eq(combined.ele[0][0], ca * sx));
-  assert!(approx_eq(combined.ele[0][1], -sa * sy));
-  assert!(approx_eq(combined.ele[1][0], sa * sx));
+  assert!(approx_eq(combined.ele[0][1], -sa * sx));
+  assert!(approx_eq(combined.ele[1][0], sa * sy));
   assert!(approx_eq(combined.ele[1][1], ca * sy));
   assert_eq!(combined.ele[2][0], tx);
   assert_eq!(combined.ele[2][1], ty);

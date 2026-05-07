@@ -60,3 +60,6 @@ pub const WHITE: Colour = Colour::new(255, 255, 255);
 pub const RED: Colour = Colour::new(255, 0, 0);
 pub const GREEN: Colour = Colour::new(0, 255, 0);
 pub const BLUE: Colour = Colour::new(0, 0, 255);
+pub const MAGENTA: Colour = Colour::new(255, 0, 255);
+pub const CYAN: Colour = Colour::new(0, 255, 255);
+pub const YELLOW: Colour = Colour::new(255, 255, 0);

@@ -24,17 +24,21 @@ pub struct Vec3 {
   pub z: f64,
 }
 
-#[allow(unused)]
 pub static AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
-#[allow(unused)]
 pub static AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
-#[allow(unused)]
 pub static AXIS_Z: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
 
 impl Vec3 {
   /// Construct a new vector, slightly shorter than writing Vec3 { x:1.0, y:2.0, z:3.0 }
   pub fn new(x: f64, y: f64, z: f64) -> Self {
     Self { x, y, z }
+  }
+
+  /// Construct a new normalized vector
+  pub fn new_normalized(x: f64, y: f64, z: f64) -> Self {
+    let mut out = Self { x, y, z };
+    out.normalize();
+    out
   }
 
   /// Construct a [0, 0, 0] vector at the origin
@@ -74,6 +78,14 @@ impl Vec3 {
 
     f64::sqrt(a * a + b * b + c * c)
   }
+
+  /// Normalize this Vec3 in place
+  pub fn normalize(&mut self) {
+    let len = self.len();
+    self.x /= len;
+    self.y /= len;
+    self.z /= len;
+  }
 }
 
 impl fmt::Display for Vec3 {
@@ -86,6 +98,7 @@ impl fmt::Display for Vec3 {
 impl Index<usize> for Vec3 {
   type Output = f64;
 
+  /// Get the value of the element at given index
   fn index(&self, i: usize) -> &f64 {
     match i {
       0 => &self.x,
