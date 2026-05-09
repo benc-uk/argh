@@ -6,8 +6,10 @@
 // Notes:
 // ==============================================================================================
 
-use crate::colour::Colour;
-use crate::math::Vec2;
+use crate::camera::Camera;
+use crate::colour::{Colour, WHITE};
+use crate::math::{Vec2, Vec4};
+use crate::models::Mesh;
 use crate::{buffer::Buffer, helpers};
 use minifb::{Key, Window, WindowOptions};
 use std::time::Instant;
@@ -22,6 +24,7 @@ pub trait Scene {
 pub struct Engine {
   win_size: (usize, usize),
   win_title: String,
+  aspect: f64,
   buffer: Buffer,
   t: f64,
   scale: minifb::Scale,
@@ -55,6 +58,7 @@ impl Engine {
       fps: 0.0,
       debug: false,
       target_fps: 60,
+      aspect: w as f64 / h as f64,
     }
   }
 
@@ -66,6 +70,10 @@ impl Engine {
   /// Return the width & height of the window
   pub fn get_size(&self) -> (usize, usize) {
     (self.win_size.0, self.win_size.1)
+  }
+
+  pub fn get_aspect(&self) -> f64 {
+    self.aspect
   }
 
   /// Get the current time in seconds
@@ -230,6 +238,55 @@ impl Engine {
       w0_row += dy0;
       w1_row += dy1;
       w2_row += dy2;
+    }
+  }
+
+  pub fn render_mesh(&mut self, cam: &Camera, m: &Mesh) {
+    let (w, h) = self.get_size();
+
+    // --- 1. Build M, V, P and compose ---
+    // Spin the cube around Y so we can see the perspective working
+
+    // let proj = Mat4::new_perspective(60f64.to_radians(), aspect, 0.1, 100.0);
+    let mvp = cam.pers_mat * cam.view_mat * m.get_model_mat();
+
+    // --- 2. Transform every unique vert ONCE ---
+    let clip: Vec<Vec4> = m.verts.iter().map(|v| mvp * &Vec4::new(v.x, v.y, v.z, 1.0)).collect();
+
+    // --- 3. Perspective divide + viewport map ---
+    // Keep z separately so we can back-face cull and (later) depth-sort.
+    let screen: Vec<(Vec2, f64)> = clip
+      .iter()
+      .map(|c| {
+        let inv_w = 1.0 / c.w;
+        let ndc_x = c.x * inv_w;
+        let ndc_y = c.y * inv_w;
+        let ndc_z = c.z * inv_w;
+        // Viewport: NDC [-1,+1] -> pixels. Flip Y because screen origin is top-left.
+        let sx = (ndc_x * 0.5 + 0.5) * w as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * h as f64; // Flip Y here
+        (Vec2 { x: sx, y: sy }, ndc_z)
+      })
+      .collect();
+
+    // --- 4. Walk the index list, cull, raster ---
+    for tri in m.indices.chunks(3) {
+      let (a, _) = screen[tri[0] as usize];
+      let (b, _) = screen[tri[1] as usize];
+      let (c, _) = screen[tri[2] as usize];
+
+      // 2D back-face cull. Signed area of the screen-space triangle.
+      let area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      if area >= 0.0 {
+        continue;
+      }
+
+      let colour = match &m.material {
+        None => WHITE,
+        Some(m) => m.texture.get_colour_at(0.0, 0.0),
+      };
+
+      self.fill_triangle(a, b, c, colour);
     }
   }
 }

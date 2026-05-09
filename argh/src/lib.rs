@@ -32,5 +32,11 @@ pub mod helpers;
 
 pub mod math;
 
+/// Models, meshes, textures, materials and 3D objects
+pub mod models;
+
 /// Very basic text rendering
 pub mod text;
+
+/// Camera
+pub mod camera;

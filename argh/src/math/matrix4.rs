@@ -98,6 +98,12 @@ impl Mat4 {
     }
   }
 
+  /// Create a matrix which performs perspective transformation
+  /// # Arguments:
+  /// * `fovy`   - Field of view in radians
+  /// * `aspect` - Aspect ratio of the camera
+  /// * `near`   - Near clipping plane
+  /// * `far`    - Far clipping plane
   pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Self {
     let f = 1.0 / (fovy * 0.5).tan(); // cotangent of half-FOV
     let nf = 1.0 / (near - far);
@@ -109,6 +115,37 @@ impl Mat4 {
     m.ele[2][3] = -1.0; // copies -z_view into clip.w (this is the "perspective" bit)
     m.ele[3][2] = 2.0 * far * near * nf; // z offset
     m
+  }
+
+  /// Create a right-handed view matrix that places the camera at `eye`, pointing at `target`. Transforms world-space points into view space (camera at origin, looking down -Z).
+  /// # Arguments:
+  /// * `eye` - Position of the eye or origin of view space
+  /// * `target` - What to point or look at
+  /// * `up_hint` - as the rough world-up direction (typically (0, 1, 0))
+  pub fn new_look_at(eye: Vec3, target: Vec3, up_hint: Vec3) -> Self {
+    // Camera basis vectors in world space (right-handed, camera looks down -Z).
+    // normalize() mutates in place, so these bindings must be mut.
+    let mut forward = eye - target;
+    forward.normalize(); // +Z of camera (points away from target)
+    let mut right = up_hint.cross(forward);
+    right.normalize();
+    let up = forward.cross(right); // already unit length (forward and right are orthonormal)
+
+    // Column-major layout: ele[col][row].
+    // The basis vectors form the rows of the rotation part (= transpose of camera-to-world).
+    // Column 3 is -R * eye, i.e. -dot(axis, eye) per row.
+    Self {
+      ele: [
+        // Column 0: x-components of each basis vector
+        [right.x, up.x, forward.x, 0.0],
+        // Column 1: y-components
+        [right.y, up.y, forward.y, 0.0],
+        // Column 2: z-components
+        [right.z, up.z, forward.z, 0.0],
+        // Column 3: translation
+        [-right.dot(eye), -up.dot(eye), -forward.dot(eye), 1.0],
+      ],
+    }
   }
 
   /// Create a zero matrix which is of almost no use

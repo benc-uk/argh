@@ -1,15 +1,13 @@
-use argh::colour::{BLACK, BLUE, CYAN, GREEN, RED, YELLOW};
+use argh::camera::Camera;
+use argh::colour::{BLACK, GREEN, RED};
 use argh::engine::{Engine, Scene};
-use argh::math::{Mat4, Quat, Vec2, Vec3, Vec4};
+use argh::math::{VEC3_ZERO, Vec3};
+use argh::models::{Material, Mesh, SimpleColourTexture};
 
 struct MyScene {
   cube: Mesh,
-}
-
-/// Simple mesh
-struct Mesh {
-  verts: Vec<Vec3>,
-  indices: Vec<i32>,
+  cube2: Mesh,
+  camera: Camera,
 }
 
 impl Scene for MyScene {
@@ -17,69 +15,20 @@ impl Scene for MyScene {
   fn update(&mut self, engine: &mut Engine, _: f64) {
     engine.clear(BLACK);
 
-    let (w, h) = engine.get_size();
-    let aspect = w as f64 / h as f64;
-
-    // --- 1. Build M, V, P and compose ---
-    // Spin the cube around Y so we can see the perspective working
-    let angle = engine.t();
     let mut axis = Vec3::new(0.6, 0.3, 0.9);
     axis.normalize();
     let py = f64::sin(engine.t());
     let px = f64::sin(engine.t() * 0.7);
     let pz = -1.0 - (f64::sin(engine.t() * 0.4) * 1.5);
-    let model = Mat4::new_scale_rot_trans(1.0, 1.0, 1.0, Quat::new(axis, angle), px, py, pz);
+    let pz2 = -1.0 - (f64::sin(engine.t() * 0.3) * 1.6);
+    self.cube.rot_y(0.01);
+    self.cube.rot_x(0.03);
+    self.cube2.rot_y(0.03);
+    self.cube.set_pos(Vec3::new(px, py, pz));
+    self.cube2.set_pos(Vec3::new(-px, py, pz2));
 
-    // Right-handed, camera at +Z=3 looking at the origin down -Z.
-    // View is the INVERSE of camera-to-world. With the camera only translated
-    // by (0,0,3), the inverse is a translation by (0,0,-3).
-    let view = Mat4::new_trans(0.0, 0.0, -3.0);
-    let proj = Mat4::new_perspective(60f64.to_radians(), aspect, 0.1, 100.0);
-    let mvp = proj * view * model;
-
-    // --- 2. Transform every unique vert ONCE ---
-    let clip: Vec<Vec4> = self.cube.verts.iter().map(|v| mvp * &Vec4::new(v.x, v.y, v.z, 1.0)).collect();
-
-    // --- 3. Perspective divide + viewport map ---
-    // Keep z separately so we can back-face cull and (later) depth-sort.
-    let screen: Vec<(Vec2, f64)> = clip
-      .iter()
-      .map(|c| {
-        let inv_w = 1.0 / c.w;
-        let ndc_x = c.x * inv_w;
-        let ndc_y = c.y * inv_w;
-        let ndc_z = c.z * inv_w;
-        // Viewport: NDC [-1,+1] -> pixels. Flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * w as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * h as f64; // Flip Y here
-        (Vec2 { x: sx, y: sy }, ndc_z)
-      })
-      .collect();
-
-    let mut t = 0;
-    // --- 4. Walk the index list, cull, raster ---
-    for tri in self.cube.indices.chunks(3) {
-      t += 1;
-      let (a, _) = screen[tri[0] as usize];
-      let (b, _) = screen[tri[1] as usize];
-      let (c, _) = screen[tri[2] as usize];
-
-      // 2D back-face cull. Signed area of the screen-space triangle.
-      let area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      if area >= 0.0 {
-        continue;
-      }
-
-      let col = match t {
-        1..=2 => RED,
-        3..=4 => GREEN,
-        5..=6 => BLUE,
-        7..=8 => YELLOW,
-        _ => CYAN,
-      };
-
-      engine.fill_triangle(a, b, c, col);
-    }
+    engine.render_mesh(&self.camera, &self.cube);
+    engine.render_mesh(&self.camera, &self.cube2);
   }
 }
 
@@ -88,29 +37,17 @@ fn main() {
   e.debug = true;
   e.target_fps = 60;
 
-  // Unit cube at the origin
-  let verts = vec![
-    Vec3::new(-0.5, -0.5, -0.5), // 0: back  bottom left
-    Vec3::new(0.5, -0.5, -0.5),  // 1: back  bottom right
-    Vec3::new(0.5, 0.5, -0.5),   // 2: back  top    right
-    Vec3::new(-0.5, 0.5, -0.5),  // 3: back  top    left
-    Vec3::new(-0.5, -0.5, 0.5),  // 4: front bottom left
-    Vec3::new(0.5, -0.5, 0.5),   // 5: front bottom right
-    Vec3::new(0.5, 0.5, 0.5),    // 6: front top    right
-    Vec3::new(-0.5, 0.5, 0.5),   // 7: front top    left
-  ];
+  let tex = SimpleColourTexture::new(RED);
+  let tex2 = SimpleColourTexture::new(GREEN);
+  let mat = Material::new(Box::new(tex));
+  let mat2 = Material::new(Box::new(tex2));
+  let mut cube = Mesh::new_cube();
+  let mut cube2 = Mesh::new_cube();
+  cube.set_material(mat);
+  cube2.set_material(mat2);
 
-  // 12 triangles, CCW winding when viewed from outside the cube
-  let indices = vec![
-    4, 5, 6, 4, 6, 7, // front
-    1, 0, 3, 1, 3, 2, // back
-    0, 4, 7, 0, 7, 3, // left
-    5, 1, 2, 5, 2, 6, // right
-    7, 6, 2, 7, 2, 3, // top
-    0, 1, 5, 0, 5, 4, // bottom
-  ];
-
-  let s = MyScene { cube: Mesh { verts, indices } };
+  let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 0.0, 4.0), VEC3_ZERO, 60.0, 0.1, 1000.0);
+  let s = MyScene { cube, cube2, camera };
 
   e.start(s);
 }
