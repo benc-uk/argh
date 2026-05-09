@@ -54,37 +54,41 @@ impl Quat {
     }
   }
 
-  /// Rotate around X axis by given angle
+  /// Rotate around the local X axis by given angle (post-multiplies self by R_x(a))
   pub fn rot_x(&mut self, a: f64) {
     let half = a * 0.5;
     let s = f64::sin(half);
     let c = f64::cos(half);
-    self.x = self.x * c + self.w * s;
-    self.y = self.y * c + self.z * s;
-    self.z = self.z * c - self.y * s;
-    self.w = self.w * c - self.x * s;
+    // Snapshot, since each new component depends on the old ones.
+    let (x, y, z, w) = (self.x, self.y, self.z, self.w);
+    self.x = x * c + w * s;
+    self.y = y * c + z * s;
+    self.z = z * c - y * s;
+    self.w = w * c - x * s;
   }
 
-  /// Rotate around Y axis by given angle
+  /// Rotate around the local Y axis by given angle (post-multiplies self by R_y(a))
   pub fn rot_y(&mut self, a: f64) {
     let half = a * 0.5;
     let s = f64::sin(half);
     let c = f64::cos(half);
-    self.x = self.x * c - self.z * s;
-    self.y = self.y * c + self.w * s;
-    self.z = self.z * c + self.x * s;
-    self.w = self.w * c - self.y * s;
+    let (x, y, z, w) = (self.x, self.y, self.z, self.w);
+    self.x = x * c - z * s;
+    self.y = y * c + w * s;
+    self.z = z * c + x * s;
+    self.w = w * c - y * s;
   }
 
-  /// Rotate around Z axis by given angle
+  /// Rotate around the local Z axis by given angle (post-multiplies self by R_z(a))
   pub fn rot_z(&mut self, a: f64) {
     let half = a * 0.5;
     let s = f64::sin(half);
     let c = f64::cos(half);
-    self.x = self.x * c + self.y * s;
-    self.y = self.y * c - self.x * s;
-    self.z = self.z * c + self.w * s;
-    self.w = self.w * c - self.z * s;
+    let (x, y, z, w) = (self.x, self.y, self.z, self.w);
+    self.x = x * c + y * s;
+    self.y = y * c - x * s;
+    self.z = z * c + w * s;
+    self.w = w * c - z * s;
   }
 }
 

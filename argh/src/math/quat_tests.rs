@@ -437,3 +437,240 @@ fn test_mul_asymmetric_components_pinned() {
   assert!(approx_eq(r.y, 30.0));
   assert!(approx_eq(r.z, 24.0));
 }
+
+// ============================================================================
+// ident()
+// ============================================================================
+
+#[test]
+fn test_ident_is_identity_quat() {
+  let q = Quat::ident();
+  assert_eq!(q, Quat { w: 1.0, x: 0.0, y: 0.0, z: 0.0 });
+}
+
+#[test]
+fn test_ident_is_unit_length() {
+  let q = Quat::ident();
+  let len_sq = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
+  assert!(approx_eq(len_sq, 1.0));
+}
+
+#[test]
+fn test_ident_is_neutral_under_multiplication() {
+  let q = Quat::new(AXIS_Y, 0.83);
+  assert!(quat_approx_eq(&(Quat::ident() * q), &q));
+  assert!(quat_approx_eq(&(q * Quat::ident()), &q));
+}
+
+#[test]
+fn test_ident_as_rotation_matrix_is_identity() {
+  // When converted to a rotation matrix it should be the identity transform
+  let m = Mat4::new_rot(Quat::ident());
+  let v = Vec3::new(1.7, -2.3, 4.1);
+  let r = m * &v;
+  assert!((r.x - v.x).abs() < EPSILON);
+  assert!((r.y - v.y).abs() < EPSILON);
+  assert!((r.z - v.z).abs() < EPSILON);
+}
+
+// ============================================================================
+// rot_x / rot_y / rot_z (in-place axis rotations)
+//
+// These post-multiply self by a rotation around the given axis, i.e.
+// self_new = self * R_axis(a). They mutate in place.
+// ============================================================================
+
+#[test]
+fn test_rot_x_from_identity_matches_new() {
+  // Starting from identity, rotating by angle a around X should equal Quat::new(AXIS_X, a)
+  let mut q = Quat::ident();
+  q.rot_x(FRAC_PI_2);
+  let expected = Quat::new(AXIS_X, FRAC_PI_2);
+  assert!(quat_approx_eq(&q, &expected));
+}
+
+#[test]
+fn test_rot_y_from_identity_matches_new() {
+  let mut q = Quat::ident();
+  q.rot_y(FRAC_PI_2);
+  let expected = Quat::new(AXIS_Y, FRAC_PI_2);
+  assert!(quat_approx_eq(&q, &expected));
+}
+
+#[test]
+fn test_rot_z_from_identity_matches_new() {
+  let mut q = Quat::ident();
+  q.rot_z(FRAC_PI_2);
+  let expected = Quat::new(AXIS_Z, FRAC_PI_2);
+  assert!(quat_approx_eq(&q, &expected));
+}
+
+#[test]
+fn test_rot_x_zero_angle_is_noop() {
+  let original = Quat::new(AXIS_Y, 0.7);
+  let mut q = original;
+  q.rot_x(0.0);
+  assert!(quat_approx_eq(&q, &original));
+}
+
+#[test]
+fn test_rot_y_zero_angle_is_noop() {
+  let original = Quat::new(AXIS_Z, 0.7);
+  let mut q = original;
+  q.rot_y(0.0);
+  assert!(quat_approx_eq(&q, &original));
+}
+
+#[test]
+fn test_rot_z_zero_angle_is_noop() {
+  let original = Quat::new(AXIS_X, 0.7);
+  let mut q = original;
+  q.rot_z(0.0);
+  assert!(quat_approx_eq(&q, &original));
+}
+
+#[test]
+fn test_rot_x_preserves_unit_length() {
+  let mut q = Quat::new(AXIS_Z, 1.1);
+  q.rot_x(0.4);
+  let len_sq = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
+  assert!(approx_eq(len_sq, 1.0));
+}
+
+#[test]
+fn test_rot_y_preserves_unit_length() {
+  let mut q = Quat::new(AXIS_X, 1.1);
+  q.rot_y(0.4);
+  let len_sq = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
+  assert!(approx_eq(len_sq, 1.0));
+}
+
+#[test]
+fn test_rot_z_preserves_unit_length() {
+  let mut q = Quat::new(AXIS_Y, 1.1);
+  q.rot_z(0.4);
+  let len_sq = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
+  assert!(approx_eq(len_sq, 1.0));
+}
+
+#[test]
+fn test_rot_x_two_halves_equals_full() {
+  let mut a = Quat::ident();
+  a.rot_x(0.6);
+  a.rot_x(0.6);
+  let b = Quat::new(AXIS_X, 1.2);
+  assert!(quat_approx_eq(&a, &b));
+}
+
+#[test]
+fn test_rot_y_two_halves_equals_full() {
+  let mut a = Quat::ident();
+  a.rot_y(0.6);
+  a.rot_y(0.6);
+  let b = Quat::new(AXIS_Y, 1.2);
+  assert!(quat_approx_eq(&a, &b));
+}
+
+#[test]
+fn test_rot_z_two_halves_equals_full() {
+  let mut a = Quat::ident();
+  a.rot_z(0.6);
+  a.rot_z(0.6);
+  let b = Quat::new(AXIS_Z, 1.2);
+  assert!(quat_approx_eq(&a, &b));
+}
+
+#[test]
+fn test_rot_x_negative_undoes_positive() {
+  let mut q = Quat::new(AXIS_Z, 0.5);
+  let original = q;
+  q.rot_x(0.7);
+  q.rot_x(-0.7);
+  assert!(quat_approx_eq(&q, &original));
+}
+
+#[test]
+fn test_rot_y_negative_undoes_positive() {
+  let mut q = Quat::new(AXIS_X, 0.5);
+  let original = q;
+  q.rot_y(0.7);
+  q.rot_y(-0.7);
+  assert!(quat_approx_eq(&q, &original));
+}
+
+#[test]
+fn test_rot_z_negative_undoes_positive() {
+  let mut q = Quat::new(AXIS_Y, 0.5);
+  let original = q;
+  q.rot_z(0.7);
+  q.rot_z(-0.7);
+  assert!(quat_approx_eq(&q, &original));
+}
+
+#[test]
+fn test_rot_x_matches_postmultiply_by_axis_quat() {
+  // Pin the convention: rot_x(a) is equivalent to self = self * Quat::new(AXIS_X, a)
+  let start = Quat::new(Vec3::new(0.6, -0.8, 0.0), 0.9);
+  let mut by_method = start;
+  by_method.rot_x(0.4);
+  let by_mul = start * Quat::new(AXIS_X, 0.4);
+  assert!(quat_approx_eq(&by_method, &by_mul));
+}
+
+#[test]
+fn test_rot_y_matches_postmultiply_by_axis_quat() {
+  let start = Quat::new(Vec3::new(0.0, 0.8, 0.6), 0.9);
+  let mut by_method = start;
+  by_method.rot_y(0.4);
+  let by_mul = start * Quat::new(AXIS_Y, 0.4);
+  assert!(quat_approx_eq(&by_method, &by_mul));
+}
+
+#[test]
+fn test_rot_z_matches_postmultiply_by_axis_quat() {
+  let start = Quat::new(Vec3::new(0.7, 0.0, 0.7), 0.9);
+  let mut by_method = start;
+  by_method.rot_z(0.4);
+  let by_mul = start * Quat::new(AXIS_Z, 0.4);
+  assert!(quat_approx_eq(&by_method, &by_mul));
+}
+
+#[test]
+fn test_rot_x_then_rot_x_via_vector_rotation() {
+  // End-to-end: a vector rotated by an accumulated quat should match
+  // the same vector rotated by the equivalent single-angle quat
+  let mut q = Quat::ident();
+  q.rot_x(0.3);
+  q.rot_x(0.4);
+  let m_acc = Mat4::new_rot(q);
+  let m_eq = Mat4::new_rot(Quat::new(AXIS_X, 0.7));
+  let v = Vec3::new(1.0, 2.0, 3.0);
+  let ra = m_acc * &v;
+  let rb = m_eq * &v;
+  assert!((ra.x - rb.x).abs() < EPSILON);
+  assert!((ra.y - rb.y).abs() < EPSILON);
+  assert!((ra.z - rb.z).abs() < EPSILON);
+}
+
+#[test]
+fn test_rot_x_then_rot_z_compose_via_vector() {
+  // q = I * R_x(90) then * R_z(90) = R_x(90) * R_z(90)
+  // When applied to a vector, q * v * q_conj rotates by R_z FIRST, then R_x
+  // (this is the standard "rightmost rotation applied first" rule for
+  // quaternion composition). Compare against an explicit two-step rotation.
+  let mut q = Quat::ident();
+  q.rot_x(FRAC_PI_2);
+  q.rot_z(FRAC_PI_2);
+  let m_via_quat = Mat4::new_rot(q);
+
+  let m_z = Mat4::new_rot(Quat::new(AXIS_Z, FRAC_PI_2));
+  let m_x = Mat4::new_rot(Quat::new(AXIS_X, FRAC_PI_2));
+
+  let v = Vec3::new(1.0, 0.0, 0.0);
+  let via_quat = m_via_quat * &v;
+  let manual = m_x * &(m_z * &v); // apply Z first, then X
+
+  assert!((via_quat.x - manual.x).abs() < EPSILON);
+  assert!((via_quat.y - manual.y).abs() < EPSILON);
+  assert!((via_quat.z - manual.z).abs() < EPSILON);
+}

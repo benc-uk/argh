@@ -668,3 +668,347 @@ fn test_mul_general_matrix_vec_hand_computed() {
   let r = m * &Vec3::new(1.0, 1.0, 1.0);
   assert!(vec3_approx_eq(&r, &Vec3::new(22.0, 26.0, 30.0)));
 }
+
+// ============================================================================
+// new_perspective
+//
+// Right-handed perspective with camera looking down -Z. Maps view-space z in
+// [-near, -far] to NDC z in [-1, +1] after the perspective divide by clip.w.
+// Top two rows project x/y; near/far only affect depth and clip.w.
+// ============================================================================
+
+fn vec4_approx_eq(a: &Vec4, b: &Vec4) -> bool {
+  approx_eq(a.x, b.x) && approx_eq(a.y, b.y) && approx_eq(a.z, b.z) && approx_eq(a.w, b.w)
+}
+
+#[test]
+fn test_new_perspective_layout_for_right_handed_minus_z() {
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 1.0, 100.0);
+  // [2][3] should be -1 (this drives clip.w = -z_view)
+  assert!(approx_eq(p.ele[2][3], -1.0));
+  // [3][3] should be 0 (a true projection, not affine)
+  assert!(approx_eq(p.ele[3][3], 0.0));
+  // No translation in x/y rows
+  assert!(approx_eq(p.ele[3][0], 0.0));
+  assert!(approx_eq(p.ele[3][1], 0.0));
+}
+
+#[test]
+fn test_new_perspective_fov_90_unit_aspect_xy_scale_is_one() {
+  // tan(45) = 1, so cotangent is 1. For 90deg fovy with aspect=1, [0][0] and [1][1] should both be 1
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  assert!(approx_eq(p.ele[0][0], 1.0));
+  assert!(approx_eq(p.ele[1][1], 1.0));
+}
+
+#[test]
+fn test_new_perspective_aspect_scales_x_only() {
+  // Aspect 2.0 (wide): [0][0] = f/aspect, [1][1] = f. So x-scale is half y-scale.
+  let p = Mat4::new_perspective(FRAC_PI_2, 2.0, 0.1, 100.0);
+  assert!(approx_eq(p.ele[0][0], 0.5));
+  assert!(approx_eq(p.ele[1][1], 1.0));
+}
+
+#[test]
+fn test_new_perspective_z_near_maps_to_minus_one_in_ndc() {
+  // A point at view-space z = -near should land on the near plane (NDC z = -1)
+  let near = 0.5;
+  let far = 100.0;
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far);
+  // View-space point on the camera's forward ray, at z = -near
+  let v_view = Vec4::new(0.0, 0.0, -near, 1.0);
+  let clip = p * &v_view;
+  // After perspective divide
+  let ndc_z = clip.z / clip.w;
+  assert!(approx_eq(ndc_z, -1.0));
+}
+
+#[test]
+fn test_new_perspective_z_far_maps_to_plus_one_in_ndc() {
+  let near = 0.5;
+  let far = 100.0;
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far);
+  let v_view = Vec4::new(0.0, 0.0, -far, 1.0);
+  let clip = p * &v_view;
+  let ndc_z = clip.z / clip.w;
+  assert!(approx_eq(ndc_z, 1.0));
+}
+
+#[test]
+fn test_new_perspective_clip_w_equals_minus_z_view() {
+  // The classic perspective trick: clip.w receives -z_view via the [2][3] = -1 entry.
+  // For an arbitrary view-space point this must hold.
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.6, 0.1, 100.0);
+  let v = Vec4::new(2.0, -3.0, -7.5, 1.0);
+  let clip = p * &v;
+  assert!(approx_eq(clip.w, -v.z));
+}
+
+#[test]
+fn test_new_perspective_centre_axis_projects_to_origin() {
+  // A point on the camera's forward ray (x=y=0) projects to the centre of the
+  // screen no matter how far it is.
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  for &z in &[-0.2, -1.0, -10.0, -50.0] {
+    let clip = p * &Vec4::new(0.0, 0.0, z, 1.0);
+    let inv_w = 1.0 / clip.w;
+    let ndc_x = clip.x * inv_w;
+    let ndc_y = clip.y * inv_w;
+    assert!(approx_eq(ndc_x, 0.0), "ndc_x at z={} was {}", z, ndc_x);
+    assert!(approx_eq(ndc_y, 0.0), "ndc_y at z={} was {}", z, ndc_y);
+  }
+}
+
+#[test]
+fn test_new_perspective_foreshortening_scales_with_distance() {
+  // Same x at farther z should produce smaller ndc_x. Specifically with fov=90
+  // and aspect=1, ndc_x = x / -z. Verify the ratio.
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let near_pt = p * &Vec4::new(1.0, 0.0, -1.0, 1.0);
+  let far_pt = p * &Vec4::new(1.0, 0.0, -10.0, 1.0);
+  let ndc_near_x = near_pt.x / near_pt.w;
+  let ndc_far_x = far_pt.x / far_pt.w;
+  // 10x further away -> 1/10th the screen-space x
+  assert!(approx_eq(ndc_near_x, 1.0));
+  assert!(approx_eq(ndc_far_x, 0.1));
+}
+
+#[test]
+fn test_new_perspective_changing_far_does_not_change_xy_projection() {
+  // Pin: x/y outputs depend only on fovy and aspect, not on near/far
+  let p1 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.1, 50.0);
+  let p2 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.1, 5000.0);
+  let v = Vec4::new(0.7, -0.3, -2.0, 1.0);
+  let c1 = p1 * &v;
+  let c2 = p2 * &v;
+  assert!(approx_eq(c1.x / c1.w, c2.x / c2.w));
+  assert!(approx_eq(c1.y / c1.w, c2.y / c2.w));
+}
+
+#[test]
+fn test_new_perspective_changing_near_does_not_change_xy_projection() {
+  let p1 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.01, 100.0);
+  let p2 = Mat4::new_perspective(FRAC_PI_4, 1.6, 5.0, 100.0);
+  let v = Vec4::new(0.7, -0.3, -10.0, 1.0);
+  let c1 = p1 * &v;
+  let c2 = p2 * &v;
+  assert!(approx_eq(c1.x / c1.w, c2.x / c2.w));
+  assert!(approx_eq(c1.y / c1.w, c2.y / c2.w));
+}
+
+#[test]
+fn test_new_perspective_off_axis_xy_scaling() {
+  // With fovy = 90 deg, a point at (1, 1, -1) should land at ndc (1, 1).
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let clip = p * &Vec4::new(1.0, 1.0, -1.0, 1.0);
+  let ndc_x = clip.x / clip.w;
+  let ndc_y = clip.y / clip.w;
+  assert!(approx_eq(ndc_x, 1.0));
+  assert!(approx_eq(ndc_y, 1.0));
+}
+
+// ============================================================================
+// new_look_at
+//
+// Right-handed view matrix. Camera at `eye` pointing at `target`, with
+// `up_hint` providing the rough world-up. Output transforms world space into
+// view space (camera at origin, looking down -Z, +X right, +Y up).
+// ============================================================================
+
+#[test]
+fn test_look_at_camera_at_origin_looking_minus_z_is_identity() {
+  // Camera at origin looking down -Z with world-up Y is the canonical view
+  // orientation; it should produce the identity matrix.
+  let m = Mat4::new_look_at(Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -1.0), Vec3::new(0.0, 1.0, 0.0));
+  assert!(mat4_approx_eq(&m, &Mat4::new()));
+}
+
+#[test]
+fn test_look_at_translates_eye_to_origin() {
+  // The eye should be transformed to the origin in view space, regardless of
+  // where it is in the world.
+  let eye = Vec3::new(3.0, 5.0, 8.0);
+  let target = Vec3::new(0.0, 0.0, 0.0);
+  let up = Vec3::new(0.0, 1.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, up);
+  let r = m * &eye;
+  assert!(vec3_approx_eq(&r, &Vec3::new(0.0, 0.0, 0.0)));
+}
+
+#[test]
+fn test_look_at_target_lands_in_front_of_camera_minus_z() {
+  // The target point should appear on the camera's forward axis (-Z in view space)
+  // with negative z (i.e. in front of the camera).
+  let eye = Vec3::new(0.0, 0.0, 5.0);
+  let target = Vec3::new(0.0, 0.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
+  let r = m * &target;
+  // x and y should be 0, z should be negative (in front of camera)
+  assert!(approx_eq(r.x, 0.0));
+  assert!(approx_eq(r.y, 0.0));
+  assert!(r.z < 0.0);
+  // Specifically the distance from eye to target was 5, so z should be -5
+  assert!(approx_eq(r.z, -5.0));
+}
+
+#[test]
+fn test_look_at_pure_translation_when_axes_align() {
+  // With camera at (0,0,5) looking at the origin and up=Y, the camera's local
+  // axes already align with world axes, so the matrix should be a pure
+  // translation by (0, 0, -5).
+  let m = Mat4::new_look_at(Vec3::new(0.0, 0.0, 5.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0));
+  assert!(mat4_approx_eq(&m, &Mat4::new_trans(0.0, 0.0, -5.0)));
+}
+
+#[test]
+fn test_look_at_rotation_columns_are_orthonormal() {
+  // The upper-left 3x3 is the world->view rotation. It should be orthonormal
+  // (its columns are unit length and mutually perpendicular).
+  let eye = Vec3::new(4.0, 3.0, 2.0);
+  let target = Vec3::new(-1.0, 0.5, -2.0);
+  let up = Vec3::new(0.0, 1.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, up);
+  for i in 0..3 {
+    let mut len_sq = 0.0;
+    for r in 0..3 {
+      len_sq += m.ele[i][r] * m.ele[i][r];
+    }
+    assert!(approx_eq(len_sq, 1.0), "view-rot column {} not unit length", i);
+  }
+  for i in 0..3 {
+    for j in (i + 1)..3 {
+      let mut dot = 0.0;
+      for r in 0..3 {
+        dot += m.ele[i][r] * m.ele[j][r];
+      }
+      assert!(approx_eq(dot, 0.0), "view-rot columns {} and {} not orthogonal", i, j);
+    }
+  }
+}
+
+#[test]
+fn test_look_at_preserves_distances() {
+  // A view matrix is a rigid transform (rotation + translation). Distances
+  // between any two world points should be preserved in view space.
+  let eye = Vec3::new(5.0, -2.0, 3.0);
+  let target = Vec3::new(0.0, 0.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
+  let p1 = Vec3::new(1.0, 2.0, 3.0);
+  let p2 = Vec3::new(-2.0, 1.0, 4.0);
+  let r1 = m * &p1;
+  let r2 = m * &p2;
+  let dx_world = p2.x - p1.x;
+  let dy_world = p2.y - p1.y;
+  let dz_world = p2.z - p1.z;
+  let world_dist_sq = dx_world * dx_world + dy_world * dy_world + dz_world * dz_world;
+  let dx_view = r2.x - r1.x;
+  let dy_view = r2.y - r1.y;
+  let dz_view = r2.z - r1.z;
+  let view_dist_sq = dx_view * dx_view + dy_view * dy_view + dz_view * dz_view;
+  assert!(approx_eq(world_dist_sq, view_dist_sq));
+}
+
+#[test]
+fn test_look_at_camera_above_looking_down_maps_axes() {
+  // Camera at (0, 5, 0) looking at origin with up_hint = +Z.
+  // The camera's local axes in world coords:
+  //   forward (+camera-Z, away from target) = +Y world
+  //   right = up_hint x forward = (0,0,1) x (0,1,0) = (-1, 0, 0) world
+  //   up = forward x right = (0,1,0) x (-1,0,0) = (0, 0, -1)
+  // Wait, but let's just test what we can verify: a world point on +X should
+  // end up on -X in view space (because right is -X world).
+  let eye = Vec3::new(0.0, 5.0, 0.0);
+  let target = Vec3::new(0.0, 0.0, 0.0);
+  let up_hint = Vec3::new(0.0, 0.0, 1.0);
+  let m = Mat4::new_look_at(eye, target, up_hint);
+  // Verify: world (1, 5, 0) is one unit to the right of the camera in world,
+  // which should end up at view x = -1 (because right axis is world -X)
+  let r = m * &Vec3::new(1.0, 5.0, 0.0);
+  assert!(approx_eq(r.x, -1.0));
+  assert!(approx_eq(r.y, 0.0));
+  assert!(approx_eq(r.z, 0.0));
+}
+
+#[test]
+fn test_look_at_point_behind_camera_lands_at_positive_z_view() {
+  // World point further from camera in the look direction than the target
+  // should appear deeper into -Z view. A point on the opposite side of the
+  // camera from the target should appear at +Z view (behind camera).
+  let eye = Vec3::new(0.0, 0.0, 5.0);
+  let target = Vec3::new(0.0, 0.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
+  // World z=10 is on the opposite side of the camera from target (z=0)
+  let r = m * &Vec3::new(0.0, 0.0, 10.0);
+  assert!(r.z > 0.0, "point behind camera should have view z > 0, got {}", r.z);
+}
+
+#[test]
+fn test_look_at_world_origin_at_view_negative_distance() {
+  // For an arbitrary eye looking at origin, the world origin should appear at
+  // view space (0, 0, -|eye|).
+  let eye = Vec3::new(2.0, 3.0, 6.0); // length 7
+  let target = Vec3::new(0.0, 0.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
+  let r = m * &target;
+  assert!(approx_eq(r.x, 0.0));
+  assert!(approx_eq(r.y, 0.0));
+  assert!(approx_eq(r.z, -7.0));
+}
+
+#[test]
+fn test_look_at_translation_column_matches_neg_dot_basis_eye() {
+  // The translation column should be -(R^T * eye), i.e. element[3][i] should
+  // equal -dot(basis_i, eye) for each row i.
+  let eye = Vec3::new(2.5, -1.5, 4.0);
+  let target = Vec3::new(0.0, 1.0, 0.0);
+  let up = Vec3::new(0.0, 1.0, 0.0);
+  let m = Mat4::new_look_at(eye, target, up);
+  // Reconstruct the basis vectors from the matrix rows
+  let right_basis = Vec3::new(m.ele[0][0], m.ele[1][0], m.ele[2][0]);
+  let up_basis = Vec3::new(m.ele[0][1], m.ele[1][1], m.ele[2][1]);
+  let forward_basis = Vec3::new(m.ele[0][2], m.ele[1][2], m.ele[2][2]);
+  assert!(approx_eq(m.ele[3][0], -right_basis.dot(eye)));
+  assert!(approx_eq(m.ele[3][1], -up_basis.dot(eye)));
+  assert!(approx_eq(m.ele[3][2], -forward_basis.dot(eye)));
+}
+
+#[test]
+fn test_look_at_homogeneous_w_row_is_clean() {
+  // A view matrix is affine, not a projection. The bottom row should be
+  // [0, 0, 0, 1] (in column-major: ele[0..2][3] = 0, ele[3][3] = 1).
+  let m = Mat4::new_look_at(Vec3::new(1.0, 2.0, 3.0), Vec3::new(-1.0, 0.5, -2.0), Vec3::new(0.0, 1.0, 0.0));
+  assert!(approx_eq(m.ele[0][3], 0.0));
+  assert!(approx_eq(m.ele[1][3], 0.0));
+  assert!(approx_eq(m.ele[2][3], 0.0));
+  assert!(approx_eq(m.ele[3][3], 1.0));
+}
+
+#[test]
+fn test_look_at_then_perspective_pipeline_smoke() {
+  // End-to-end smoke test: a model-space point through view * projection
+  // should produce sensible NDC coordinates in [-1, 1].
+  let view = Mat4::new_look_at(Vec3::new(0.0, 0.0, 5.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0));
+  let proj = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let mvp = proj * view;
+  // A point at world origin: 5 units in front of the camera
+  let clip = mvp * &Vec4::new(0.0, 0.0, 0.0, 1.0);
+  let ndc_x = clip.x / clip.w;
+  let ndc_y = clip.y / clip.w;
+  let ndc_z = clip.z / clip.w;
+  assert!(approx_eq(ndc_x, 0.0));
+  assert!(approx_eq(ndc_y, 0.0));
+  // 5 is between near (0.1) and far (100), so ndc_z should be in (-1, 1)
+  assert!(ndc_z > -1.0 && ndc_z < 1.0, "ndc_z={} not in (-1, 1)", ndc_z);
+}
+
+#[test]
+fn test_look_at_pipeline_off_centre_point() {
+  // A point at world (1, 0, 0) seen from camera at (0, 0, 5) should appear
+  // to the right of centre on screen (positive ndc_x).
+  let view = Mat4::new_look_at(Vec3::new(0.0, 0.0, 5.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0));
+  let proj = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let mvp = proj * view;
+  let clip = mvp * &Vec4::new(1.0, 0.0, 0.0, 1.0);
+  let ndc_x = clip.x / clip.w;
+  assert!(ndc_x > 0.0, "off-centre +x point should give positive ndc_x, got {}", ndc_x);
+}
