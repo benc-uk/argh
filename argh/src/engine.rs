@@ -7,8 +7,9 @@
 // ==============================================================================================
 
 use crate::camera::Camera;
-use crate::colour::{Colour, WHITE};
-use crate::math::{Vec2, Vec4};
+use crate::colour::{BLACK, Colour, WHITE};
+use crate::light::Light;
+use crate::math::{Vec2, Vec3, Vec4};
 use crate::models::Mesh;
 use crate::{buffer::Buffer, helpers};
 use minifb::{Key, Window, WindowOptions};
@@ -29,6 +30,8 @@ pub struct Engine {
   t: f64,
   scale: minifb::Scale,
   fps: f64,
+  lights: Vec<Light>,
+
   pub target_fps: usize,
   pub debug: bool,
 }
@@ -67,6 +70,7 @@ impl Engine {
       debug: false,
       target_fps: 60,
       aspect: w as f64 / h as f64,
+      lights: vec![] as std::vec::Vec<Light>,
     }
   }
 
@@ -122,6 +126,11 @@ impl Engine {
       window.set_target_fps(self.target_fps);
     }
     let mut last_time = Instant::now();
+
+    // Lights check
+    if self.lights.is_empty() {
+      println!("You have added no lights, mesh rendering will show nothing")
+    }
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
       let now = Instant::now();
@@ -209,23 +218,43 @@ impl Engine {
     }
   }
 
+  /// Add a light to the scene
+  pub fn add_light(&mut self, light: Light) {
+    self.lights.push(light);
+  }
+
   /// Renders a 3D mesh onto the screen from given camera position
   pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
-    // --- 1. Build M, V, P and compose ---
-    let mvp = cam.pers_mat * cam.view_mat * mesh.get_model_mat();
+    // Early exit if scene has no lights
+    if self.lights.is_empty() {
+      return;
+    }
 
-    // --- 2. Transform every unique vert ONCE; compute outcode at the same time. ---
-    let clip_verts: Vec<(Vec4, u8)> = mesh
-      .verts
+    // Get the colour of the mesh
+    let colour = match &mesh.material {
+      None => WHITE,
+      Some(m) => m.texture.get_colour_at(0.0, 0.0) * m.diffuse,
+    };
+
+    // --- 1. Build view projection matrix VP ---
+    let vp = cam.pers_mat * cam.view_mat;
+
+    // --- 2 Apply model matrix M to transform model verts into world space. We'll use them later  ---
+    let world_verts: Vec<Vec3> = mesh.verts.iter().map(|v| mesh.get_model_mat() * v).collect();
+
+    // --- 3. Transform every unique vert ONCE; compute outcode at the same time. ---
+    let clip_verts: Vec<(Vec4, u8)> = world_verts
       .iter()
       .map(|v| {
-        let cv = mvp * &Vec4::new(v.x, v.y, v.z, 1.0);
+        let cv = vp * &Vec4::new(v.x, v.y, v.z, 1.0); // We use vp here not mvp
         let outcode = helpers::compute_outcode(&cv);
         (cv, outcode)
       })
       .collect();
 
-    // --- 3. Perspective divide + viewport map ---
+    let normals: Vec<Vec3> = mesh.normals.iter().map(|n| mesh.rot.rotate_vec3(*n)).collect();
+
+    // --- 4. Perspective divide + viewport map ---
     // Keep z separately so we can back-face cull and (later) depth-sort.
     let screen_verts: Vec<ScreenVertex> = clip_verts
       .iter()
@@ -242,14 +271,20 @@ impl Engine {
       })
       .collect();
 
-    // --- 4. Walk the index list (3 at a time for triangles), cull, raster ---
-    for tri in mesh.indices.chunks(3) {
+    // --- 5. Walk the index list (3 at a time for triangles), cull, shade & raster ---
+    for (tri_index, tri) in mesh.indices.chunks(3).enumerate() {
       let i0 = tri[0] as usize;
       let i1 = tri[1] as usize;
       let i2 = tri[2] as usize;
       let sv0 = screen_verts[i0];
       let sv1 = screen_verts[i1];
       let sv2 = screen_verts[i2];
+      let wv0 = world_verts[i0];
+      let wv1 = world_verts[i1];
+      let wv2 = world_verts[i2];
+
+      // One per triangle
+      let n = normals[tri_index];
 
       // Trivial reject: all three vertices outside the SAME plane.
       let combined_out = clip_verts[i0].1 & clip_verts[i1].1 & clip_verts[i2].1;
@@ -273,12 +308,19 @@ impl Engine {
         continue;
       }
 
-      let colour = match &mesh.material {
-        None => WHITE,
-        Some(m) => m.texture.get_colour_at(0.0, 0.0),
-      };
+      // Shading & lighting
+      let world_v = (wv0 + wv1 + wv2) / 3.0; // Centroid of the triangle in world space
+      let mut light_col_sum = BLACK;
+      for light in &self.lights {
+        let l = (light.pos - world_v).normalize_new();
+        let diff = n.dot(l);
+        let col = light.colour * light.brightness * diff;
+        light_col_sum += col;
+      }
 
-      self.buffer.fill_triangle(sv0, sv1, sv2, colour);
+      let out_colour = colour * light_col_sum;
+
+      self.buffer.fill_triangle(sv0, sv1, sv2, out_colour);
     }
   }
 }

@@ -91,6 +91,16 @@ impl Vec3 {
     self.y /= len;
     self.z /= len;
   }
+
+  /// Normalize this Vec3 in to a new Vec3
+  pub fn normalize_new(&self) -> Self {
+    let len = self.len();
+    Self {
+      x: self.x / len,
+      y: self.y / len,
+      z: self.z / len,
+    }
+  }
 }
 
 impl fmt::Display for Vec3 {
@@ -211,6 +221,19 @@ impl Div<Self> for Vec3 {
       x: self.x / v.x,
       y: self.y / v.y,
       z: self.z / v.z,
+    }
+  }
+}
+
+impl Div<f64> for Vec3 {
+  type Output = Self;
+
+  /// Divide by a scalar and return as new value
+  fn div(self, s: f64) -> Self {
+    Self {
+      x: self.x / s,
+      y: self.y / s,
+      z: self.z / s,
     }
   }
 }

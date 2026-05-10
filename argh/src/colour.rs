@@ -1,65 +1,114 @@
 // ==============================================================================================
 // Module & file:   colour.rs
-// Purpose:         Colour type wrapping u32 with named constants and conversion helpers
+// Purpose:         Standard RGB Colour type
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:
 // ==============================================================================================
 
-/// A RGB colour tuple, backed with u32 for use with [Engine](crate::engine::Engine)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Colour(u32);
+use std::ops::*;
 
-impl Colour {
-  /// Create a new Colour from given RGB values (0 - 255)
-  pub const fn new(r: u8, g: u8, b: u8) -> Self {
-    Self((r as u32) << 16 | (g as u32) << 8 | b as u32)
-  }
-
-  /// Get the R component
-  pub fn r(self) -> u8 {
-    (self.0 >> 16) as u8
-  }
-
-  /// Get the G component
-  pub fn g(self) -> u8 {
-    (self.0 >> 8) as u8
-  }
-
-  /// Get the B component
-  pub fn b(self) -> u8 {
-    self.0 as u8
-  }
-
-  /// Return the internal u32 representation of the colour
-  pub fn as_u32(self) -> u32 {
-    self.0
-  }
-
-  /// Scale colour by some amount (darker or brighter)
-  pub fn scale(&mut self, amount: f64) {
-    let r = ((self.r() as f64) * amount).clamp(0.0, 255.0) as u8;
-    let g = ((self.g() as f64) * amount).clamp(0.0, 255.0) as u8;
-    let b = ((self.b() as f64) * amount).clamp(0.0, 255.0) as u8;
-    *self = Self::new(r, g, b);
-  }
-
-  /// Create a random RGB colour
-  pub fn rand() -> Self {
-    let r = rand::random_range(0..255);
-    let g = rand::random_range(0..255);
-    let b = rand::random_range(0..255);
-    Self::new(r, g, b)
-  }
+/// A RGB colour tuple. Linear RGB colour, components in [0.0, 1.0] for normal use but range is not enforced
+#[derive(Debug, Clone, Copy)]
+pub struct Colour {
+  r: f32,
+  g: f32,
+  b: f32,
 }
 
 // Helper static colours
 
-pub const BLACK: Colour = Colour::new(0, 0, 0);
-pub const WHITE: Colour = Colour::new(255, 255, 255);
-pub const RED: Colour = Colour::new(255, 0, 0);
-pub const GREEN: Colour = Colour::new(0, 255, 0);
-pub const BLUE: Colour = Colour::new(0, 0, 255);
-pub const MAGENTA: Colour = Colour::new(255, 0, 255);
-pub const CYAN: Colour = Colour::new(0, 255, 255);
-pub const YELLOW: Colour = Colour::new(255, 255, 0);
+pub const BLACK: Colour = Colour::new(0.0, 0.0, 0.0);
+pub const WHITE: Colour = Colour::new(1.0, 1.0, 1.0);
+pub const RED: Colour = Colour::new(1.0, 0.0, 0.0);
+pub const GREEN: Colour = Colour::new(0.0, 1.0, 0.0);
+pub const BLUE: Colour = Colour::new(0.0, 0.0, 1.0);
+pub const MAGENTA: Colour = Colour::new(1.0, 0.0, 1.0);
+pub const CYAN: Colour = Colour::new(0.0, 1.0, 1.0);
+pub const YELLOW: Colour = Colour::new(1.0, 1.0, 0.0);
+
+impl Colour {
+  /// Create a new Colour from given RGB values
+  pub const fn new(r: f32, g: f32, b: f32) -> Self {
+    Self { r, g, b }
+  }
+
+  /// Create a new Colour from given u8 RGB values (0 - 255)
+  pub const fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
+    Self {
+      r: r as f32,
+      g: g as f32,
+      b: b as f32,
+    }
+  }
+
+  /// Return as packed argb u32 representation of the colour for use with the [Buffer]. Alpha is always 0 as minifb ignores it
+  #[inline(always)]
+  pub fn to_packed_0rgb(self) -> u32 {
+    let r = (self.r.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;
+    let g = (self.g.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;
+    let b = (self.b.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;
+    (r << 16) | (g << 8) | b
+  }
+
+  /// Create a random RGB colour
+  pub fn rand() -> Self {
+    let r = rand::random_range(0.0..1.0);
+    let g = rand::random_range(0.0..1.0);
+    let b = rand::random_range(0.0..1.0);
+    Self::new(r, g, b)
+  }
+}
+
+impl Mul<f32> for Colour {
+  type Output = Self;
+  fn mul(self, s: f32) -> Self {
+    Self::new(self.r * s, self.g * s, self.b * s)
+  }
+}
+
+impl Mul<f64> for Colour {
+  type Output = Self;
+  fn mul(self, s: f64) -> Self {
+    let sf32 = s as f32;
+    Self::new(self.r * sf32, self.g * sf32, self.b * sf32)
+  }
+}
+
+impl Mul<Self> for Colour {
+  type Output = Self;
+  fn mul(self, c: Self) -> Self {
+    Self::new(self.r * c.r, self.g * c.g, self.b * c.b)
+  }
+}
+
+impl Add for Colour {
+  type Output = Self;
+  fn add(self, c: Self) -> Self {
+    Self::new(self.r + c.r, self.g + c.g, self.b + c.b)
+  }
+}
+
+impl MulAssign<f32> for Colour {
+  fn mul_assign(&mut self, s: f32) {
+    *self = *self * s;
+  }
+}
+
+impl MulAssign<f64> for Colour {
+  fn mul_assign(&mut self, s: f64) {
+    *self = *self * s;
+  }
+}
+
+impl MulAssign<Self> for Colour {
+  fn mul_assign(&mut self, c: Self) {
+    *self = *self * c;
+  }
+}
+
+impl AddAssign<Self> for Colour {
+  fn add_assign(&mut self, c: Self) {
+    *self = *self + c;
+  }
+}

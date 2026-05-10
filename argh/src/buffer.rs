@@ -30,7 +30,7 @@ impl Buffer {
 
   #[inline(always)]
   pub fn clear(&mut self, colour: Colour) {
-    self.pixels.fill(colour.as_u32());
+    self.pixels.fill(colour.to_packed_0rgb());
     self.clear_depth();
   }
 
@@ -42,7 +42,7 @@ impl Buffer {
   #[inline(always)]
   pub fn set_pixel(&mut self, x: usize, y: usize, c: Colour) {
     if x < self.w && y < self.h {
-      self.pixels[y * self.w + x] = c.as_u32();
+      self.pixels[y * self.w + x] = c.to_packed_0rgb();
     }
   }
 
@@ -50,18 +50,17 @@ impl Buffer {
   pub fn set_pixel_depth(&mut self, x: usize, y: usize, c: Colour, z: f32) {
     let idx = y * self.w + x;
     if x < self.w && y < self.h && z < self.depth[idx] {
-      self.pixels[idx] = c.as_u32();
+      self.pixels[idx] = c.to_packed_0rgb();
       self.depth[idx] = z;
     }
   }
 
   #[inline(always)]
   pub fn fill_rect(&mut self, x: usize, y: usize, w: usize, h: usize, c: Colour) {
-    let colour = c.as_u32();
     for row in y..((y + h).min(self.h)) {
       let start = row * self.w + x.min(self.w);
       let end = row * self.w + (x + w).min(self.w);
-      self.pixels[start..end].fill(colour);
+      self.pixels[start..end].fill(c.to_packed_0rgb());
     }
   }
 
@@ -147,7 +146,7 @@ impl Buffer {
 
           if row & (1 << (w - ci - 1)) != 0 {
             if ci + x < self.w {
-              self.pixels[(ri + y) * self.w + ci + x] = c.as_u32();
+              self.pixels[(ri + y) * self.w + ci + x] = c.to_packed_0rgb();
             }
           }
         }

@@ -54,6 +54,15 @@ impl Quat {
     }
   }
 
+  /// Rotate a vector by this quaternion. Assumes quat is unit length.
+  pub fn rotate_vec3(&self, v: Vec3) -> Vec3 {
+    // Optimised form: v' = v + 2*q.xyz × (q.xyz × v + q.w * v)
+    // Avoids constructing q⁻¹ and doing two full quaternion multiplies.
+    let q_xyz = Vec3 { x: self.x, y: self.y, z: self.z };
+    let t = q_xyz.cross(v) * 2.0;
+    v + t * self.w + q_xyz.cross(t)
+  }
+
   /// Rotate around the local X axis by given angle (post-multiplies self by R_x(a))
   pub fn rot_x(&mut self, a: f64) {
     let half = a * 0.5;

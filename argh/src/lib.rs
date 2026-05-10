@@ -38,5 +38,8 @@ pub mod models;
 /// Very basic text rendering
 pub mod text;
 
-/// Camera
+/// Positionable Camera with look-at and FOV
 pub mod camera;
+
+/// Light source with position & colour
+pub mod light;
