@@ -110,6 +110,7 @@ impl Mat4 {
   /// * `aspect` - Aspect ratio of the camera
   /// * `near`   - Near clipping plane
   /// * `far`    - Far clipping plane
+  ///
   /// Clip space is (-w, -w, 0) to (w, w, w) on all three axis
   pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Result<Self, Mat4Error> {
     if near == 0.0 {

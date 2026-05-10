@@ -677,10 +677,6 @@ fn test_mul_general_matrix_vec_hand_computed() {
 // Top two rows project x/y; near/far only affect depth and clip.w.
 // ============================================================================
 
-fn vec4_approx_eq(a: &Vec4, b: &Vec4) -> bool {
-  approx_eq(a.x, b.x) && approx_eq(a.y, b.y) && approx_eq(a.z, b.z) && approx_eq(a.w, b.w)
-}
-
 #[test]
 fn test_new_perspective_layout_for_right_handed_minus_z() {
   let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 1.0, 100.0).unwrap();
