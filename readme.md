@@ -21,11 +21,12 @@ Features:
   - Rendering pipeline for meshes, with z-buffering and clipping
   - Cameras with perspective
   - Simple meshes, materials, & textures (no texture mapping yet)
+  - Generators for cubes and spheres
 - Methods for drawing 2D primitives, pixels, lines, text
 
 ## Examples
 
-<video src="https://github.com/user-attachments/assets/e639d19f-9a14-4cda-a8a5-82f5b547616e" controls></video>
+<video src="https://github.com/user-attachments/assets/d7c25032-ad3b-451b-be79-cd355bc293eb" controls></video>
 
 ## Usage
 
