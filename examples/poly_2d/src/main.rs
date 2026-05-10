@@ -1,6 +1,7 @@
+use std::f64::consts::PI;
+
 use argh::colour::{BLACK, Colour};
 use argh::engine::{Engine, Scene};
-use argh::helpers;
 use argh::math::{Mat3, Vec2};
 use rand::random_range;
 
@@ -37,7 +38,7 @@ fn main() {
 
   for _ in 0..200 {
     let p = Poly {
-      points: helpers::simple_poly(random_range(3..7), 20.0),
+      points: simple_poly(random_range(3..7), 20.0),
       scale: random_range(1.0..3.0),
       speed: random_range(1.0..3.0),
       trans: Vec2 {
@@ -51,4 +52,21 @@ fn main() {
   }
 
   e.start(s);
+}
+
+/// Construct a basic regular polygon, triangle, square, pentagon, hexagon etc
+fn simple_poly(count: u32, size: f64) -> Vec<Vec2> {
+  let mut out = vec![];
+  if count < 3 {
+    return out;
+  }
+
+  for i in 0..count {
+    let mut p = Vec2::new(size, 0.0);
+    p.rotate(((2.0 * PI) / count as f64) * i as f64);
+    out.push(p);
+  }
+  out.push(Vec2::new(size, 0.0));
+
+  out
 }

@@ -33,6 +33,14 @@ pub struct Engine {
   pub debug: bool,
 }
 
+#[derive(Copy, Clone)]
+pub struct ScreenVertex {
+  pub x: f64,     // pixel coordinate, [0, width]
+  pub y: f64,     // pixel coordinate, [0, height], origin top-left
+  pub z: f64,     // NDC depth, typically [-1, +1] (OpenGL convention, near=-1, far=+1)
+  pub inv_w: f64, // 1/w from clip space, for perspective-correct interp
+}
+
 impl Engine {
   /// Constructor for a new Engine
   /// # Arguments
@@ -63,6 +71,7 @@ impl Engine {
   }
 
   /// Clear the entire window and buffer with the given colour
+  /// Also clears the depth buffer
   pub fn clear(&mut self, colour: Colour) {
     self.buffer.clear(colour);
   }
@@ -72,11 +81,13 @@ impl Engine {
     (self.win_size.0, self.win_size.1)
   }
 
+  /// Get the aspect ratio of the viewport and window
   pub fn get_aspect(&self) -> f64 {
     self.aspect
   }
 
   /// Get the current time in seconds
+  #[inline(always)]
   pub fn t(&self) -> f64 {
     self.t
   }
@@ -86,6 +97,7 @@ impl Engine {
   /// * `x` - X position of pixel
   /// * `y` - Y position of pixel
   /// * `colour` - New colour of the pixel
+  #[inline(always)]
   pub fn set_pixel(&mut self, x: usize, y: usize, colour: Colour) {
     self.buffer.set_pixel(x, y, colour);
   }
@@ -144,7 +156,7 @@ impl Engine {
     }
   }
 
-  /// Draw a filled rectangle
+  /// Draw a filled 2D rectangle
   /// # Arguments
   /// * `x` - X coord of top left corner of rectangle
   /// * `y` - Y coord of top left corner of rectangle
@@ -155,7 +167,7 @@ impl Engine {
     self.buffer.fill_rect(x, y, w, h, colour);
   }
 
-  /// Draw a line between two points
+  /// Draw a 2D line between two points
   pub fn draw_line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, colour: Colour) {
     let mut x0 = x0;
     let mut y0 = y0;
@@ -197,96 +209,76 @@ impl Engine {
     }
   }
 
-  /// Fill a triangle between three Vec2 points which form a triangle
-  pub fn fill_triangle(&mut self, v0: Vec2, v1: Vec2, v2: Vec2, colour: Colour) {
-    // The ordering in this method seems to work with CCW winding and back face culling
-    let min_x = (v1.x.min(v0.x).min(v2.x).max(0.0)) as i32;
-    let min_y = (v1.y.min(v0.y).min(v2.y).max(0.0)) as i32;
-    let max_x = (v1.x.max(v0.x).max(v2.x).min(self.buffer.w() as f64 - 1.0)) as i32;
-    let max_y = (v1.y.max(v0.y).max(v2.y).min(self.buffer.h() as f64 - 1.0)) as i32;
-
-    let p0 = Vec2 { x: min_x as f64, y: min_y as f64 };
-
-    // Edge values at top-left of bounding box
-    let mut w0_row = helpers::edge_function(&v0, &v2, &p0);
-    let mut w1_row = helpers::edge_function(&v2, &v1, &p0);
-    let mut w2_row = helpers::edge_function(&v1, &v0, &p0);
-
-    // Step amounts: how much each edge value changes per pixel
-    let dx0 = (v0.y - v2.y) as i32;
-    let dx1 = (v2.y - v1.y) as i32;
-    let dx2 = (v1.y - v0.y) as i32;
-
-    let dy0 = (v2.x - v0.x) as i32;
-    let dy1 = (v1.x - v2.x) as i32;
-    let dy2 = (v0.x - v1.x) as i32;
-
-    for y in min_y..=max_y {
-      let mut w0 = w0_row;
-      let mut w1 = w1_row;
-      let mut w2 = w2_row;
-
-      for x in min_x..=max_x {
-        if (w0 | w1 | w2) >= 0 {
-          self.buffer.set_pixel(x as usize, y as usize, colour);
-        }
-        w0 += dx0;
-        w1 += dx1;
-        w2 += dx2;
-      }
-
-      w0_row += dy0;
-      w1_row += dy1;
-      w2_row += dy2;
-    }
-  }
-
-  pub fn render_mesh(&mut self, cam: &Camera, m: &Mesh) {
-    let (w, h) = self.get_size();
-
+  /// Renders a 3D mesh onto the screen from given camera position
+  pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
     // --- 1. Build M, V, P and compose ---
-    // Spin the cube around Y so we can see the perspective working
+    let mvp = cam.pers_mat * cam.view_mat * mesh.get_model_mat();
 
-    // let proj = Mat4::new_perspective(60f64.to_radians(), aspect, 0.1, 100.0);
-    let mvp = cam.pers_mat * cam.view_mat * m.get_model_mat();
-
-    // --- 2. Transform every unique vert ONCE ---
-    let clip: Vec<Vec4> = m.verts.iter().map(|v| mvp * &Vec4::new(v.x, v.y, v.z, 1.0)).collect();
-
-    // --- 3. Perspective divide + viewport map ---
-    // Keep z separately so we can back-face cull and (later) depth-sort.
-    let screen: Vec<(Vec2, f64)> = clip
+    // --- 2. Transform every unique vert ONCE; compute outcode at the same time. ---
+    let clip_verts: Vec<(Vec4, u8)> = mesh
+      .verts
       .iter()
-      .map(|c| {
-        let inv_w = 1.0 / c.w;
-        let ndc_x = c.x * inv_w;
-        let ndc_y = c.y * inv_w;
-        let ndc_z = c.z * inv_w;
-        // Viewport: NDC [-1,+1] -> pixels. Flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * w as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * h as f64; // Flip Y here
-        (Vec2 { x: sx, y: sy }, ndc_z)
+      .map(|v| {
+        let cv = mvp * &Vec4::new(v.x, v.y, v.z, 1.0);
+        let outcode = helpers::compute_outcode(&cv);
+        (cv, outcode)
       })
       .collect();
 
-    // --- 4. Walk the index list, cull, raster ---
-    for tri in m.indices.chunks(3) {
-      let (a, _) = screen[tri[0] as usize];
-      let (b, _) = screen[tri[1] as usize];
-      let (c, _) = screen[tri[2] as usize];
+    // --- 3. Perspective divide + viewport map ---
+    // Keep z separately so we can back-face cull and (later) depth-sort.
+    let screen_verts: Vec<ScreenVertex> = clip_verts
+      .iter()
+      .map(|clip_vert_data| {
+        let vert = clip_vert_data.0;
+        let inv_w = 1.0 / vert.w;
+        let ndc_x = vert.x * inv_w;
+        let ndc_y = vert.y * inv_w;
+        let ndc_z = vert.z * inv_w;
+        // Viewport: NDC [-1,+1] -> pixels. Flip Y because screen origin is top-left.
+        let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
+        ScreenVertex { x: sx, y: sy, z: ndc_z, inv_w }
+      })
+      .collect();
 
-      // 2D back-face cull. Signed area of the screen-space triangle.
-      let area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    // --- 4. Walk the index list (3 at a time for triangles), cull, raster ---
+    for tri in mesh.indices.chunks(3) {
+      let i0 = tri[0] as usize;
+      let i1 = tri[1] as usize;
+      let i2 = tri[2] as usize;
+      let sv0 = screen_verts[i0];
+      let sv1 = screen_verts[i1];
+      let sv2 = screen_verts[i2];
+
+      // Trivial reject: all three vertices outside the SAME plane.
+      let combined_out = clip_verts[i0].1 & clip_verts[i1].1 & clip_verts[i2].1;
+      if combined_out != 0 {
+        continue;
+      }
+      // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
+      // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
+      let any_near = (clip_verts[i0].1 | clip_verts[i1].1 | clip_verts[i2].1) & helpers::OUT_NEAR;
+      if any_near != 0 {
+        continue;
+      }
+
+      // Back-face cull. We use Y-flipped screen space (origin top-left), so the
+      // signed area test is inverted from the textbook OpenGL test:
+      //   - Front faces (mesh CCW in 3D) have NEGATIVE area in screen space
+      //   - Back faces (mesh CW or back of CCW) have POSITIVE area
+      // We discard anything non-negative.
+      let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
       if area >= 0.0 {
         continue;
       }
 
-      let colour = match &m.material {
+      let colour = match &mesh.material {
         None => WHITE,
         Some(m) => m.texture.get_colour_at(0.0, 0.0),
       };
 
-      self.fill_triangle(a, b, c, colour);
+      self.buffer.fill_triangle(sv0, sv1, sv2, colour);
     }
   }
 }

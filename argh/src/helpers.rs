@@ -1,31 +1,46 @@
 // ==============================================================================================
 // Module & file:   helpers.rs
-// Purpose:         Helper functions for generating geometry such as regular polygons
+// Purpose:         INTERNAL - Helper functions
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:
 // ==============================================================================================
 
-use crate::math::Vec2;
-use std::f64::consts::PI;
+use crate::{engine::*, math::*};
 
-/// Construct a basic regular polygon, triangle, square, pentagon, hexagon etc
-pub fn simple_poly(count: u32, size: f64) -> Vec<Vec2> {
-  let mut out = vec![];
-  if count < 3 {
-    return out;
-  }
+// One bit per frustum plane
+pub(crate) const OUT_LEFT: u8 = 1 << 0;
+pub(crate) const OUT_RIGHT: u8 = 1 << 1;
+pub(crate) const OUT_BOTTOM: u8 = 1 << 2;
+pub(crate) const OUT_TOP: u8 = 1 << 3;
+pub(crate) const OUT_NEAR: u8 = 1 << 4;
+pub(crate) const OUT_FAR: u8 = 1 << 5;
 
-  for i in 0..count {
-    let mut p = Vec2::new(size, 0.0);
-    p.rotate(((2.0 * PI) / count as f64) * i as f64);
-    out.push(p);
-  }
-  out.push(Vec2::new(size, 0.0));
-
-  out
+#[inline(always)]
+pub fn edge_function(a: ScreenVertex, b: ScreenVertex, px: f64, py: f64) -> f64 {
+  (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
 }
 
-pub fn edge_function(a: &Vec2, b: &Vec2, p: &Vec2) -> i32 {
-  ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) as i32
+#[inline(always)]
+pub fn compute_outcode(v: &Vec4) -> u8 {
+  let mut code = 0u8;
+  if v.x + v.w < 0.0 {
+    code |= OUT_LEFT;
+  }
+  if v.w - v.x < 0.0 {
+    code |= OUT_RIGHT;
+  }
+  if v.y + v.w < 0.0 {
+    code |= OUT_BOTTOM;
+  }
+  if v.w - v.y < 0.0 {
+    code |= OUT_TOP;
+  }
+  if v.z + v.w < 0.0 {
+    code |= OUT_NEAR;
+  }
+  if v.w - v.z < 0.0 {
+    code |= OUT_FAR;
+  }
+  code
 }

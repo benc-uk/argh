@@ -12,16 +12,20 @@ ARGH is a learning project to build a software renderer in Rust. It is not inten
 
 Features:
 
-- Window and framebuffer creation handled for you, backed by [minifb](https://docs.rs/minifb/latest/minifb/)
+- Window and framebuffer backed by [minifb](https://docs.rs/minifb/latest/minifb/)
 - Entirely software (CPU) based rendering loop and buffer operations
-- Maths libraries for vectors and matrices
+- Core maths libraries for vectors and matrices & quaternions implemented from scratch
 - Simple scene management
-- Methods for drawing 2d primitives, pixels, lines and polygons
-- 3D coming soon!
+- 3D Stuff
+  - Matrix operations for affine transforms
+  - Rendering pipeline for meshes, with z-buffering and clipping
+  - Cameras with perspective
+  - Simple meshes, materials, & textures (no texture mapping yet)
+- Methods for drawing 2D primitives, pixels, lines, text
 
 ## Examples
 
-![screenshot](misc/image_001.png)
+<video src="https://github.com/user-attachments/assets/e639d19f-9a14-4cda-a8a5-82f5b547616e" controls></video>
 
 ## Usage
 
