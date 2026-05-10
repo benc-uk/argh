@@ -21,6 +21,7 @@ pub fn edge_function(a: ScreenVertex, b: ScreenVertex, px: f64, py: f64) -> f64 
   (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
 }
 
+/// Don't ask me to explain this one!
 #[inline(always)]
 pub fn compute_outcode(v: &Vec4) -> u8 {
   let mut code = 0u8;
@@ -36,7 +37,7 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
   if v.w - v.y < 0.0 {
     code |= OUT_TOP;
   }
-  if v.z + v.w < 0.0 {
+  if v.z < 0.0 {
     code |= OUT_NEAR;
   }
   if v.w - v.z < 0.0 {

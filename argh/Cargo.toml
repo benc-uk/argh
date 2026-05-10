@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 minifb = "0.28"
 rand = "0.10.1"
+thiserror = "2.0.18"
 
 [lints.clippy]
 collapsible-if = "allow"

@@ -18,7 +18,7 @@ Features:
 - Simple scene management
 - 3D Stuff
   - Matrix operations for affine transforms
-  - Rendering pipeline for meshes, with z-buffering and clipping
+  - Rendering pipeline for meshes, with z-buffering and simple clipping (no Sutherland-Hodgman)
   - Cameras with perspective
   - Simple meshes, materials, & textures (no texture mapping yet)
   - Generators for cubes and spheres
@@ -58,6 +58,16 @@ fn main() {
 ## Reference
 
 - [Library API reference docs here](https://code.benco.io/argh/argh/index.html)
+
+## Technical Notes
+
+Computer graphics conventions and followed internally by this engine, most are the same as OpenGL, except clip space:
+
+- Screen space has [x: 0, y:0] as top-left corner of the viewport. So Y increases downward
+- We use a right handed coordinate system
+  - Camera will be looking down the negative Z-axis; -Z is further away, +Z closer (or behind)
+- CCW for vertices in triangle meshes
+- Clip space z range is [0, +w] (NDC z is [0, +1] after perspective divide), unlike OpenGL's [-w, +w] / [-1, +1]
 
 ## Building and Running Locally
 

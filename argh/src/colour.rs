@@ -36,9 +36,9 @@ impl Colour {
   /// Create a new Colour from given u8 RGB values (0 - 255)
   pub const fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
     Self {
-      r: r as f32,
-      g: g as f32,
-      b: b as f32,
+      r: r as f32 / 255.0,
+      g: g as f32 / 255.0,
+      b: b as f32 / 255.0,
     }
   }
 

@@ -40,7 +40,7 @@ pub struct Engine {
 pub struct ScreenVertex {
   pub x: f64,     // pixel coordinate, [0, width]
   pub y: f64,     // pixel coordinate, [0, height], origin top-left
-  pub z: f64,     // NDC depth, typically [-1, +1] (OpenGL convention, near=-1, far=+1)
+  pub z: f64,     // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
   pub inv_w: f64, // 1/w from clip space, for perspective-correct interp
 }
 
@@ -240,7 +240,8 @@ impl Engine {
     let vp = cam.pers_mat * cam.view_mat;
 
     // --- 2 Apply model matrix M to transform model verts into world space. We'll use them later  ---
-    let world_verts: Vec<Vec3> = mesh.verts.iter().map(|v| mesh.get_model_mat() * v).collect();
+    let model_mat = mesh.get_model_mat();
+    let world_verts: Vec<Vec3> = mesh.verts.iter().map(|v| model_mat * v).collect();
 
     // --- 3. Transform every unique vert ONCE; compute outcode at the same time. ---
     let clip_verts: Vec<(Vec4, u8)> = world_verts

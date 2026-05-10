@@ -683,7 +683,7 @@ fn vec4_approx_eq(a: &Vec4, b: &Vec4) -> bool {
 
 #[test]
 fn test_new_perspective_layout_for_right_handed_minus_z() {
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 1.0, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 1.0, 100.0).unwrap();
   // [2][3] should be -1 (this drives clip.w = -z_view)
   assert!(approx_eq(p.ele[2][3], -1.0));
   // [3][3] should be 0 (a true projection, not affine)
@@ -696,7 +696,7 @@ fn test_new_perspective_layout_for_right_handed_minus_z() {
 #[test]
 fn test_new_perspective_fov_90_unit_aspect_xy_scale_is_one() {
   // tan(45) = 1, so cotangent is 1. For 90deg fovy with aspect=1, [0][0] and [1][1] should both be 1
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0).unwrap();
   assert!(approx_eq(p.ele[0][0], 1.0));
   assert!(approx_eq(p.ele[1][1], 1.0));
 }
@@ -704,30 +704,30 @@ fn test_new_perspective_fov_90_unit_aspect_xy_scale_is_one() {
 #[test]
 fn test_new_perspective_aspect_scales_x_only() {
   // Aspect 2.0 (wide): [0][0] = f/aspect, [1][1] = f. So x-scale is half y-scale.
-  let p = Mat4::new_perspective(FRAC_PI_2, 2.0, 0.1, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 2.0, 0.1, 100.0).unwrap();
   assert!(approx_eq(p.ele[0][0], 0.5));
   assert!(approx_eq(p.ele[1][1], 1.0));
 }
 
 #[test]
-fn test_new_perspective_z_near_maps_to_minus_one_in_ndc() {
-  // A point at view-space z = -near should land on the near plane (NDC z = -1)
+fn test_new_perspective_z_near_maps_to_zero_in_ndc() {
+  // A point at view-space z = -near should land on the near plane (NDC z = 0)
   let near = 0.5;
   let far = 100.0;
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far).unwrap();
   // View-space point on the camera's forward ray, at z = -near
   let v_view = Vec4::new(0.0, 0.0, -near, 1.0);
   let clip = p * &v_view;
   // After perspective divide
   let ndc_z = clip.z / clip.w;
-  assert!(approx_eq(ndc_z, -1.0));
+  assert!(approx_eq(ndc_z, 0.0));
 }
 
 #[test]
 fn test_new_perspective_z_far_maps_to_plus_one_in_ndc() {
   let near = 0.5;
   let far = 100.0;
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far).unwrap();
   let v_view = Vec4::new(0.0, 0.0, -far, 1.0);
   let clip = p * &v_view;
   let ndc_z = clip.z / clip.w;
@@ -738,7 +738,7 @@ fn test_new_perspective_z_far_maps_to_plus_one_in_ndc() {
 fn test_new_perspective_clip_w_equals_minus_z_view() {
   // The classic perspective trick: clip.w receives -z_view via the [2][3] = -1 entry.
   // For an arbitrary view-space point this must hold.
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.6, 0.1, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.6, 0.1, 100.0).unwrap();
   let v = Vec4::new(2.0, -3.0, -7.5, 1.0);
   let clip = p * &v;
   assert!(approx_eq(clip.w, -v.z));
@@ -748,7 +748,7 @@ fn test_new_perspective_clip_w_equals_minus_z_view() {
 fn test_new_perspective_centre_axis_projects_to_origin() {
   // A point on the camera's forward ray (x=y=0) projects to the centre of the
   // screen no matter how far it is.
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0).unwrap();
   for &z in &[-0.2, -1.0, -10.0, -50.0] {
     let clip = p * &Vec4::new(0.0, 0.0, z, 1.0);
     let inv_w = 1.0 / clip.w;
@@ -763,7 +763,7 @@ fn test_new_perspective_centre_axis_projects_to_origin() {
 fn test_new_perspective_foreshortening_scales_with_distance() {
   // Same x at farther z should produce smaller ndc_x. Specifically with fov=90
   // and aspect=1, ndc_x = x / -z. Verify the ratio.
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0).unwrap();
   let near_pt = p * &Vec4::new(1.0, 0.0, -1.0, 1.0);
   let far_pt = p * &Vec4::new(1.0, 0.0, -10.0, 1.0);
   let ndc_near_x = near_pt.x / near_pt.w;
@@ -776,8 +776,8 @@ fn test_new_perspective_foreshortening_scales_with_distance() {
 #[test]
 fn test_new_perspective_changing_far_does_not_change_xy_projection() {
   // Pin: x/y outputs depend only on fovy and aspect, not on near/far
-  let p1 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.1, 50.0);
-  let p2 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.1, 5000.0);
+  let p1 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.1, 50.0).unwrap();
+  let p2 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.1, 5000.0).unwrap();
   let v = Vec4::new(0.7, -0.3, -2.0, 1.0);
   let c1 = p1 * &v;
   let c2 = p2 * &v;
@@ -787,8 +787,8 @@ fn test_new_perspective_changing_far_does_not_change_xy_projection() {
 
 #[test]
 fn test_new_perspective_changing_near_does_not_change_xy_projection() {
-  let p1 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.01, 100.0);
-  let p2 = Mat4::new_perspective(FRAC_PI_4, 1.6, 5.0, 100.0);
+  let p1 = Mat4::new_perspective(FRAC_PI_4, 1.6, 0.01, 100.0).unwrap();
+  let p2 = Mat4::new_perspective(FRAC_PI_4, 1.6, 5.0, 100.0).unwrap();
   let v = Vec4::new(0.7, -0.3, -10.0, 1.0);
   let c1 = p1 * &v;
   let c2 = p2 * &v;
@@ -799,7 +799,7 @@ fn test_new_perspective_changing_near_does_not_change_xy_projection() {
 #[test]
 fn test_new_perspective_off_axis_xy_scaling() {
   // With fovy = 90 deg, a point at (1, 1, -1) should land at ndc (1, 1).
-  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let p = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0).unwrap();
   let clip = p * &Vec4::new(1.0, 1.0, -1.0, 1.0);
   let ndc_x = clip.x / clip.w;
   let ndc_y = clip.y / clip.w;
@@ -988,7 +988,7 @@ fn test_look_at_then_perspective_pipeline_smoke() {
   // End-to-end smoke test: a model-space point through view * projection
   // should produce sensible NDC coordinates in [-1, 1].
   let view = Mat4::new_look_at(Vec3::new(0.0, 0.0, 5.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0));
-  let proj = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let proj = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0).unwrap();
   let mvp = proj * view;
   // A point at world origin: 5 units in front of the camera
   let clip = mvp * &Vec4::new(0.0, 0.0, 0.0, 1.0);
@@ -1006,7 +1006,7 @@ fn test_look_at_pipeline_off_centre_point() {
   // A point at world (1, 0, 0) seen from camera at (0, 0, 5) should appear
   // to the right of centre on screen (positive ndc_x).
   let view = Mat4::new_look_at(Vec3::new(0.0, 0.0, 5.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0));
-  let proj = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0);
+  let proj = Mat4::new_perspective(FRAC_PI_2, 1.0, 0.1, 100.0).unwrap();
   let mvp = proj * view;
   let clip = mvp * &Vec4::new(1.0, 0.0, 0.0, 1.0);
   let ndc_x = clip.x / clip.w;

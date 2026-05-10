@@ -20,10 +20,16 @@ pub struct Light {
 }
 
 impl Light {
+  /// Create a light
+  /// # Arguments:
+  /// * `pos` - Position in world space of the light
+  /// * `brightness` - Scales the brightness of the the light 0-1
+  /// * `colour` - Light colour
   pub fn new(pos: Vec3, brightness: f64, colour: Colour) -> Self {
     Self { pos, brightness, colour }
   }
 
+  /// Create a default light at [0,0,0] with white colour and full brightness
   pub fn new_default() -> Self {
     Self {
       pos: VEC3_ZERO,

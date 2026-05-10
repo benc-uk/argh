@@ -22,6 +22,12 @@ pub struct Mat4 {
   ele: [[f64; 4]; 4],
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum Mat4Error {
+  #[error("near plane cannot be zero")]
+  NearPlaneZero,
+}
+
 impl Mat4 {
   /// New identity matrix
   pub fn new() -> Self {
@@ -104,17 +110,23 @@ impl Mat4 {
   /// * `aspect` - Aspect ratio of the camera
   /// * `near`   - Near clipping plane
   /// * `far`    - Far clipping plane
-  pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Self {
+  /// Clip space is (-w, -w, 0) to (w, w, w) on all three axis
+  pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Result<Self, Mat4Error> {
+    if near == 0.0 {
+      return Err(Mat4Error::NearPlaneZero);
+    }
+
     let f = 1.0 / (fovy * 0.5).tan(); // cotangent of half-FOV
     let nf = 1.0 / (near - far);
 
     let mut m = Self::zero();
     m.ele[0][0] = f / aspect; // x scale
     m.ele[1][1] = f; // y scale
-    m.ele[2][2] = (far + near) * nf; // z remap
+    m.ele[2][2] = far * nf; // z remap
     m.ele[2][3] = -1.0; // copies -z_view into clip.w (this is the "perspective" bit)
-    m.ele[3][2] = 2.0 * far * near * nf; // z offset
-    m
+    m.ele[3][2] = far * near * nf; // z offset
+
+    Ok(m)
   }
 
   /// Create a right-handed view matrix that places the camera at `eye`, pointing at `target`. Transforms world-space points into view space (camera at origin, looking down -Z).

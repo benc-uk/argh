@@ -35,6 +35,9 @@ pub mod engine;
 /// Models, meshes, textures, materials and 3D objects
 pub mod models;
 
+/// Models, meshes, textures, materials and 3D objects
+pub mod primitives;
+
 /// Very basic text rendering
 pub mod text;
 
