@@ -129,7 +129,7 @@ impl Engine {
 
     // Lights check
     if self.lights.is_empty() {
-      println!("You have added no lights, mesh rendering will show nothing")
+      println!("You have added no lights, there will be no shading just flat colours!")
     }
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
@@ -207,7 +207,7 @@ impl Engine {
     }
   }
 
-  /// Draw a series of lines between a list of Vec2 points, designed for drawing a polygon but this method does not ensure the shape is closed
+  /// Draw a series of 2D lines between a list of Vec2 points, designed for drawing a polygon but this method does not ensure the shape is closed
   pub fn draw_poly_line(&mut self, points: Vec<Vec2>, colour: Colour) {
     for p in 0..points.len() {
       if p + 1 >= points.len() {
@@ -218,18 +218,13 @@ impl Engine {
     }
   }
 
-  /// Add a light to the scene
+  /// Add a light to the scene, used by 3D rendering
   pub fn add_light(&mut self, light: Light) {
     self.lights.push(light);
   }
 
   /// Renders a 3D mesh onto the screen from given camera position
   pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
-    // Early exit if scene has no lights
-    if self.lights.is_empty() {
-      return;
-    }
-
     // Get the colour of the mesh
     let colour = match &mesh.material {
       None => WHITE,
@@ -310,13 +305,19 @@ impl Engine {
       }
 
       // Shading & lighting
-      let world_v = (wv0 + wv1 + wv2) / 3.0; // Centroid of the triangle in world space
       let mut light_col_sum = BLACK;
-      for light in &self.lights {
-        let l = (light.pos - world_v).normalize_new();
-        let diff = n.dot(l);
-        let col = light.colour * light.brightness * diff;
-        light_col_sum += col;
+      if !self.lights.is_empty() {
+        let world_v = (wv0 + wv1 + wv2) / 3.0; // Centroid of the triangle in world space
+
+        for light in &self.lights {
+          let l = (light.pos - world_v).normalize_new();
+          let diff = n.dot(l);
+          let col = light.colour * light.brightness * diff;
+          light_col_sum += col;
+        }
+      } else {
+        // I figured this was a better fallback than a totally black window!
+        light_col_sum = WHITE;
       }
 
       let out_colour = colour * light_col_sum;
