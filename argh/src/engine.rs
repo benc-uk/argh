@@ -36,12 +36,21 @@ pub struct Engine {
   pub debug: bool,
 }
 
+// This is used internally to represent a vertex transformed into screen space (after perspective divide)
+// It's a hybrid of x & Y being screen pixel values, and z being a float representing depth in 0-1 range
 #[derive(Copy, Clone)]
 pub struct ScreenVertex {
   pub x: f64,     // pixel coordinate, [0, width]
   pub y: f64,     // pixel coordinate, [0, height], origin top-left
   pub z: f64,     // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
   pub inv_w: f64, // 1/w from clip space, for perspective-correct interp
+}
+
+// VertexOut collects various data from the processing of mesh vertex in the rendering pass, transformed ready for rasterization
+pub struct VertexOut {
+  world: Vec3,
+  screen: ScreenVertex,
+  outcode: u8,
 }
 
 impl Engine {
@@ -231,80 +240,83 @@ impl Engine {
       Some(m) => m.texture.get_colour_at(0.0, 0.0) * m.diffuse,
     };
 
-    // --- 1. Build view projection matrix VP ---
-    let vp = cam.pers_mat * cam.view_mat;
+    // 1. Combine MVP (model, view, perspective) matrix
+    let m = mesh.get_model_mat();
+    let mvp = cam.pers_mat * cam.view_mat * m;
 
-    // --- 2 Apply model matrix M to transform model verts into world space. We'll use them later  ---
-    let model_mat = mesh.get_model_mat();
-    let world_verts: Vec<Vec3> = mesh.verts.iter().map(|v| model_mat * v).collect();
-
-    // --- 3. Transform every unique vert ONCE; compute outcode at the same time. ---
-    let clip_verts: Vec<(Vec4, u8)> = world_verts
+    // 2. Process verts, into world space, clip space and screen space
+    let verts: Vec<VertexOut> = mesh
+      .verts
       .iter()
       .map(|v| {
-        let cv = vp * &Vec4::new(v.x, v.y, v.z, 1.0); // We use vp here not mvp
-        let outcode = helpers::compute_outcode(&cv);
-        (cv, outcode)
+        // World space
+        let world = m * v;
+
+        // Clip space
+        let clip = mvp * &Vec4::new(v.x, v.y, v.z, 1.0);
+
+        // Calc vertex is clipped or not
+        let outcode = helpers::compute_outcode(&clip);
+
+        // 1/w used for perspective and we store it for other reasons too
+        let inv_w = 1.0 / clip.w;
+
+        // NDCs to get us towards screen space
+        let ndc_x = clip.x * inv_w;
+        let ndc_y = clip.y * inv_w;
+        let ndc_z = clip.z * inv_w;
+        // Screen space is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
+        let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
+
+        // Finally output processed vert data bundle
+        VertexOut {
+          world,
+          screen: ScreenVertex { x: sx, y: sy, z: ndc_z, inv_w },
+          outcode,
+        }
       })
       .collect();
 
     let normals: Vec<Vec3> = mesh.normals.iter().map(|n| mesh.rot.rotate_vec3(*n)).collect();
 
-    // --- 4. Perspective divide + viewport map ---
-    // Keep z separately so we can back-face cull and (later) depth-sort.
-    let screen_verts: Vec<ScreenVertex> = clip_verts
-      .iter()
-      .map(|clip_vert_data| {
-        let vert = clip_vert_data.0;
-        let inv_w = 1.0 / vert.w;
-        let ndc_x = vert.x * inv_w;
-        let ndc_y = vert.y * inv_w;
-        let ndc_z = vert.z * inv_w;
-        // Viewport: NDC [-1,+1] -> pixels. Flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
-        ScreenVertex { x: sx, y: sy, z: ndc_z, inv_w }
-      })
-      .collect();
-
-    // --- 5. Walk the index list (3 at a time for triangles), cull, shade & raster ---
+    // 3. Walk the index list 3 at a time for triangles, cull, shade & rasterize
     for (tri_index, tri) in mesh.indices.chunks(3).enumerate() {
       let i0 = tri[0] as usize;
       let i1 = tri[1] as usize;
       let i2 = tri[2] as usize;
-      let sv0 = screen_verts[i0];
-      let sv1 = screen_verts[i1];
-      let sv2 = screen_verts[i2];
-      let wv0 = world_verts[i0];
-      let wv1 = world_verts[i1];
-      let wv2 = world_verts[i2];
+      let sv0 = verts[i0].screen;
+      let sv1 = verts[i1].screen;
+      let sv2 = verts[i2].screen;
+      let wv0 = verts[i0].world;
+      let wv1 = verts[i1].world;
+      let wv2 = verts[i2].world;
 
       // One per triangle
       let n = normals[tri_index];
 
       // Trivial reject: all three vertices outside the SAME plane.
-      let combined_out = clip_verts[i0].1 & clip_verts[i1].1 & clip_verts[i2].1;
+      let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
       if combined_out != 0 {
         continue;
       }
       // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
       // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
-      let any_near = (clip_verts[i0].1 | clip_verts[i1].1 | clip_verts[i2].1) & helpers::OUT_NEAR;
+      let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & helpers::OUT_NEAR;
       if any_near != 0 {
         continue;
       }
 
-      // Back-face cull. We use Y-flipped screen space (origin top-left), so the
-      // signed area test is inverted from the textbook OpenGL test:
-      //   - Front faces (mesh CCW in 3D) have NEGATIVE area in screen space
-      //   - Back faces (mesh CW or back of CCW) have POSITIVE area
-      // We discard anything non-negative.
+      // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
+      //  - Front faces (mesh CCW in 3D) have NEGATIVE area in screen space
+      //  - Back faces (mesh CW or back of CCW) have POSITIVE area
+      // So we discard anything non-negative.
       let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
       if area >= 0.0 {
         continue;
       }
 
-      // Shading & lighting
+      // Shading & lighting over multiple lights
       let mut light_col_sum = BLACK;
       if !self.lights.is_empty() {
         let world_v = (wv0 + wv1 + wv2) / 3.0; // Centroid of the triangle in world space
