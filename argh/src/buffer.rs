@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{colour::Colour, engine::ScreenVertex, helpers};
+use crate::{colour::Colour, engine::ScreenVert, helpers};
 
 /// Internal struct wrapping a Vec<u32> to be used with minifb update_with_buffer(), each u32 is a single pixel
 /// The encoding for each pixel is 0RGB: The upper 8-bits are ignored, the next 8-bits are for the red channel, the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
@@ -67,7 +67,7 @@ impl Buffer {
   /// Fill a 3D triangle between three ScreenVertex points which form a triangle
   /// Not public!
   #[inline(always)]
-  pub fn fill_triangle(&mut self, v0: ScreenVertex, v1: ScreenVertex, v2: ScreenVertex, colour: Colour) {
+  pub fn fill_triangle(&mut self, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, smooth: bool) {
     let area = helpers::edge_function(v1, v2, v0.x, v0.y);
     if area == 0.0 {
       return;
@@ -123,6 +123,13 @@ impl Buffer {
 
           // Linear depth interpolation (correct in screen space, no /w needed)
           let z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
+
+          let mut colour = v0.colour;
+          if smooth {
+            // Gouraud shading interpolates between colours at each vert
+            colour = v0.colour * b0 + v1.colour * b1 + v2.colour * b2;
+          }
+
           self.set_pixel_depth(x as usize, y as usize, colour, z as f32);
         }
         w0 += dx0;

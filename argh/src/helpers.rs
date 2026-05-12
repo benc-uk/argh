@@ -17,7 +17,7 @@ pub(crate) const OUT_NEAR: u8 = 1 << 4;
 pub(crate) const OUT_FAR: u8 = 1 << 5;
 
 #[inline(always)]
-pub fn edge_function(a: ScreenVertex, b: ScreenVertex, px: f64, py: f64) -> f64 {
+pub fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
   (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
 }
 

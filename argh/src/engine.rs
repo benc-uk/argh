@@ -39,17 +39,19 @@ pub struct Engine {
 // This is used internally to represent a vertex transformed into screen space (after perspective divide)
 // It's a hybrid of x & Y being screen pixel values, and z being a float representing depth in 0-1 range
 #[derive(Copy, Clone)]
-pub struct ScreenVertex {
-  pub x: f64,     // pixel coordinate, [0, width]
-  pub y: f64,     // pixel coordinate, [0, height], origin top-left
-  pub z: f64,     // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
-  pub inv_w: f64, // 1/w from clip space, for perspective-correct interp
+pub struct ScreenVert {
+  pub(crate) x: f64, // pixel coordinate, [0, width]
+  pub(crate) y: f64, // pixel coordinate, [0, height], origin top-left
+  pub(crate) z: f64, // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
+  // pub(crate) inv_w: f64,    // 1/w from clip space, for perspective-correct interp
+  pub(crate) colour: Colour, // Gouraud shading needs colour per vertex
 }
 
-// VertexOut collects various data from the processing of mesh vertex in the rendering pass, transformed ready for rasterization
-pub struct VertexOut {
+// VertexOut collects various data from the processing/transformation of mesh vertex in the rendering pass
+// It holds data ready for rasterization, shading etc
+pub struct ProcessedVert {
   world: Vec3,
-  screen: ScreenVertex,
+  screen: ScreenVert,
   outcode: u8,
 }
 
@@ -233,6 +235,7 @@ impl Engine {
   }
 
   /// Renders a 3D mesh onto the screen from given camera position
+  /// This triggers a rendering pipeline
   pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
     // Get the colour of the mesh
     let colour = match &mesh.material {
@@ -245,7 +248,7 @@ impl Engine {
     let mvp = cam.pers_mat * cam.view_mat * m;
 
     // 2. Process verts, into world space, clip space and screen space
-    let verts: Vec<VertexOut> = mesh
+    let verts: Vec<ProcessedVert> = mesh
       .verts
       .iter()
       .map(|v| {
@@ -270,9 +273,15 @@ impl Engine {
         let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
 
         // Finally output processed vert data bundle
-        VertexOut {
+        ProcessedVert {
           world,
-          screen: ScreenVertex { x: sx, y: sy, z: ndc_z, inv_w },
+          screen: ScreenVert {
+            x: sx,
+            y: sy,
+            z: ndc_z,
+            // inv_w,
+            colour: BLACK, // Mutated later
+          },
           outcode,
         }
       })
@@ -281,19 +290,19 @@ impl Engine {
     let normals: Vec<Vec3> = mesh.normals.iter().map(|n| mesh.rot.rotate_vec3(*n)).collect();
 
     // 3. Walk the index list 3 at a time for triangles, cull, shade & rasterize
-    for (tri_index, tri) in mesh.indices.chunks(3).enumerate() {
+    for tri in mesh.indices.chunks(3) {
       let i0 = tri[0] as usize;
       let i1 = tri[1] as usize;
       let i2 = tri[2] as usize;
-      let sv0 = verts[i0].screen;
-      let sv1 = verts[i1].screen;
-      let sv2 = verts[i2].screen;
+      let mut sv0 = verts[i0].screen;
+      let mut sv1 = verts[i1].screen;
+      let mut sv2 = verts[i2].screen;
       let wv0 = verts[i0].world;
       let wv1 = verts[i1].world;
       let wv2 = verts[i2].world;
-
-      // One per triangle
-      let n = normals[tri_index];
+      let n0 = normals[i0];
+      let n1 = normals[i1];
+      let n2 = normals[i2];
 
       // Trivial reject: all three vertices outside the SAME plane.
       let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
@@ -316,25 +325,30 @@ impl Engine {
         continue;
       }
 
-      // Shading & lighting over multiple lights
-      let mut light_col_sum = BLACK;
-      if !self.lights.is_empty() {
-        let world_v = (wv0 + wv1 + wv2) / 3.0; // Centroid of the triangle in world space
-
-        for light in &self.lights {
-          let l = (light.pos - world_v).normalize_new();
-          let diff = n.dot(l);
-          let col = light.colour * light.brightness * diff;
-          light_col_sum += col;
-        }
-      } else {
-        // I figured this was a better fallback than a totally black window!
-        light_col_sum = WHITE;
+      sv0.colour = shade_vert(&self.lights, wv0, n0) * colour;
+      if mesh.smooth {
+        sv1.colour = shade_vert(&self.lights, wv1, n1) * colour;
+        sv2.colour = shade_vert(&self.lights, wv2, n2) * colour;
       }
 
-      let out_colour = colour * light_col_sum;
-
-      self.buffer.fill_triangle(sv0, sv1, sv2, out_colour);
+      self.buffer.fill_triangle(sv0, sv1, sv2, mesh.smooth);
     }
   }
+}
+
+fn shade_vert(lights: &Vec<Light>, world: Vec3, normal: Vec3) -> Colour {
+  // Shading & lighting over multiple lights
+  let mut light_col_sum = BLACK;
+  if !lights.is_empty() {
+    for light in lights {
+      let l = (light.pos - world).normalize_new();
+      let diff = normal.dot(l);
+      let col = light.colour * light.brightness * diff;
+      light_col_sum += col;
+    }
+  } else {
+    // I figured this was a better fallback than a totally black window!
+    light_col_sum = WHITE;
+  }
+  light_col_sum
 }

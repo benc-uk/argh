@@ -63,13 +63,15 @@ impl Material {
 
 /// Simple 3D mesh of triangles using index
 pub struct Mesh {
-  pub(crate) verts: Vec<Vec3>,
-  pub(crate) indices: Vec<i32>,
-  pub(crate) material: Option<Material>,
-  pub(crate) normals: Vec<Vec3>, // Currently one per triangle
+  pub(crate) material: Option<Material>, // Surface material, colour etc
+  pub(crate) pos: Vec3,                  // Position
+  pub(crate) rot: Quat,                  // Rotation held as a Quat
 
-  pub(crate) pos: Vec3,
-  pub(crate) rot: Quat,
+  pub(crate) verts: Vec<Vec3>,   // Internal mesh vert position
+  pub(crate) normals: Vec<Vec3>, // Normal per vert
+  pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
+
+  pub smooth: bool,
 }
 
 impl Mesh {
@@ -81,6 +83,7 @@ impl Mesh {
       verts: vec![],
       indices: vec![],
       normals: vec![],
+      smooth: true,
     }
   }
   pub fn set_material(&mut self, m: Material) {

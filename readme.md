@@ -19,7 +19,8 @@ Features:
 - 3D Stuff
   - Matrix operations for affine transforms
   - Rendering pipeline for meshes, with z-buffering and simple clipping (no Sutherland-Hodgman)
-  - Cameras with perspective
+  - Diffuse illumination, & Gouraud shading
+  - Cameras with perspective projection
   - Simple meshes, materials, & textures (no texture mapping yet)
   - Generators for cubes and spheres
 - Methods for drawing 2D primitives, pixels, lines, text
