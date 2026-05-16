@@ -7,7 +7,7 @@
 // ==============================================================================================
 
 use crate::{
-  colour::Colour,
+  colour::{Colour, WHITE},
   math::{Mat4, Quat, VEC3_ZERO, Vec3},
 };
 
@@ -26,8 +26,14 @@ pub struct SimpleColourTexture {
 }
 
 impl SimpleColourTexture {
+  /// Create a texture with a single flat colour
   pub fn new(c: Colour) -> Self {
     Self { colour: c }
+  }
+
+  /// Modify the colour of this texture
+  pub fn set_colour(&mut self, c: Colour) {
+    self.colour = c
   }
 }
 
@@ -49,23 +55,24 @@ pub struct Material {
 }
 
 impl Material {
-  pub fn new(t: Box<dyn Texture>) -> Self {
+  pub fn new<T: Texture + 'static>(t: T) -> Self {
     Self {
       diffuse: 1.0,
       _spec: 1.0,
-      texture: t,
+      texture: Box::new(t),
     }
   }
 }
+
 // ===================================
 // Mesh
 // ===================================
 
 /// Simple 3D mesh of triangles using index
 pub struct Mesh {
-  pub(crate) material: Option<Material>, // Surface material, colour etc
-  pub(crate) pos: Vec3,                  // Position
-  pub(crate) rot: Quat,                  // Rotation held as a Quat
+  pub(crate) material: Material, // Surface material, colour etc
+  pub(crate) pos: Vec3,          // Position
+  pub(crate) rot: Quat,          // Rotation held as a Quat
 
   pub(crate) verts: Vec<Vec3>,   // Internal mesh vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
@@ -76,8 +83,10 @@ pub struct Mesh {
 
 impl Mesh {
   pub(crate) fn new() -> Self {
+    let tex = SimpleColourTexture::new(WHITE);
+    let mat = Material::new(tex);
     Self {
-      material: None,
+      material: mat,
       pos: VEC3_ZERO,
       rot: Quat::ident(),
       verts: vec![],
@@ -86,8 +95,13 @@ impl Mesh {
       smooth: true,
     }
   }
+
   pub fn set_material(&mut self, m: Material) {
-    self.material = Some(m);
+    self.material = m;
+  }
+
+  pub fn get_material(&mut self) -> &Material {
+    &self.material
   }
 
   pub fn set_pos(&mut self, pos: Vec3) {

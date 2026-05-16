@@ -6,20 +6,23 @@
 // Notes:
 // ==============================================================================================
 
+use std::time::Instant;
+
 use crate::camera::Camera;
 use crate::colour::{BLACK, Colour, WHITE};
 use crate::light::Light;
 use crate::math::{Vec2, Vec3, Vec4};
 use crate::models::Mesh;
 use crate::{buffer::Buffer, helpers};
-use minifb::{Key, Window, WindowOptions};
-use std::time::Instant;
+use minifb::{Window, WindowOptions};
 
 /// All users of argh are expected to provide their own Scene implementation
 pub trait Scene {
   /// This method will be called every frame by the main loop, use it to draw and render your scene
   fn update(&mut self, engine: &mut Engine, dt: f64);
 }
+
+pub use minifb::{Key, MouseButton};
 
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
@@ -31,6 +34,10 @@ pub struct Engine {
   scale: minifb::Scale,
   fps: f64,
   lights: Vec<Light>,
+
+  // Inputs
+  keys: Vec<Key>,
+  keys_pressed: Vec<Key>,
 
   pub target_fps: usize,
   pub debug: bool,
@@ -73,8 +80,8 @@ impl Engine {
 
     Self {
       win_size: (w as usize, h as usize),
-      win_title: title,
       buffer: Buffer::new(w as usize, h as usize),
+      win_title: title,
       t: 0.0,
       scale: scl,
       fps: 0.0,
@@ -82,6 +89,9 @@ impl Engine {
       target_fps: 60,
       aspect: w as f64 / h as f64,
       lights: vec![] as std::vec::Vec<Light>,
+
+      keys: vec![],
+      keys_pressed: vec![],
     }
   }
 
@@ -136,12 +146,13 @@ impl Engine {
     if self.target_fps > 0 {
       window.set_target_fps(self.target_fps);
     }
-    let mut last_time = Instant::now();
 
     // Lights check
     if self.lights.is_empty() {
       println!("You have added no lights, there will be no shading just flat colours!")
     }
+
+    let mut last_time = Instant::now();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
       let now = Instant::now();
@@ -150,18 +161,32 @@ impl Engine {
       self.fps = 1.0 / dt;
       last_time = now;
 
+      self.keys = window.get_keys();
+      self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
+
+      // This is the hook, the user does their rendering here.
+      // self.window stays in place so get_keys / get_keys_pressed work from inside update().
       scene.update(&mut self, dt);
 
       if self.debug {
-        self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, crate::colour::BLACK);
-        self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, crate::colour::WHITE);
+        self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
+        self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, WHITE);
       }
 
-      let res = window.update_with_buffer(&self.buffer.pixels, self.win_size.0, self.win_size.1);
-      if res.is_err() {
-        println!("Error updating buffer: {}", res.err().unwrap());
+      if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.win_size.0, self.win_size.1) {
+        println!("Error updating buffer: {}", e);
       }
     }
+  }
+
+  /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
+  pub fn get_keys(&self) -> &[Key] {
+    &self.keys
+  }
+
+  /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
+  pub fn get_keys_pressed(&self) -> &[Key] {
+    &self.keys_pressed
   }
 
   /// Draw text onto the screen
@@ -238,10 +263,7 @@ impl Engine {
   /// This triggers a rendering pipeline
   pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
     // Get the colour of the mesh
-    let colour = match &mesh.material {
-      None => WHITE,
-      Some(m) => m.texture.get_colour_at(0.0, 0.0) * m.diffuse,
-    };
+    let colour = mesh.material.texture.get_colour_at(0.0, 0.0);
 
     // 1. Combine MVP (model, view, perspective) matrix
     let m = mesh.get_model_mat();
@@ -251,28 +273,28 @@ impl Engine {
     let verts: Vec<ProcessedVert> = mesh
       .verts
       .iter()
-      .map(|v| {
-        // World space
-        let world = m * v;
+      .map(|vert| {
+        // World space: vert transformed by model matrix M
+        let world = m * vert;
 
-        // Clip space
-        let clip = mvp * &Vec4::new(v.x, v.y, v.z, 1.0);
+        // Clip space: vert transformed by MVP
+        let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
 
-        // Calc vertex is clipped or not
+        // Calc how vertex is clipped or not
         let outcode = helpers::compute_outcode(&clip);
 
         // 1/w used for perspective and we store it for other reasons too
         let inv_w = 1.0 / clip.w;
 
-        // NDCs to get us towards screen space
+        // Clip space -> NDCs, which get us towards screen space
         let ndc_x = clip.x * inv_w;
         let ndc_y = clip.y * inv_w;
         let ndc_z = clip.z * inv_w;
-        // Screen space is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
+        // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
         let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
         let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
 
-        // Finally output processed vert data bundle
+        // Bundle up processed data into a single struct
         ProcessedVert {
           world,
           screen: ScreenVert {
@@ -287,9 +309,13 @@ impl Engine {
       })
       .collect();
 
+    // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
+    // We just rotate them by the model rotation quat for now
+    // TODO: We probably do need to do this the proper way at some point
     let normals: Vec<Vec3> = mesh.normals.iter().map(|n| mesh.rot.rotate_vec3(*n)).collect();
 
-    // 3. Walk the index list 3 at a time for triangles, cull, shade & rasterize
+    // 3. Now to rendering triangles
+    // Walk the index list 3 at a time for triangles, cull, shade & rasterize
     for tri in mesh.indices.chunks(3) {
       let i0 = tri[0] as usize;
       let i1 = tri[1] as usize;
@@ -300,6 +326,9 @@ impl Engine {
       let wv0 = verts[i0].world;
       let wv1 = verts[i1].world;
       let wv2 = verts[i2].world;
+
+      // It's convention that the normals list is in the same order as the verts list
+      // Otherwise we're in impossible mess TBH
       let n0 = normals[i0];
       let n1 = normals[i1];
       let n2 = normals[i2];
@@ -317,7 +346,6 @@ impl Engine {
       }
 
       // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
-      //  - Front faces (mesh CCW in 3D) have NEGATIVE area in screen space
       //  - Back faces (mesh CW or back of CCW) have POSITIVE area
       // So we discard anything non-negative.
       let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
@@ -331,11 +359,13 @@ impl Engine {
         sv2.colour = shade_vert(&self.lights, wv2, n2) * colour;
       }
 
+      // Finally draw the damn triangle based on the screen verts
       self.buffer.fill_triangle(sv0, sv1, sv2, mesh.smooth);
     }
   }
 }
 
+// Internal function for calculating the lighting and colour at a vertex in world space
 fn shade_vert(lights: &Vec<Light>, world: Vec3, normal: Vec3) -> Colour {
   // Shading & lighting over multiple lights
   let mut light_col_sum = BLACK;
@@ -350,5 +380,6 @@ fn shade_vert(lights: &Vec<Light>, world: Vec3, normal: Vec3) -> Colour {
     // I figured this was a better fallback than a totally black window!
     light_col_sum = WHITE;
   }
+
   light_col_sum
 }

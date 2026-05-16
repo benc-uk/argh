@@ -3,12 +3,13 @@
 //! # Examples
 //! Minimal usage and getting started
 //! ```
-//! use argh::core::{Engine, Scene};
+//! use argh::colour::BLUE;
+//! use argh::engine::{Engine, Scene};
 //!
 //! struct MyScene {}
 //! impl Scene for MyScene {
 //!     fn update(&mut self, e: &mut Engine, _: f64) {
-//!         // Update & draw here
+//!         e.clear(BLUE);
 //!     }
 //! }
 //!

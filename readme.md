@@ -14,44 +14,48 @@ Features:
 
 - Window and framebuffer backed by [minifb](https://docs.rs/minifb/latest/minifb/)
 - Entirely software (CPU) based rendering loop and buffer operations
-- Core maths libraries for vectors and matrices & quaternions implemented from scratch
+- Core maths libraries for vectors, matrices and quaternions, implemented from scratch
 - Simple scene management
-- 3D Stuff
+- 3D rendering
   - Matrix operations for affine transforms
-  - Rendering pipeline for meshes, with z-buffering and simple clipping (no Sutherland-Hodgman)
-  - Diffuse illumination, & Gouraud shading
+  - Rendering pipeline for meshes, with z-buffering and basic clipping (no Sutherland-Hodgman polygon clipping yet)
+  - Diffuse illumination and Gouraud shading
   - Cameras with perspective projection
-  - Simple meshes, materials, & textures (no texture mapping yet)
+  - Simple meshes, materials and textures (no UV / texture mapping yet)
   - Generators for cubes and spheres
-- Methods for drawing 2D primitives, pixels, lines, text
+- Methods for drawing 2D primitives, pixels, lines and text
 
 ## Examples
 
 <video src="https://github.com/user-attachments/assets/d7c25032-ad3b-451b-be79-cd355bc293eb" controls></video>
 
+See the [`examples/`](./examples) directory for runnable demos (`basic1`, `hello_world`, `poly_2d`, `rects`, `simple_3d`).
+
 ## Usage
 
-To use ARGH, add it as a dependency in your `Cargo.toml`:
+ARGH is not currently published to crates.io. Add it as a git dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-argh = "0.0.1"
+argh = { git = "https://github.com/benc-uk/argh" }
 ```
 
-Then, you can create a simple application by implementing the `Scene` trait and starting the engine:
+Then create a simple application by implementing the `Scene` trait and starting the engine:
 
 ```rust
-use argh::core::{Engine, Scene};
+use argh::colour::BLUE;
+use argh::engine::{Engine, Scene};
 
 struct MyScene {}
 impl Scene for MyScene {
     fn update(&mut self, e: &mut Engine, _: f64) {
-        // Update & draw here
+        e.clear(BLUE);
+        // Draw the rest of your frame here
     }
 }
 
 fn main() {
-    let eng = Engine::new(800, 600, String::from("Hello World"));
+    let eng = Engine::new(800, 600, String::from("Hello World"), 1);
     eng.start(MyScene {});
 }
 ```
@@ -62,7 +66,7 @@ fn main() {
 
 ## Technical Notes
 
-Computer graphics conventions and followed internally by this engine, most are the same as OpenGL, except clip space:
+Computer graphics conventions followed internally by this engine. Mostly the same as OpenGL, except clip space:
 
 - Screen space has [x: 0, y:0] as top-left corner of the viewport. So Y increases downward
 - We use a right handed coordinate system
@@ -73,7 +77,7 @@ Computer graphics conventions and followed internally by this engine, most are t
 ## Building and Running Locally
 
 - Have Rust & Cargo installed
-- Don't be on Windows (generally good advice)
+- Don't be on Windows (generally good advice). minifb works best on Linux & macOS; for Windows builds use the `build-win` make target to cross-compile via the `x86_64-pc-windows-gnu` toolchain
 - Run `make`
 
 ```

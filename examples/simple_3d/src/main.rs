@@ -35,6 +35,20 @@ impl Scene for MyScene {
     engine.render_mesh(&self.camera, &self.obj1);
     engine.render_mesh(&self.camera, &self.obj2);
     engine.render_mesh(&self.camera, &self.obj3);
+
+    if !engine.get_keys_pressed().is_empty() {
+      if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
+        let tex = SimpleColourTexture::new(Colour::rand());
+        let tex2 = SimpleColourTexture::new(Colour::rand());
+        let tex3 = SimpleColourTexture::new(Colour::rand());
+        let mat = Material::new(tex);
+        let mat2 = Material::new(tex2);
+        let mat3 = Material::new(tex3);
+        self.obj1.set_material(mat);
+        self.obj2.set_material(mat2);
+        self.obj3.set_material(mat3);
+      }
+    }
   }
 }
 
@@ -50,16 +64,16 @@ fn main() {
   let tex = SimpleColourTexture::new(Colour::rand());
   let tex2 = SimpleColourTexture::new(Colour::rand());
   let tex3 = SimpleColourTexture::new(Colour::rand());
-  let mat = Material::new(Box::new(tex));
-  let mat2 = Material::new(Box::new(tex2));
-  let mat3 = Material::new(Box::new(tex3));
+  let mat = Material::new(tex);
+  let mat2 = Material::new(tex2);
+  let mat3 = Material::new(tex3);
   let mut obj1 = primitives::new_cube();
   let mut obj2 = primitives::new_sphere(8, 12);
   let mut obj3 = primitives::new_sphere(12, 24);
   obj1.set_material(mat);
   obj2.set_material(mat2);
-  obj2.smooth = false;
   obj3.set_material(mat3);
+  obj2.smooth = false;
 
   let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 0.0, 2.8), Vec3::new(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
 

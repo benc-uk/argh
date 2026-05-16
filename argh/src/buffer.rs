@@ -65,13 +65,15 @@ impl Buffer {
   }
 
   /// Fill a 3D triangle between three ScreenVertex points which form a triangle
-  /// Not public!
+  /// Not public outside the crate
   #[inline(always)]
   pub fn fill_triangle(&mut self, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, smooth: bool) {
     let area = helpers::edge_function(v1, v2, v0.x, v0.y);
     if area == 0.0 {
       return;
     } // degenerate triangle, save ourselves a NaN
+
+    // We need inverse area for Barycentric gubbins later
     let inv_area = 1.0 / area;
 
     let min_x = v1.x.min(v0.x).min(v2.x).max(0.0);
@@ -143,6 +145,7 @@ impl Buffer {
     }
   }
 
+  /// Internal method for rendering characters to the buffer
   pub fn draw_char(&mut self, ch: char, x: usize, y: usize, c: Colour) {
     let (w, h) = crate::text::glyph_size();
     if let Some(rows) = crate::text::glyph(ch) {
