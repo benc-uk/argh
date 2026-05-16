@@ -263,6 +263,7 @@ impl Engine {
   /// This triggers a rendering pipeline
   pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
     // Get the colour of the mesh
+    let mat = mesh.get_material();
     let colour = mesh.material.texture.get_colour_at(0.0, 0.0);
 
     // 1. Combine MVP (model, view, perspective) matrix
@@ -353,10 +354,10 @@ impl Engine {
         continue;
       }
 
-      sv0.colour = shade_vert(&self.lights, wv0, n0) * colour;
+      sv0.colour = shade_vert(&self.lights, wv0, n0) * colour * mat.diffuse;
       if mesh.smooth {
-        sv1.colour = shade_vert(&self.lights, wv1, n1) * colour;
-        sv2.colour = shade_vert(&self.lights, wv2, n2) * colour;
+        sv1.colour = shade_vert(&self.lights, wv1, n1) * colour * mat.diffuse;
+        sv2.colour = shade_vert(&self.lights, wv2, n2) * colour * mat.diffuse;
       }
 
       // Finally draw the damn triangle based on the screen verts

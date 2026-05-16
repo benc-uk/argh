@@ -36,18 +36,16 @@ impl Scene for MyScene {
     engine.render_mesh(&self.camera, &self.obj2);
     engine.render_mesh(&self.camera, &self.obj3);
 
-    if !engine.get_keys_pressed().is_empty() {
-      if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
-        let tex = SimpleColourTexture::new(Colour::rand());
-        let tex2 = SimpleColourTexture::new(Colour::rand());
-        let tex3 = SimpleColourTexture::new(Colour::rand());
-        let mat = Material::new(tex);
-        let mat2 = Material::new(tex2);
-        let mat3 = Material::new(tex3);
-        self.obj1.set_material(mat);
-        self.obj2.set_material(mat2);
-        self.obj3.set_material(mat3);
-      }
+    if !engine.get_keys_pressed().is_empty() && engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
+      let tex = SimpleColourTexture::new(Colour::rand());
+      let tex2 = SimpleColourTexture::new(Colour::rand());
+      let tex3 = SimpleColourTexture::new(Colour::rand());
+      let mat = Material::new(tex);
+      let mat2 = Material::new(tex2);
+      let mat3 = Material::new(tex3);
+      self.obj1.set_material(mat);
+      self.obj2.set_material(mat2);
+      self.obj3.set_material(mat3);
     }
   }
 }

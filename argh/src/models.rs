@@ -100,7 +100,7 @@ impl Mesh {
     self.material = m;
   }
 
-  pub fn get_material(&mut self) -> &Material {
+  pub fn get_material(&self) -> &Material {
     &self.material
   }
 
