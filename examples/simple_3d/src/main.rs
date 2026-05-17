@@ -14,15 +14,15 @@ struct MyScene {
 
 impl Scene for MyScene {
   // You must always implement the update method it will be called once per frame
-  fn update(&mut self, engine: &mut Engine, _: f64) {
+  fn update(&mut self, engine: &mut Engine, _: f64, t: f64) {
     engine.clear(BLACK);
 
     let mut axis = Vec3::new(0.6, 0.3, 0.9);
     axis.normalize();
-    let py = f64::sin(engine.t());
-    let px = f64::sin(engine.t() * 0.7);
-    let pz = -0.5 - (f64::sin(engine.t() * 1.4) * 0.9);
-    let pz2 = f64::sin(engine.t() * 0.9) * 0.6;
+    let py = f64::sin(t);
+    let px = f64::sin(t * 0.7);
+    let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
+    let pz2 = f64::sin(t * 0.9) * 0.6;
     self.obj1.rot_y(0.01);
     self.obj1.rot_x(0.03);
     self.obj2.rot_y(0.03);
@@ -67,7 +67,7 @@ fn main() {
   let mat3 = Material::new(tex3);
   let mut obj1 = primitives::new_cube();
   let mut obj2 = primitives::new_sphere(8, 12);
-  let mut obj3 = primitives::new_sphere(12, 24);
+  let mut obj3 = primitives::new_sphere(24, 48);
   obj1.set_material(mat);
   obj2.set_material(mat2);
   obj3.set_material(mat3);

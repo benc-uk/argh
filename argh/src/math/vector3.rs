@@ -30,8 +30,10 @@ pub static AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
 pub static AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
 /// A Vec3 pointing along the z axis [0.0, 0.0, 1.0]
 pub static AXIS_Z: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
-/// A Vec3 at [0, 0, 0]
-pub static VEC3_ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
+/// A Vec3 = [0, 0, 0]
+pub static VEC3_ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+/// A Vec3 = [1, 1, 1]
+pub static VEC3_ONE: Vec3 = Vec3 { x: 1.0, y: 1.0, z: 1.0 };
 
 impl Vec3 {
   /// Construct a new vector, slightly shorter than writing Vec3 { x:1.0, y:2.0, z:3.0 }
@@ -99,6 +101,22 @@ impl Vec3 {
       x: self.x / len,
       y: self.y / len,
       z: self.z / len,
+    }
+  }
+
+  /// Reflect this vector about a (unit) normal.
+  /// Uses the "incident points into surface" convention:
+  ///   R = I - 2(N·I)N
+  pub fn reflect(&self, n: Vec3) -> Vec3 {
+    *self - n * (2.0 * self.dot(n))
+  }
+
+  /// Invert direction of this vector
+  pub fn invert(self) -> Vec3 {
+    Vec3 {
+      x: -self.x,
+      y: -self.y,
+      z: -self.z,
     }
   }
 }

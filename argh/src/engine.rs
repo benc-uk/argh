@@ -19,7 +19,7 @@ use minifb::{Window, WindowOptions};
 /// All users of argh are expected to provide their own Scene implementation
 pub trait Scene {
   /// This method will be called every frame by the main loop, use it to draw and render your scene
-  fn update(&mut self, engine: &mut Engine, dt: f64);
+  fn update(&mut self, engine: &mut Engine, dt: f64, t: f64);
 }
 
 pub use minifb::{Key, MouseButton};
@@ -34,13 +34,21 @@ pub struct Engine {
   scale: minifb::Scale,
   fps: f64,
   lights: Vec<Light>,
+  exit: bool,
 
   // Inputs
   keys: Vec<Key>,
   keys_pressed: Vec<Key>,
 
+  // Public fields...
+  /// Rate to try to update the buffer, used at engine start only
   pub target_fps: usize,
+
+  /// Output debug info like FPS onto the top right of the screen
   pub debug: bool,
+
+  /// Ambient light colour, defaults to [0.1, 0.1, 0.1], beware setting this too high it will look washed out
+  pub ambient_light: Colour,
 }
 
 // This is used internally to represent a vertex transformed into screen space (after perspective divide)
@@ -88,7 +96,10 @@ impl Engine {
       debug: false,
       target_fps: 60,
       aspect: w as f64 / h as f64,
+      exit: false,
+
       lights: vec![] as std::vec::Vec<Light>,
+      ambient_light: Colour::new(0.1, 0.1, 0.1),
 
       keys: vec![],
       keys_pressed: vec![],
@@ -117,6 +128,11 @@ impl Engine {
     self.t
   }
 
+  /// Stop running and exit the running process
+  pub fn stop(&mut self) {
+    self.exit = true;
+  }
+
   /// Set the colour of a
   /// # Arguments
   /// * `x` - X position of pixel
@@ -133,8 +149,7 @@ impl Engine {
   pub fn start<S: Scene>(mut self, mut scene: S) {
     let opt = WindowOptions {
       scale_mode: minifb::ScaleMode::Stretch,
-      topmost: true,
-      resize: true,
+      resize: false,
       scale: self.scale,
       ..Default::default()
     };
@@ -154,7 +169,11 @@ impl Engine {
 
     let mut last_time = Instant::now();
 
-    while window.is_open() && !window.is_key_down(Key::Escape) {
+    while window.is_open() {
+      if self.exit {
+        break;
+      }
+
       let now = Instant::now();
       let dt = now.duration_since(last_time).as_secs_f64();
       self.t += dt;
@@ -165,8 +184,8 @@ impl Engine {
       self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
 
       // This is the hook, the user does their rendering here.
-      // self.window stays in place so get_keys / get_keys_pressed work from inside update().
-      scene.update(&mut self, dt);
+      let t = self.t;
+      scene.update(&mut self, dt, t);
 
       if self.debug {
         self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
@@ -264,7 +283,7 @@ impl Engine {
   pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
     // Get the colour of the mesh
     let mat = mesh.get_material();
-    let colour = mesh.material.texture.get_colour_at(0.0, 0.0);
+    let colour = mat.texture.get_colour_at(0.0, 0.0);
 
     // 1. Combine MVP (model, view, perspective) matrix
     let m = mesh.get_model_mat();
@@ -354,33 +373,54 @@ impl Engine {
         continue;
       }
 
-      sv0.colour = shade_vert(&self.lights, wv0, n0) * colour * mat.diffuse;
+      // Ambient light
+      let amb = self.ambient_light * mat.diffuse;
+
+      let eye = cam.get_pos();
+
+      // Calc shading & lighting at each world vertex, and set into screen vert
+      let (d0, s0) = shade_vert(&self.lights, wv0, n0, eye, mat.hardness);
+      sv0.colour = (d0 * colour * mat.diffuse) + (s0 * mat.specular) + amb;
       if mesh.smooth {
-        sv1.colour = shade_vert(&self.lights, wv1, n1) * colour * mat.diffuse;
-        sv2.colour = shade_vert(&self.lights, wv2, n2) * colour * mat.diffuse;
+        let (d1, s1) = shade_vert(&self.lights, wv1, n1, eye, mat.hardness);
+        let (d2, s2) = shade_vert(&self.lights, wv2, n2, eye, mat.hardness);
+        sv1.colour = (d1 * colour * mat.diffuse) + (s1 * mat.specular) + amb;
+        sv2.colour = (d2 * colour * mat.diffuse) + (s2 * mat.specular) + amb;
       }
 
-      // Finally draw the damn triangle based on the screen verts
+      // Finally draw the damn triangle based on the screen verts and interpolate
       self.buffer.fill_triangle(sv0, sv1, sv2, mesh.smooth);
     }
   }
 }
 
 // Internal function for calculating the lighting and colour at a vertex in world space
-fn shade_vert(lights: &Vec<Light>, world: Vec3, normal: Vec3) -> Colour {
+fn shade_vert(lights: &Vec<Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
   // Shading & lighting over multiple lights
-  let mut light_col_sum = BLACK;
-  if !lights.is_empty() {
-    for light in lights {
-      let l = (light.pos - world).normalize_new();
-      let diff = normal.dot(l);
-      let col = light.colour * light.brightness * diff;
-      light_col_sum += col;
-    }
-  } else {
-    // I figured this was a better fallback than a totally black window!
-    light_col_sum = WHITE;
-  }
+  let mut diff_sum = BLACK;
+  let mut spec_sum = BLACK;
 
-  light_col_sum
+  // if !lights.is_empty() {
+  for light in lights {
+    // Vectors to and from the surface and the light
+    let l = (light.pos - world).normalize_new();
+    let li = l.invert();
+
+    // Diffuse lighting
+    let n_dot_l = n.dot(l).max(0.0);
+    let diff_col = light.colour * light.brightness * n_dot_l;
+    diff_sum += diff_col;
+
+    // Specular
+    if n_dot_l > 0.0 {
+      let v = (eye - world).normalize_new();
+      let r = li.reflect(n);
+      let v_dot_r = v.dot(r).max(0.0);
+      let spec = v_dot_r.powf(hardness);
+      let spec_col = light.colour * spec * light.brightness;
+      spec_sum += spec_col;
+    }
+  }
+  // }
+  (diff_sum, spec_sum)
 }

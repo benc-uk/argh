@@ -2,10 +2,10 @@
 [workspace]
 members = [
   "argh",
-  "examples/basic1",
   "examples/hello_world",
+  "examples/rects",
   "examples/poly_2d",
   "examples/simple_3d",
-  "examples/rects",
+  "examples/teapots",
 ]
 resolver = "3"

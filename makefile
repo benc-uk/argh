@@ -1,4 +1,4 @@
-MODULE ?= basic1
+MODULE ?= teapots
 
 .DEFAULT_GOAL := help
 

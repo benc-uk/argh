@@ -8,7 +8,7 @@
 
 use crate::{
   colour::{Colour, WHITE},
-  math::{Mat4, Quat, VEC3_ZERO, Vec3},
+  math::{Mat4, Quat, VEC3_ONE, VEC3_ZERO, Vec3},
 };
 
 // ===================================
@@ -50,7 +50,8 @@ impl Texture for SimpleColourTexture {
 /// Material holds parameters for rendering the surface of a mesh
 pub struct Material {
   pub(crate) diffuse: f64,
-  _spec: f64,
+  pub(crate) specular: f64,
+  pub(crate) hardness: f64,
   pub(crate) texture: Box<dyn Texture>,
 }
 
@@ -58,7 +59,8 @@ impl Material {
   pub fn new<T: Texture + 'static>(t: T) -> Self {
     Self {
       diffuse: 1.0,
-      _spec: 1.0,
+      specular: 1.0,
+      hardness: 12.0,
       texture: Box::new(t),
     }
   }
@@ -68,26 +70,29 @@ impl Material {
 // Mesh
 // ===================================
 
-/// Simple 3D mesh of triangles using index
+/// Triangle based 3D mesh - with position, scale and rotation
 pub struct Mesh {
   pub(crate) material: Material, // Surface material, colour etc
   pub(crate) pos: Vec3,          // Position
   pub(crate) rot: Quat,          // Rotation held as a Quat
+  pub(crate) scale: Vec3,        // Scaling factors
 
   pub(crate) verts: Vec<Vec3>,   // Internal mesh vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
   pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
 
-  pub smooth: bool,
+  pub smooth: bool, // Gouraud shading enabled
 }
 
 impl Mesh {
+  // Internal only method for creating an "empty" mesh
   pub(crate) fn new() -> Self {
     let tex = SimpleColourTexture::new(WHITE);
     let mat = Material::new(tex);
     Self {
       material: mat,
       pos: VEC3_ZERO,
+      scale: VEC3_ONE,
       rot: Quat::ident(),
       verts: vec![],
       indices: vec![],
@@ -124,8 +129,24 @@ impl Mesh {
     self.rot.rot_z(a);
   }
 
+  pub fn scale(&mut self, s: f64) {
+    self.scale = Vec3 { x: s, y: s, z: s }
+  }
+
+  pub fn scale_x(&mut self, s: f64) {
+    self.scale.x = s
+  }
+
+  pub fn scale_y(&mut self, s: f64) {
+    self.scale.y = s
+  }
+
+  pub fn scale_z(&mut self, s: f64) {
+    self.scale.z = s
+  }
+
   /// Return the model matrix for this mesh, with scale, rotation and translation
   pub fn get_model_mat(&self) -> Mat4 {
-    Mat4::new_scale_rot_trans(1.0, 1.0, 1.0, self.rot, self.pos.x, self.pos.y, self.pos.z)
+    Mat4::new_scale_rot_trans(self.scale.x, self.scale.y, self.scale.z, self.rot, self.pos.x, self.pos.y, self.pos.z)
   }
 }

@@ -8,7 +8,7 @@ const H: i32 = 600;
 
 impl Scene for MyScene {
   // You must always implement the update method it will be called once per frame
-  fn update(&mut self, engine: &mut Engine, _: f64) {
+  fn update(&mut self, engine: &mut Engine, _: f64, _: f64) {
     engine.clear(BLACK);
 
     for _ in 0..600 {

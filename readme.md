@@ -66,7 +66,7 @@ fn main() {
 
 ## Technical Notes
 
-Computer graphics conventions followed internally by this engine. Mostly the same as OpenGL, except clip space:
+Graphics & 3D conventions followed internally by this engine are mostly the same as OpenGL, except clip space:
 
 - Screen space has [x: 0, y:0] as top-left corner of the viewport. So Y increases downward
 - We use a right handed coordinate system

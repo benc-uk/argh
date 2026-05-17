@@ -7,6 +7,7 @@
 // ==============================================================================================
 
 use crate::{math::*, models::Mesh};
+use std::fs::read_to_string;
 
 /// Create a mesh for a unit cube, two triangles per face.
 ///
@@ -149,4 +150,56 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
   }
 
   mesh
+}
+
+/// Utah teapot!
+///
+/// File format: each triangle is six lines (vert, normal, vert, normal, vert, normal)
+/// terminated by a blank line. We push indices (n-3, n-2, n-1) at the blank line,
+/// where n is the current vert count, so they reference the three verts we just parsed.
+/// A final flush after the loop handles the last triangle if the file has no trailing blank.
+pub fn new_teapot() -> Mesh {
+  let txt = include_str!("models/teapot.txt");
+
+  let mut out = Mesh::new();
+  let mut lc = 0;
+
+  let flush_tri = |out: &mut Mesh| {
+    let n = out.verts.len() as i32;
+    out.indices.push(n - 3);
+    out.indices.push(n - 2);
+    out.indices.push(n - 1);
+  };
+
+  for line in txt.lines() {
+    if line.is_empty() && lc == 6 {
+      flush_tri(&mut out);
+
+      lc = 0;
+      continue;
+    }
+
+    let eles: Vec<f64> = line.split_whitespace().filter_map(|word| word.parse::<f64>().ok()).collect();
+
+    let v = Vec3 {
+      x: eles[0],
+      y: eles[1],
+      z: eles[2],
+    };
+
+    if lc % 2 == 0 {
+      out.verts.push(v);
+    } else {
+      out.normals.push(v);
+    }
+
+    lc += 1;
+  }
+
+  // Flush trailing triangle if the file didn't end with a blank line.
+  if lc == 6 {
+    flush_tri(&mut out);
+  }
+
+  out
 }
