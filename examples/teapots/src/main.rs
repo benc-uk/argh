@@ -16,8 +16,8 @@ impl Scene for MyScene {
   fn update(&mut self, engine: &mut Engine, dt: f64, _: f64) {
     engine.clear(BLACK);
 
-    engine.instance_mut(self.h1).rot_y(dt * 1.2);
-    engine.instance_mut(self.h2).rot_y(dt * -1.4);
+    engine.instance_mut(self.h1).unwrap().rot_y(dt * 1.2);
+    engine.instance_mut(self.h2).unwrap().rot_y(dt * -1.4);
     engine.render_all(&self.camera);
 
     if !engine.get_keys_pressed().is_empty() && engine.get_keys_pressed()[0].eq(&argh::engine::Key::Escape) {
@@ -36,14 +36,15 @@ fn main() {
   e.add_light(Light::new(Vec3::new(4.0, 9.0, 10.0), 0.8, WHITE));
 
   let tex = SimpleColourTexture::new(Colour::rand());
-  let mat = Material::new(tex);
+  let mut mat = Material::new(tex);
   e.add_mesh("teapot", primitives::new_teapot());
 
   let h1 = e.add_instance("teapot");
-  e.instance_mut(h1).set_material(mat).set_pos_xyz(2.0, -1.0, -3.0);
+  e.instance_mut(h1).unwrap().set_material(mat).set_pos_xyz(2.0, -1.0, -3.0);
 
   let h2 = e.add_instance("teapot");
   e.instance_mut(h2)
+    .unwrap()
     .set_material(Material::new(SimpleColourTexture::new(Colour::rand())))
     .set_pos_xyz(-2.0, -1.0, -6.0);
 

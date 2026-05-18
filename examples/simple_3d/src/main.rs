@@ -14,7 +14,7 @@ struct MyScene {
 
 impl Scene for MyScene {
   // You must always implement the update method it will be called once per frame
-  fn update(&mut self, engine: &mut Engine, _: f64, t: f64) {
+  fn update(&mut self, engine: &mut Engine, dt: f64, t: f64) {
     engine.clear(BLACK);
 
     let mut axis = Vec3::new(0.6, 0.3, 0.9);
@@ -23,9 +23,9 @@ impl Scene for MyScene {
     let px = f64::sin(t * 0.7);
     let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
     let pz2 = f64::sin(t * 0.9) * 0.6;
-    engine.instance_mut(self.h1).rot_y(0.01).rot_x(0.03).set_pos(Vec3::new(-px, py, pz));
-    engine.instance_mut(self.h2).rot_y(0.03).rot_x(0.04).set_pos(Vec3::new(px, -py, pz2));
-    engine.instance_mut(self.h3).rot_y(0.02).set_pos(Vec3::new(px * 0.3, py * 0.5, 0.0));
+    engine.instance_mut(self.h1).unwrap().rot_y(0.01).rot_x(0.03).set_pos(Vec3::new(-px, py, pz));
+    engine.instance_mut(self.h2).unwrap().rot_y(0.03).rot_x(0.04).set_pos(Vec3::new(px, -py, pz2));
+    engine.instance_mut(self.h3).unwrap().rot_y(0.02).set_pos(Vec3::new(px * 0.3, py * 0.5, 0.0));
 
     engine.render_all(&self.camera);
 
@@ -33,9 +33,9 @@ impl Scene for MyScene {
       let tex = SimpleColourTexture::new(Colour::rand());
       let tex2 = SimpleColourTexture::new(Colour::rand());
       let tex3 = SimpleColourTexture::new(Colour::rand());
-      engine.instance_mut(self.h1).set_material(Material::new(tex));
-      engine.instance_mut(self.h2).set_material(Material::new(tex2));
-      engine.instance_mut(self.h3).set_material(Material::new(tex3));
+      engine.instance_mut(self.h1).unwrap().set_material(Material::new(tex));
+      engine.instance_mut(self.h2).unwrap().set_material(Material::new(tex2));
+      engine.instance_mut(self.h3).unwrap().set_material(Material::new(tex3));
     }
   }
 }
@@ -63,9 +63,9 @@ fn main() {
   let h2 = e.add_instance("sphere1");
   let h3 = e.add_instance("sphere2");
 
-  e.instance_mut(h1).set_material(mat);
-  e.instance_mut(h2).set_material(mat2).smooth = false;
-  e.instance_mut(h3).set_material(mat3);
+  e.instance_mut(h1).unwrap().set_material(mat);
+  e.instance_mut(h2).unwrap().set_material(mat2).smooth = false;
+  e.instance_mut(h3).unwrap().set_material(mat3);
 
   let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 0.0, 2.8), Vec3::new(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
 

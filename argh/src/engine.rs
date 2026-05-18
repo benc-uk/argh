@@ -6,6 +6,7 @@
 // Notes:
 // ==============================================================================================
 
+use slotmap::{SlotMap, new_key_type};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -26,9 +27,8 @@ pub trait Scene {
 // Re-export some of the minifb enums for inputs
 pub use minifb::{Key, MouseButton};
 
-/// This is an integer handle to reference instances
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct InstanceHandle(usize);
+// This is a handle to reference instances
+new_key_type! { pub struct InstanceHandle; }
 
 /// This is a internal way to lookup Meshes
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -49,7 +49,7 @@ pub struct Engine {
   // Meshes & instances
   meshes: Vec<Mesh>,
   mesh_lookup: HashMap<String, MeshHandle>,
-  instances: Vec<Instance>,
+  instances: SlotMap<InstanceHandle, Instance>,
 
   // Inputs
   keys: Vec<Key>,
@@ -70,10 +70,9 @@ pub struct Engine {
 // It's a hybrid of x & Y being screen pixel values, and z being a float representing depth in 0-1 range
 #[derive(Copy, Clone)]
 pub struct ScreenVert {
-  pub(crate) x: f64, // pixel coordinate, [0, width]
-  pub(crate) y: f64, // pixel coordinate, [0, height], origin top-left
-  pub(crate) z: f64, // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
-  // pub(crate) inv_w: f64,    // 1/w from clip space, for perspective-correct interp
+  pub(crate) x: f64,         // pixel coordinate, [0, width]
+  pub(crate) y: f64,         // pixel coordinate, [0, height], origin top-left
+  pub(crate) z: f64,         // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
   pub(crate) colour: Colour, // Gouraud shading needs colour per vertex
 }
 
@@ -114,7 +113,7 @@ impl Engine {
       exit: false,
       mesh_lookup: HashMap::new(),
       meshes: vec![],
-      instances: vec![],
+      instances: SlotMap::with_key(),
 
       lights: vec![] as std::vec::Vec<Light>,
       ambient_light: Colour::new(0.1, 0.1, 0.1),
@@ -171,16 +170,19 @@ impl Engine {
       mesh: self.get_mesh_handle(mesh_name),
     };
 
-    self.instances.push(i);
-    InstanceHandle(self.instances.len() - 1)
+    self.instances.insert(i)
   }
 
-  pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {
-    &mut self.instances[h.0]
+  pub fn instance_mut(&mut self, h: InstanceHandle) -> Option<&mut Instance> {
+    self.instances.get_mut(h)
   }
 
-  pub fn instance(&self, h: InstanceHandle) -> &Instance {
-    &self.instances[h.0]
+  pub fn instance(&self, h: InstanceHandle) -> Option<&Instance> {
+    self.instances.get(h)
+  }
+
+  pub fn remove_instance(&mut self, h: InstanceHandle) {
+    self.instances.remove(h);
   }
 
   /// Set the colour of a single pixel in the frame buffer
@@ -325,8 +327,11 @@ impl Engine {
 
   /// Render all instances available
   pub fn render_all(&mut self, cam: &Camera) {
-    for i in 0..self.instances.len() {
-      self.render_instance(cam, InstanceHandle(i));
+    //self.instances.iter().map(|(ih, _)| &self.render_instance(cam, ih));
+    let keys: Vec<_> = self.instances.keys().collect();
+
+    for i in keys {
+      self.render_instance(cam, i);
     }
   }
 
@@ -337,7 +342,10 @@ impl Engine {
   /// Renders a 3D mesh onto the screen from given camera position
   /// This triggers a rendering pipeline
   pub fn render_instance(&mut self, cam: &Camera, h: InstanceHandle) {
-    let instance = &self.instances[h.0];
+    // Shorthand for finding the instance
+    let Some(instance) = self.instances.get(h) else {
+      return;
+    };
 
     // Get the colour of the mesh
     let mat = instance.get_material();
