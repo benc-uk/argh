@@ -27,12 +27,21 @@ pub trait Scene {
 // Re-export some of the minifb enums for inputs
 pub use minifb::{Key, MouseButton};
 
-// This is a handle to reference instances
-new_key_type! { pub struct InstanceHandle; }
+new_key_type! {
+  /// A handle to reference instances held by the engine
+  pub struct InstanceHandle;
+}
 
-/// This is a internal way to lookup Meshes
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct MeshHandle(usize);
+// This is a internal way to lookup Meshes
+new_key_type! {
+  pub(crate) struct MeshHandle;
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum EngineError {
+  #[error("no mesh found with that name")]
+  MeshNotFound,
+}
 
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
@@ -47,7 +56,7 @@ pub struct Engine {
   exit: bool,
 
   // Meshes & instances
-  meshes: Vec<Mesh>,
+  meshes: SlotMap<MeshHandle, Mesh>,
   mesh_lookup: HashMap<String, MeshHandle>,
   instances: SlotMap<InstanceHandle, Instance>,
 
@@ -112,7 +121,7 @@ impl Engine {
       aspect: w as f64 / h as f64,
       exit: false,
       mesh_lookup: HashMap::new(),
-      meshes: vec![],
+      meshes: SlotMap::with_key(),
       instances: SlotMap::with_key(),
 
       lights: vec![] as std::vec::Vec<Light>,
@@ -146,9 +155,7 @@ impl Engine {
 
   /// Add a mesh to the cache and give it a name
   pub fn add_mesh(&mut self, name: &str, mesh: Mesh) {
-    self.meshes.push(mesh);
-    let handle = MeshHandle(self.meshes.len() - 1);
-    self.mesh_lookup.insert(name.to_string(), handle);
+    self.mesh_lookup.insert(name.to_string(), self.meshes.insert(mesh));
   }
 
   /// Add a light to the scene, used by 3D rendering
@@ -157,20 +164,24 @@ impl Engine {
   }
 
   /// Create an instance of a mesh with given name, instance will have default values & material
-  pub fn add_instance(&mut self, mesh_name: &str) -> InstanceHandle {
+  pub fn add_instance(&mut self, mesh_name: &str) -> Result<InstanceHandle, EngineError> {
     let tex = SimpleColourTexture::new(WHITE);
     let mat = Material::new(tex);
 
-    let i = Instance {
-      material: mat,
-      pos: VEC3_ZERO,
-      scale: VEC3_ONE,
-      rot: Quat::ident(),
-      smooth: true,
-      mesh: self.get_mesh_handle(mesh_name),
-    };
+    if let Some(mesh_handle) = self.mesh_lookup.get(mesh_name) {
+      let i = Instance {
+        material: mat,
+        pos: VEC3_ZERO,
+        scale: VEC3_ONE,
+        rot: Quat::ident(),
+        smooth: true,
+        mesh: *mesh_handle,
+      };
 
-    self.instances.insert(i)
+      Ok(self.instances.insert(i))
+    } else {
+      Err(EngineError::MeshNotFound)
+    }
   }
 
   pub fn instance_mut(&mut self, h: InstanceHandle) -> Option<&mut Instance> {
@@ -335,9 +346,9 @@ impl Engine {
     }
   }
 
-  pub(crate) fn get_mesh_handle(&self, name: &str) -> MeshHandle {
-    *self.mesh_lookup.get(name).unwrap()
-  }
+  // pub(crate) fn get_mesh_handle(&self, name: &str) -> MeshHandle {
+  //   *self.mesh_lookup.get(name).unwrap()
+  // }
 
   /// Renders a 3D mesh onto the screen from given camera position
   /// This triggers a rendering pipeline
@@ -355,7 +366,8 @@ impl Engine {
     let m = instance.get_model_mat();
     let mvp = cam.pers_mat * cam.view_mat * m;
 
-    let mesh = &self.meshes[instance.mesh.0];
+    // We unwrap here, as mesh existence is checked when instance is created
+    let mesh = &self.meshes.get(instance.mesh).unwrap();
 
     // 2. Process verts, into world space, clip space and screen space
     let verts: Vec<ProcessedVert> = mesh

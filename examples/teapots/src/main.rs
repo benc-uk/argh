@@ -39,10 +39,10 @@ fn main() {
   let mut mat = Material::new(tex);
   e.add_mesh("teapot", primitives::new_teapot());
 
-  let h1 = e.add_instance("teapot");
+  let h1 = e.add_instance("teapot").expect("bad");
   e.instance_mut(h1).unwrap().set_material(mat).set_pos_xyz(2.0, -1.0, -3.0);
 
-  let h2 = e.add_instance("teapot");
+  let h2 = e.add_instance("teapot").expect("bad");
   e.instance_mut(h2)
     .unwrap()
     .set_material(Material::new(SimpleColourTexture::new(Colour::rand())))

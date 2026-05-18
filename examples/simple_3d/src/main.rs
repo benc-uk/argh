@@ -23,9 +23,9 @@ impl Scene for MyScene {
     let px = f64::sin(t * 0.7);
     let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
     let pz2 = f64::sin(t * 0.9) * 0.6;
-    engine.instance_mut(self.h1).unwrap().rot_y(0.01).rot_x(0.03).set_pos(Vec3::new(-px, py, pz));
-    engine.instance_mut(self.h2).unwrap().rot_y(0.03).rot_x(0.04).set_pos(Vec3::new(px, -py, pz2));
-    engine.instance_mut(self.h3).unwrap().rot_y(0.02).set_pos(Vec3::new(px * 0.3, py * 0.5, 0.0));
+    engine.instance_mut(self.h1).unwrap().rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(Vec3::new(-px, py, pz));
+    engine.instance_mut(self.h2).unwrap().rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(Vec3::new(px, -py, pz2));
+    engine.instance_mut(self.h3).unwrap().rot_y(0.8 * dt).set_pos(Vec3::new(px * 3.0 * dt, py * 5.0 * dt, 0.0));
 
     engine.render_all(&self.camera);
 
@@ -59,9 +59,9 @@ fn main() {
   e.add_mesh("sphere1", primitives::new_sphere(8, 12));
   e.add_mesh("sphere2", primitives::new_sphere(24, 48));
 
-  let h1 = e.add_instance("cube");
-  let h2 = e.add_instance("sphere1");
-  let h3 = e.add_instance("sphere2");
+  let h1 = e.add_instance("cube").expect("bad");
+  let h2 = e.add_instance("sphere1").expect("bad");
+  let h3 = e.add_instance("sphere2").expect("bad");
 
   e.instance_mut(h1).unwrap().set_material(mat);
   e.instance_mut(h2).unwrap().set_material(mat2).smooth = false;
