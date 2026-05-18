@@ -6,13 +6,14 @@
 // Notes:
 // ==============================================================================================
 
+use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::camera::Camera;
 use crate::colour::{BLACK, Colour, WHITE};
 use crate::light::Light;
-use crate::math::{Vec2, Vec3, Vec4};
-use crate::models::Mesh;
+use crate::math::{Quat, VEC3_ONE, VEC3_ZERO, Vec2, Vec3, Vec4};
+use crate::models::{Instance, Material, Mesh, SimpleColourTexture};
 use crate::{buffer::Buffer, helpers};
 use minifb::{Window, WindowOptions};
 
@@ -22,7 +23,16 @@ pub trait Scene {
   fn update(&mut self, engine: &mut Engine, dt: f64, t: f64);
 }
 
+// Re-export some of the minifb enums for inputs
 pub use minifb::{Key, MouseButton};
+
+/// This is an integer handle to reference instances
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct InstanceHandle(usize);
+
+/// This is a internal way to lookup Meshes
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub(crate) struct MeshHandle(usize);
 
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
@@ -35,6 +45,11 @@ pub struct Engine {
   fps: f64,
   lights: Vec<Light>,
   exit: bool,
+
+  // Meshes & instances
+  meshes: Vec<Mesh>,
+  mesh_lookup: HashMap<String, MeshHandle>,
+  instances: Vec<Instance>,
 
   // Inputs
   keys: Vec<Key>,
@@ -97,6 +112,9 @@ impl Engine {
       target_fps: 60,
       aspect: w as f64 / h as f64,
       exit: false,
+      mesh_lookup: HashMap::new(),
+      meshes: vec![],
+      instances: vec![],
 
       lights: vec![] as std::vec::Vec<Light>,
       ambient_light: Colour::new(0.1, 0.1, 0.1),
@@ -122,18 +140,50 @@ impl Engine {
     self.aspect
   }
 
-  /// Get the current time in seconds
-  #[inline(always)]
-  pub fn t(&self) -> f64 {
-    self.t
-  }
-
   /// Stop running and exit the running process
   pub fn stop(&mut self) {
     self.exit = true;
   }
 
-  /// Set the colour of a
+  /// Add a mesh to the cache and give it a name
+  pub fn add_mesh(&mut self, name: &str, mesh: Mesh) {
+    self.meshes.push(mesh);
+    let handle = MeshHandle(self.meshes.len() - 1);
+    self.mesh_lookup.insert(name.to_string(), handle);
+  }
+
+  /// Add a light to the scene, used by 3D rendering
+  pub fn add_light(&mut self, light: Light) {
+    self.lights.push(light);
+  }
+
+  /// Create an instance of a mesh with given name, instance will have default values & material
+  pub fn add_instance(&mut self, mesh_name: &str) -> InstanceHandle {
+    let tex = SimpleColourTexture::new(WHITE);
+    let mat = Material::new(tex);
+
+    let i = Instance {
+      material: mat,
+      pos: VEC3_ZERO,
+      scale: VEC3_ONE,
+      rot: Quat::ident(),
+      smooth: true,
+      mesh: self.get_mesh_handle(mesh_name),
+    };
+
+    self.instances.push(i);
+    InstanceHandle(self.instances.len() - 1)
+  }
+
+  pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {
+    &mut self.instances[h.0]
+  }
+
+  pub fn instance(&self, h: InstanceHandle) -> &Instance {
+    &self.instances[h.0]
+  }
+
+  /// Set the colour of a single pixel in the frame buffer
   /// # Arguments
   /// * `x` - X position of pixel
   /// * `y` - Y position of pixel
@@ -273,21 +323,31 @@ impl Engine {
     }
   }
 
-  /// Add a light to the scene, used by 3D rendering
-  pub fn add_light(&mut self, light: Light) {
-    self.lights.push(light);
+  /// Render all instances available
+  pub fn render_all(&mut self, cam: &Camera) {
+    for i in 0..self.instances.len() {
+      self.render_instance(cam, InstanceHandle(i));
+    }
+  }
+
+  pub(crate) fn get_mesh_handle(&self, name: &str) -> MeshHandle {
+    *self.mesh_lookup.get(&name.to_string()).unwrap()
   }
 
   /// Renders a 3D mesh onto the screen from given camera position
   /// This triggers a rendering pipeline
-  pub fn render_mesh(&mut self, cam: &Camera, mesh: &Mesh) {
+  pub fn render_instance(&mut self, cam: &Camera, h: InstanceHandle) {
+    let instance = &self.instances[h.0];
+
     // Get the colour of the mesh
-    let mat = mesh.get_material();
+    let mat = instance.get_material();
     let colour = mat.texture.get_colour_at(0.0, 0.0);
 
     // 1. Combine MVP (model, view, perspective) matrix
-    let m = mesh.get_model_mat();
+    let m = instance.get_model_mat();
     let mvp = cam.pers_mat * cam.view_mat * m;
+
+    let mesh = &self.meshes[instance.mesh.0];
 
     // 2. Process verts, into world space, clip space and screen space
     let verts: Vec<ProcessedVert> = mesh
@@ -332,7 +392,7 @@ impl Engine {
     // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
     // We just rotate them by the model rotation quat for now
     // TODO: We probably do need to do this the proper way at some point
-    let normals: Vec<Vec3> = mesh.normals.iter().map(|n| mesh.rot.rotate_vec3(*n)).collect();
+    let normals: Vec<Vec3> = mesh.normals.iter().map(|n| instance.rot.rotate_vec3(*n)).collect();
 
     // 3. Now to rendering triangles
     // Walk the index list 3 at a time for triangles, cull, shade & rasterize
@@ -358,6 +418,7 @@ impl Engine {
       if combined_out != 0 {
         continue;
       }
+
       // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
       // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
       let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & helpers::OUT_NEAR;
@@ -381,7 +442,7 @@ impl Engine {
       // Calc shading & lighting at each world vertex, and set into screen vert
       let (d0, s0) = shade_vert(&self.lights, wv0, n0, eye, mat.hardness);
       sv0.colour = (d0 * colour * mat.diffuse) + (s0 * mat.specular) + amb;
-      if mesh.smooth {
+      if instance.smooth {
         let (d1, s1) = shade_vert(&self.lights, wv1, n1, eye, mat.hardness);
         let (d2, s2) = shade_vert(&self.lights, wv2, n2, eye, mat.hardness);
         sv1.colour = (d1 * colour * mat.diffuse) + (s1 * mat.specular) + amb;
@@ -389,7 +450,7 @@ impl Engine {
       }
 
       // Finally draw the damn triangle based on the screen verts and interpolate
-      self.buffer.fill_triangle(sv0, sv1, sv2, mesh.smooth);
+      self.buffer.fill_triangle(sv0, sv1, sv2, instance.smooth);
     }
   }
 }

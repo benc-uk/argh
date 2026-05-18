@@ -8,6 +8,7 @@
 
 use crate::{
   colour::{Colour, WHITE},
+  engine::{Engine, InstanceHandle, MeshHandle},
   math::{Mat4, Quat, VEC3_ONE, VEC3_ZERO, Vec3},
 };
 
@@ -70,79 +71,92 @@ impl Material {
 // Mesh
 // ===================================
 
-/// Triangle based 3D mesh - with position, scale and rotation
+/// Triangle based 3D mesh
 pub struct Mesh {
-  pub(crate) material: Material, // Surface material, colour etc
-  pub(crate) pos: Vec3,          // Position
-  pub(crate) rot: Quat,          // Rotation held as a Quat
-  pub(crate) scale: Vec3,        // Scaling factors
-
   pub(crate) verts: Vec<Vec3>,   // Internal mesh vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
   pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
-
-  pub smooth: bool, // Gouraud shading enabled
 }
 
 impl Mesh {
   // Internal only method for creating an "empty" mesh
   pub(crate) fn new() -> Self {
-    let tex = SimpleColourTexture::new(WHITE);
-    let mat = Material::new(tex);
     Self {
-      material: mat,
-      pos: VEC3_ZERO,
-      scale: VEC3_ONE,
-      rot: Quat::ident(),
       verts: vec![],
-      indices: vec![],
       normals: vec![],
-      smooth: true,
+      indices: vec![],
     }
   }
+}
 
-  pub fn set_material(&mut self, m: Material) {
+// ===================================
+// Instance
+// ===================================
+
+/// Instance of a mesh in the world, with position, scale and rotation
+pub struct Instance {
+  pub(crate) material: Material, // Surface material, colour etc
+  pub(crate) pos: Vec3,          // Position
+  pub(crate) rot: Quat,          // Rotation held as a Quat
+  pub(crate) scale: Vec3,        // Scaling factors
+  pub(crate) mesh: MeshHandle,   // Reference to mesh via handle
+
+  pub smooth: bool, // Gouraud shading enabled
+}
+
+impl Instance {
+  pub fn set_material(&mut self, m: Material) -> &mut Self {
     self.material = m;
+    self
   }
 
   pub fn get_material(&self) -> &Material {
     &self.material
   }
 
-  pub fn set_pos(&mut self, pos: Vec3) {
+  pub fn set_pos(&mut self, pos: Vec3) -> &mut Self {
     self.pos = pos;
+    self
   }
 
-  pub fn set_pos_xyz(&mut self, x: f64, y: f64, z: f64) {
+  pub fn set_pos_xyz(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
     self.pos = Vec3 { x, y, z };
+    self
   }
 
-  pub fn rot_x(&mut self, a: f64) {
+  pub fn rot_x(&mut self, a: f64) -> &mut Self {
     self.rot.rot_x(a);
+    self
   }
 
-  pub fn rot_y(&mut self, a: f64) {
+  pub fn rot_y(&mut self, a: f64) -> &mut Self {
     self.rot.rot_y(a);
+    self
   }
 
-  pub fn rot_z(&mut self, a: f64) {
+  pub fn rot_z(&mut self, a: f64) -> &mut Self {
     self.rot.rot_z(a);
+    self
   }
 
-  pub fn scale(&mut self, s: f64) {
-    self.scale = Vec3 { x: s, y: s, z: s }
+  pub fn scale(&mut self, s: f64) -> &mut Self {
+    self.scale = Vec3 { x: s, y: s, z: s };
+    self
   }
 
-  pub fn scale_x(&mut self, s: f64) {
-    self.scale.x = s
+  pub fn scale_x(&mut self, s: f64) -> &mut Self {
+    self.scale.x = s;
+    self
   }
 
-  pub fn scale_y(&mut self, s: f64) {
-    self.scale.y = s
+  pub fn scale_y(&mut self, s: f64) -> &mut Self {
+    self.scale.y = s;
+    self
   }
 
-  pub fn scale_z(&mut self, s: f64) {
-    self.scale.z = s
+  pub fn scale_z(&mut self, s: f64) -> &mut Self {
+    self.scale.z = s;
+    self
   }
 
   /// Return the model matrix for this mesh, with scale, rotation and translation

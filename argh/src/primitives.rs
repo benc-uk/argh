@@ -7,7 +7,6 @@
 // ==============================================================================================
 
 use crate::{math::*, models::Mesh};
-use std::fs::read_to_string;
 
 /// Create a mesh for a unit cube, two triangles per face.
 ///
