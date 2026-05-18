@@ -331,7 +331,7 @@ impl Engine {
   }
 
   pub(crate) fn get_mesh_handle(&self, name: &str) -> MeshHandle {
-    *self.mesh_lookup.get(&name.to_string()).unwrap()
+    *self.mesh_lookup.get(name).unwrap()
   }
 
   /// Renders a 3D mesh onto the screen from given camera position

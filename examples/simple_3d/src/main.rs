@@ -2,7 +2,7 @@ use argh::camera::Camera;
 use argh::engine::{Engine, InstanceHandle, Scene};
 use argh::light::Light;
 use argh::math::Vec3;
-use argh::models::{Instance, Material, SimpleColourTexture};
+use argh::models::{Material, SimpleColourTexture};
 use argh::{colour::*, primitives};
 
 struct MyScene {

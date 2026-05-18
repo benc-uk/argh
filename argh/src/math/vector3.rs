@@ -107,13 +107,13 @@ impl Vec3 {
   /// Reflect this vector about a (unit) normal.
   /// Uses the "incident points into surface" convention:
   ///   R = I - 2(N·I)N
-  pub fn reflect(&self, n: Vec3) -> Vec3 {
+  pub fn reflect(&self, n: Self) -> Self {
     *self - n * (2.0 * self.dot(n))
   }
 
   /// Invert direction of this vector
-  pub fn invert(self) -> Vec3 {
-    Vec3 {
+  pub fn invert(self) -> Self {
+    Self {
       x: -self.x,
       y: -self.y,
       z: -self.z,
