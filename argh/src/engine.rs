@@ -14,7 +14,7 @@ use crate::camera::Camera;
 use crate::colour::{BLACK, Colour, WHITE};
 use crate::light::Light;
 use crate::math::{Quat, VEC3_ONE, VEC3_ZERO, Vec2, Vec3, Vec4};
-use crate::models::{Instance, Material, Mesh, SimpleColourTexture};
+use crate::models::{Instance, Material, Mesh};
 use crate::{buffer::Buffer, helpers};
 use minifb::{Window, WindowOptions};
 
@@ -32,15 +32,26 @@ new_key_type! {
   pub struct InstanceHandle;
 }
 
+new_key_type! {
+  /// A handle to reference materials held by the engine
+  pub struct MaterialHandle;
+}
+
 // This is a internal way to lookup Meshes
 new_key_type! {
   pub(crate) struct MeshHandle;
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error)]
 pub enum EngineError {
-  #[error("no mesh found with that name")]
-  MeshNotFound,
+  #[error("no mesh registered with the name: '{0}'")]
+  MeshNotFound(String),
+}
+
+impl std::fmt::Debug for EngineError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    std::fmt::Display::fmt(self, f)
+  }
 }
 
 /// This is the heart of argh, create an instance of the Engine to use the library
@@ -57,6 +68,7 @@ pub struct Engine {
 
   // Meshes & instances
   meshes: SlotMap<MeshHandle, Mesh>,
+  materials: SlotMap<MaterialHandle, Material>,
   mesh_lookup: HashMap<String, MeshHandle>,
   instances: SlotMap<InstanceHandle, Instance>,
 
@@ -83,6 +95,9 @@ pub struct ScreenVert {
   pub(crate) y: f64,         // pixel coordinate, [0, height], origin top-left
   pub(crate) z: f64,         // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
   pub(crate) colour: Colour, // Gouraud shading needs colour per vertex
+  pub(crate) inv_w: f64,     // Inverse of w
+  pub(crate) u_w: f64,       // PRE-DIVIDED, not raw u and v.
+  pub(crate) v_w: f64,       // PRE-DIVIDED, not raw u and v.
 }
 
 // VertexOut collects various data from the processing/transformation of mesh vertex in the rendering pass
@@ -122,6 +137,7 @@ impl Engine {
       exit: false,
       mesh_lookup: HashMap::new(),
       meshes: SlotMap::with_key(),
+      materials: SlotMap::with_key(),
       instances: SlotMap::with_key(),
 
       lights: vec![] as std::vec::Vec<Light>,
@@ -130,80 +146,6 @@ impl Engine {
       keys: vec![],
       keys_pressed: vec![],
     }
-  }
-
-  /// Clear the entire window and buffer with the given colour
-  /// Also clears the depth buffer
-  pub fn clear(&mut self, colour: Colour) {
-    self.buffer.clear(colour);
-  }
-
-  /// Return the width & height of the window
-  pub fn get_size(&self) -> (usize, usize) {
-    (self.win_size.0, self.win_size.1)
-  }
-
-  /// Get the aspect ratio of the viewport and window
-  pub fn get_aspect(&self) -> f64 {
-    self.aspect
-  }
-
-  /// Stop running and exit the running process
-  pub fn stop(&mut self) {
-    self.exit = true;
-  }
-
-  /// Add a mesh to the cache and give it a name
-  pub fn add_mesh(&mut self, name: &str, mesh: Mesh) {
-    self.mesh_lookup.insert(name.to_string(), self.meshes.insert(mesh));
-  }
-
-  /// Add a light to the scene, used by 3D rendering
-  pub fn add_light(&mut self, light: Light) {
-    self.lights.push(light);
-  }
-
-  /// Create an instance of a mesh with given name, instance will have default values & material
-  pub fn add_instance(&mut self, mesh_name: &str) -> Result<InstanceHandle, EngineError> {
-    let tex = SimpleColourTexture::new(WHITE);
-    let mat = Material::new(tex);
-
-    if let Some(mesh_handle) = self.mesh_lookup.get(mesh_name) {
-      let i = Instance {
-        material: mat,
-        pos: VEC3_ZERO,
-        scale: VEC3_ONE,
-        rot: Quat::ident(),
-        smooth: true,
-        mesh: *mesh_handle,
-      };
-
-      Ok(self.instances.insert(i))
-    } else {
-      Err(EngineError::MeshNotFound)
-    }
-  }
-
-  pub fn instance_mut(&mut self, h: InstanceHandle) -> Option<&mut Instance> {
-    self.instances.get_mut(h)
-  }
-
-  pub fn instance(&self, h: InstanceHandle) -> Option<&Instance> {
-    self.instances.get(h)
-  }
-
-  pub fn remove_instance(&mut self, h: InstanceHandle) {
-    self.instances.remove(h);
-  }
-
-  /// Set the colour of a single pixel in the frame buffer
-  /// # Arguments
-  /// * `x` - X position of pixel
-  /// * `y` - Y position of pixel
-  /// * `colour` - New colour of the pixel
-  #[inline(always)]
-  pub fn set_pixel(&mut self, x: usize, y: usize, colour: Colour) {
-    self.buffer.set_pixel(x, y, colour);
   }
 
   /// Begin the main loop, open the window and blocks until the window is closed or escape is pressed
@@ -261,6 +203,216 @@ impl Engine {
     }
   }
 
+  /// Stop running and exit the running process
+  pub fn stop(&mut self) {
+    self.exit = true;
+  }
+
+  /// Return the width & height of the window
+  pub fn get_size(&self) -> (usize, usize) {
+    (self.win_size.0, self.win_size.1)
+  }
+
+  /// Get the aspect ratio of the viewport and window
+  pub fn get_aspect(&self) -> f64 {
+    self.aspect
+  }
+
+  /// Add a mesh to the cache and give it a name
+  pub fn add_mesh(&mut self, name: &str, mesh: Mesh) {
+    self.mesh_lookup.insert(name.to_string(), self.meshes.insert(mesh));
+  }
+
+  /// Add a light to the scene, used by 3D rendering
+  pub fn add_light(&mut self, light: Light) {
+    self.lights.push(light);
+  }
+
+  /// Create an instance of a mesh with given name, using the material
+  pub fn add_instance(&mut self, mesh_name: &str, mat_handle: MaterialHandle) -> Result<InstanceHandle, EngineError> {
+    if let Some(mesh_handle) = self.mesh_lookup.get(mesh_name) {
+      let i = Instance {
+        material_handle: mat_handle,
+        pos: VEC3_ZERO,
+        scale: VEC3_ONE,
+        rot: Quat::ident(),
+        smooth: true,
+        mesh_handle: *mesh_handle,
+      };
+
+      Ok(self.instances.insert(i))
+    } else {
+      Err(EngineError::MeshNotFound(String::from(mesh_name)))
+    }
+  }
+
+  pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {
+    self.instances.get_mut(h).expect("instance not found")
+  }
+
+  pub fn instance(&self, h: InstanceHandle) -> &Instance {
+    self.instances.get(h).expect("instance not found")
+  }
+
+  pub fn remove_instance(&mut self, h: InstanceHandle) {
+    self.instances.remove(h);
+  }
+
+  pub fn add_material(&mut self, mat: Material) -> MaterialHandle {
+    self.materials.insert(mat)
+  }
+
+  pub fn material_mut(&mut self, h: MaterialHandle) -> &mut Material {
+    self.materials.get_mut(h).expect("material not found")
+  }
+
+  pub fn material(&self, h: MaterialHandle) -> &Material {
+    self.materials.get(h).expect("material not found")
+  }
+
+  /// Render all instances available
+  pub fn render_all(&mut self, cam: &Camera) {
+    //self.instances.iter().map(|(ih, _)| &self.render_instance(cam, ih));
+    let keys: Vec<_> = self.instances.keys().collect();
+
+    for i in keys {
+      self.render_instance(cam, i);
+    }
+  }
+
+  /// Renders a 3D mesh onto the screen from given camera position
+  /// This triggers a rendering pipeline
+  pub fn render_instance(&mut self, cam: &Camera, h: InstanceHandle) {
+    // Shorthand for finding the instance
+    let Some(instance) = self.instances.get(h) else {
+      return;
+    };
+
+    // Get texture
+    let mh = instance.get_material();
+    let mat = &self.materials.get(mh).unwrap();
+    let tex = mat.texture.as_ref();
+
+    // 1. Combine MVP (model, view, perspective) matrix
+    let m = instance.get_model_mat();
+    let mvp = cam.pers_mat * cam.view_mat * m;
+
+    // We unwrap here, as mesh existence is checked when instance is created
+    let mesh = &self.meshes.get(instance.mesh_handle).unwrap();
+
+    // 2. Process verts, into world space, clip space and screen space
+    let verts: Vec<ProcessedVert> = mesh
+      .verts
+      .iter()
+      .enumerate()
+      .map(|(i, vert)| {
+        // World space: vert transformed by model matrix M
+        let world = m * vert;
+
+        // Clip space: vert transformed by MVP
+        let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
+
+        // Calc how vertex is clipped or not
+        let outcode = helpers::compute_outcode(&clip);
+
+        // 1/w used for perspective and we store it for other reasons too
+        let inv_w = 1.0 / clip.w;
+
+        // Clip space -> NDCs, which get us towards screen space
+        let ndc_x = clip.x * inv_w;
+        let ndc_y = clip.y * inv_w;
+        let ndc_z = clip.z * inv_w;
+        // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
+        let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
+
+        // Reach out to the UV array and pre-mult by 1/w
+        let uv = mesh.uvs[i];
+        let u_w = uv.x * inv_w;
+        let v_w = uv.y * inv_w;
+
+        // Bundle up processed data into a single struct
+        ProcessedVert {
+          world,
+          screen: ScreenVert {
+            x: sx,
+            y: sy,
+            z: ndc_z,
+            inv_w,
+            colour: BLACK, // Mutated later
+            u_w,
+            v_w,
+          },
+          outcode,
+        }
+      })
+      .collect();
+
+    // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
+    // We just rotate them by the model rotation quat for now
+    // TODO: We probably do need to do this the proper way at some point
+    let normals: Vec<Vec3> = mesh.normals.iter().map(|n| instance.rot.rotate_vec3(*n)).collect();
+
+    // 3. Now to rendering triangles
+    // Walk the index list 3 at a time for triangles, cull, shade & rasterize
+    for tri in mesh.indices.chunks(3) {
+      let i0 = tri[0] as usize;
+      let i1 = tri[1] as usize;
+      let i2 = tri[2] as usize;
+      let mut sv0 = verts[i0].screen;
+      let mut sv1 = verts[i1].screen;
+      let mut sv2 = verts[i2].screen;
+      let wv0 = verts[i0].world;
+      let wv1 = verts[i1].world;
+      let wv2 = verts[i2].world;
+
+      // It's convention that the normals list is in the same order as the verts list
+      // Otherwise we're in impossible mess TBH
+      let n0 = normals[i0];
+      let n1 = normals[i1];
+      let n2 = normals[i2];
+
+      // Trivial reject: all three vertices outside the SAME plane.
+      let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
+      if combined_out != 0 {
+        continue;
+      }
+
+      // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
+      // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
+      let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & helpers::OUT_NEAR;
+      if any_near != 0 {
+        continue;
+      }
+
+      // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
+      //  - Back faces (mesh CW or back of CCW) have POSITIVE area
+      // So we discard anything non-negative.
+      let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
+      if area >= 0.0 {
+        continue;
+      }
+
+      // Ambient light
+      let amb = self.ambient_light * mat.diffuse;
+
+      let eye = cam.get_pos();
+
+      // Calc shading & lighting at each world vertex, and set into screen vert
+      let (d0, s0) = helpers::shade_vert(&self.lights, wv0, n0, eye, mat.hardness);
+      sv0.colour = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
+      if instance.smooth {
+        let (d1, s1) = helpers::shade_vert(&self.lights, wv1, n1, eye, mat.hardness);
+        let (d2, s2) = helpers::shade_vert(&self.lights, wv2, n2, eye, mat.hardness);
+        sv1.colour = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
+        sv2.colour = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
+      }
+
+      // Finally draw the damn triangle based on the screen verts and interpolate
+      self.buffer.fill_triangle(sv0, sv1, sv2, tex, instance.smooth);
+    }
+  }
+
   /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
   pub fn get_keys(&self) -> &[Key] {
     &self.keys
@@ -269,6 +421,22 @@ impl Engine {
   /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
   pub fn get_keys_pressed(&self) -> &[Key] {
     &self.keys_pressed
+  }
+
+  /// Set the colour of a single pixel in the frame buffer, this is the bedrock of the system
+  /// # Arguments
+  /// * `x` - X position of pixel
+  /// * `y` - Y position of pixel
+  /// * `colour` - New colour of the pixel
+  #[inline(always)]
+  pub fn set_pixel(&mut self, x: usize, y: usize, colour: Colour) {
+    self.buffer.set_pixel(x, y, colour);
+  }
+
+  /// Clear the entire window and buffer with the given colour
+  /// Also clears the depth buffer
+  pub fn clear(&mut self, colour: Colour) {
+    self.buffer.clear(colour);
   }
 
   /// Draw text onto the screen
@@ -335,173 +503,4 @@ impl Engine {
       self.draw_line(points[p].x as i32, points[p].y as i32, points[p + 1].x as i32, points[p + 1].y as i32, colour);
     }
   }
-
-  /// Render all instances available
-  pub fn render_all(&mut self, cam: &Camera) {
-    //self.instances.iter().map(|(ih, _)| &self.render_instance(cam, ih));
-    let keys: Vec<_> = self.instances.keys().collect();
-
-    for i in keys {
-      self.render_instance(cam, i);
-    }
-  }
-
-  // pub(crate) fn get_mesh_handle(&self, name: &str) -> MeshHandle {
-  //   *self.mesh_lookup.get(name).unwrap()
-  // }
-
-  /// Renders a 3D mesh onto the screen from given camera position
-  /// This triggers a rendering pipeline
-  pub fn render_instance(&mut self, cam: &Camera, h: InstanceHandle) {
-    // Shorthand for finding the instance
-    let Some(instance) = self.instances.get(h) else {
-      return;
-    };
-
-    // Get the colour of the mesh
-    let mat = instance.get_material();
-    let colour = mat.texture.get_colour_at(0.0, 0.0);
-
-    // 1. Combine MVP (model, view, perspective) matrix
-    let m = instance.get_model_mat();
-    let mvp = cam.pers_mat * cam.view_mat * m;
-
-    // We unwrap here, as mesh existence is checked when instance is created
-    let mesh = &self.meshes.get(instance.mesh).unwrap();
-
-    // 2. Process verts, into world space, clip space and screen space
-    let verts: Vec<ProcessedVert> = mesh
-      .verts
-      .iter()
-      .map(|vert| {
-        // World space: vert transformed by model matrix M
-        let world = m * vert;
-
-        // Clip space: vert transformed by MVP
-        let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
-
-        // Calc how vertex is clipped or not
-        let outcode = helpers::compute_outcode(&clip);
-
-        // 1/w used for perspective and we store it for other reasons too
-        let inv_w = 1.0 / clip.w;
-
-        // Clip space -> NDCs, which get us towards screen space
-        let ndc_x = clip.x * inv_w;
-        let ndc_y = clip.y * inv_w;
-        let ndc_z = clip.z * inv_w;
-        // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
-
-        // Bundle up processed data into a single struct
-        ProcessedVert {
-          world,
-          screen: ScreenVert {
-            x: sx,
-            y: sy,
-            z: ndc_z,
-            // inv_w,
-            colour: BLACK, // Mutated later
-          },
-          outcode,
-        }
-      })
-      .collect();
-
-    // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
-    // We just rotate them by the model rotation quat for now
-    // TODO: We probably do need to do this the proper way at some point
-    let normals: Vec<Vec3> = mesh.normals.iter().map(|n| instance.rot.rotate_vec3(*n)).collect();
-
-    // 3. Now to rendering triangles
-    // Walk the index list 3 at a time for triangles, cull, shade & rasterize
-    for tri in mesh.indices.chunks(3) {
-      let i0 = tri[0] as usize;
-      let i1 = tri[1] as usize;
-      let i2 = tri[2] as usize;
-      let mut sv0 = verts[i0].screen;
-      let mut sv1 = verts[i1].screen;
-      let mut sv2 = verts[i2].screen;
-      let wv0 = verts[i0].world;
-      let wv1 = verts[i1].world;
-      let wv2 = verts[i2].world;
-
-      // It's convention that the normals list is in the same order as the verts list
-      // Otherwise we're in impossible mess TBH
-      let n0 = normals[i0];
-      let n1 = normals[i1];
-      let n2 = normals[i2];
-
-      // Trivial reject: all three vertices outside the SAME plane.
-      let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
-      if combined_out != 0 {
-        continue;
-      }
-
-      // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
-      // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
-      let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & helpers::OUT_NEAR;
-      if any_near != 0 {
-        continue;
-      }
-
-      // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
-      //  - Back faces (mesh CW or back of CCW) have POSITIVE area
-      // So we discard anything non-negative.
-      let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
-      if area >= 0.0 {
-        continue;
-      }
-
-      // Ambient light
-      let amb = self.ambient_light * mat.diffuse;
-
-      let eye = cam.get_pos();
-
-      // Calc shading & lighting at each world vertex, and set into screen vert
-      let (d0, s0) = shade_vert(&self.lights, wv0, n0, eye, mat.hardness);
-      sv0.colour = (d0 * colour * mat.diffuse) + (s0 * mat.specular) + amb;
-      if instance.smooth {
-        let (d1, s1) = shade_vert(&self.lights, wv1, n1, eye, mat.hardness);
-        let (d2, s2) = shade_vert(&self.lights, wv2, n2, eye, mat.hardness);
-        sv1.colour = (d1 * colour * mat.diffuse) + (s1 * mat.specular) + amb;
-        sv2.colour = (d2 * colour * mat.diffuse) + (s2 * mat.specular) + amb;
-      }
-
-      // Finally draw the damn triangle based on the screen verts and interpolate
-      self.buffer.fill_triangle(sv0, sv1, sv2, instance.smooth);
-    }
-  }
-}
-
-// Internal function for calculating the lighting and colour at a vertex in world space
-fn shade_vert(lights: &Vec<Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
-  // Shading & lighting over multiple lights
-  let mut diff_sum = BLACK;
-  let mut spec_sum = BLACK;
-
-  // if !lights.is_empty() {
-  for light in lights {
-    // Vectors to and from the surface and the light
-    let l = (light.pos - world).normalize_new();
-    let li = l.invert();
-
-    // Diffuse lighting
-    let n_dot_l = n.dot(l).max(0.0);
-    let diff_col = light.colour * light.brightness * n_dot_l;
-    diff_sum += diff_col;
-
-    // Specular
-    if n_dot_l > 0.0 {
-      let v = (eye - world).normalize_new();
-      let r = li.reflect(n);
-      let v_dot_r = v.dot(r).max(0.0);
-      let spec = v_dot_r.powf(hardness);
-      let spec_col = light.colour * spec * light.brightness;
-      spec_sum += spec_col;
-    }
-  }
-  // }
-  (diff_sum, spec_sum)
 }

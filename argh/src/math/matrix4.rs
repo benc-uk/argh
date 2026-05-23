@@ -22,10 +22,19 @@ pub struct Mat4 {
   ele: [[f64; 4]; 4],
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error)]
 pub enum Mat4Error {
   #[error("near plane cannot be zero")]
   NearPlaneZero,
+
+  #[error("far plane must be greater than near")]
+  FarNotGreaterThanNear,
+}
+
+impl std::fmt::Debug for Mat4Error {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    std::fmt::Display::fmt(self, f)
+  }
 }
 
 impl Mat4 {
@@ -115,6 +124,10 @@ impl Mat4 {
   pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Result<Self, Mat4Error> {
     if near == 0.0 {
       return Err(Mat4Error::NearPlaneZero);
+    }
+
+    if far <= near {
+      return Err(Mat4Error::FarNotGreaterThanNear);
     }
 
     let f = 1.0 / (fovy * 0.5).tan(); // cotangent of half-FOV

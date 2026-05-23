@@ -6,15 +6,15 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{engine::*, math::*};
+use crate::{colour::*, engine::*, light::*, math::*};
 
 // One bit per frustum plane
-pub(crate) const OUT_LEFT: u8 = 1 << 0;
-pub(crate) const OUT_RIGHT: u8 = 1 << 1;
-pub(crate) const OUT_BOTTOM: u8 = 1 << 2;
-pub(crate) const OUT_TOP: u8 = 1 << 3;
-pub(crate) const OUT_NEAR: u8 = 1 << 4;
-pub(crate) const OUT_FAR: u8 = 1 << 5;
+pub const OUT_LEFT: u8 = 1 << 0;
+pub const OUT_RIGHT: u8 = 1 << 1;
+pub const OUT_BOTTOM: u8 = 1 << 2;
+pub const OUT_TOP: u8 = 1 << 3;
+pub const OUT_NEAR: u8 = 1 << 4;
+pub const OUT_FAR: u8 = 1 << 5;
 
 #[inline(always)]
 pub fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
@@ -44,4 +44,35 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
     code |= OUT_FAR;
   }
   code
+}
+
+// Internal function for calculating the light at a vertex in world space
+// We return colours which are in fact light values not the colour of the surface
+pub fn shade_vert(lights: &Vec<Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
+  // Shading & lighting over multiple lights
+  let mut diff_sum = BLACK;
+  let mut spec_sum = BLACK;
+
+  for light in lights {
+    // Vectors to and from the surface and the light
+    let l = (light.pos - world).normalize_new();
+    let li = l.invert();
+
+    // Diffuse lighting
+    let n_dot_l = n.dot(l).max(0.0);
+    let diff_col = light.colour * light.brightness * n_dot_l;
+    diff_sum += diff_col;
+
+    // Specular
+    if n_dot_l > 0.0 {
+      let v = (eye - world).normalize_new();
+      let r = li.reflect(n);
+      let v_dot_r = v.dot(r).max(0.0);
+      let spec = v_dot_r.powf(hardness);
+      let spec_col = light.colour * spec * light.brightness;
+      spec_sum += spec_col;
+    }
+  }
+
+  (diff_sum, spec_sum)
 }

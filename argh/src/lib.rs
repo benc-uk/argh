@@ -19,13 +19,19 @@
 //! }
 //! ```
 
-// Crate level modules
+// === Crate level modules, remain internal
+
+/// Buffer holds the pixel video buffer to be drawn each frame
 pub(crate) mod buffer;
 
 /// Some helpers for various graphics routines
 pub(crate) mod helpers;
 
-pub mod math;
+/// Very basic text rendering
+pub(crate) mod text;
+
+// === Public modules
+pub mod math; // This has it's own docs in math/mod.rs
 
 /// Module for working with 8-bit RGB colour
 pub mod colour;
@@ -36,11 +42,8 @@ pub mod engine;
 /// Models, meshes, textures, materials and 3D objects
 pub mod models;
 
-/// Models, meshes, textures, materials and 3D objects
+/// Static methods for creating meshes of simple primatives
 pub mod primitives;
-
-/// Very basic text rendering
-pub mod text;
 
 /// Positionable Camera with look-at and FOV
 pub mod camera;

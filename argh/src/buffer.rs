@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{colour::Colour, engine::ScreenVert, helpers};
+use crate::{colour::Colour, engine::ScreenVert, helpers, models::Texture};
 
 /// Internal struct wrapping a Vec<u32> to be used with minifb update_with_buffer(), each u32 is a single pixel
 /// The encoding for each pixel is 0RGB: The upper 8-bits are ignored, the next 8-bits are for the red channel, the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
@@ -67,7 +67,7 @@ impl Buffer {
   /// Fill a 3D triangle between three ScreenVertex points which form a triangle
   /// Not public outside the crate
   #[inline(always)]
-  pub fn fill_triangle(&mut self, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, smooth: bool) {
+  pub fn fill_triangle(&mut self, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, tex: &dyn Texture, smooth: bool) {
     let area = helpers::edge_function(v1, v2, v0.x, v0.y);
     if area == 0.0 {
       return;
@@ -126,13 +126,20 @@ impl Buffer {
           // Linear depth interpolation (correct in screen space, no /w needed)
           let z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
 
+          // Texture mapping requires voodoo with inv_w
+          let inv_w = b0 * v0.inv_w + b1 * v1.inv_w + b2 * v2.inv_w;
+          let w = 1.0 / inv_w; // one divide instead of two
+          let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
+          let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
+          let texel = tex.sample(u, v);
+
           let mut colour = v0.colour;
           if smooth {
             // Gouraud shading interpolates between colours at each vert
             colour = v0.colour * b0 + v1.colour * b1 + v2.colour * b2;
           }
 
-          self.set_pixel_depth(x as usize, y as usize, colour, z as f32);
+          self.set_pixel_depth(x as usize, y as usize, texel * colour, z as f32);
         }
         w0 += dx0;
         w1 += dx1;

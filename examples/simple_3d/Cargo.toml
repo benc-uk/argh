@@ -10,3 +10,4 @@ doc = false
 
 [dependencies]
 argh = { path = "../../argh" }
+rand = "0.10.1"

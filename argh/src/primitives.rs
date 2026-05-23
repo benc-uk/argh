@@ -61,11 +61,27 @@ pub fn new_cube() -> Mesh {
     Vec3::new(0.0, 1.0, 0.0),  // top
     Vec3::new(0.0, -1.0, 0.0), // bottom
   ];
+
   mesh.normals = Vec::with_capacity(24);
   for n in face_normals {
     for _ in 0..4 {
       mesh.normals.push(n);
     }
+  }
+
+  // Per-face UVs: same texture on every face, mapped 0..1 in both axes.
+  // Order matches the vert order per face: bl, br, tr, tl.
+  // v=0 at top of texture (image-memory convention), v=1 at bottom.
+  let face_uvs: [Vec2; 4] = [
+    Vec2::new(0.0, 1.0), // bl
+    Vec2::new(1.0, 1.0), // br
+    Vec2::new(1.0, 0.0), // tr
+    Vec2::new(0.0, 0.0), // tl
+  ];
+
+  mesh.uvs = Vec::with_capacity(24);
+  for _ in 0..6 {
+    mesh.uvs.extend_from_slice(&face_uvs);
   }
 
   // 12 triangles, CCW winding when viewed from outside the cube.
@@ -107,6 +123,8 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
   let vert_count = (stacks + 1) * (sectors + 1);
   mesh.verts = Vec::with_capacity(vert_count);
   mesh.normals = Vec::with_capacity(vert_count);
+  mesh.uvs = Vec::with_capacity(vert_count);
+
   for i in 0..=stacks {
     let phi = pi * (i as f64) / (stacks as f64); // 0 at +Y pole, pi at -Y pole
     let sin_phi = phi.sin();
@@ -122,6 +140,7 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
       // outward normal. Position is just that scaled by the radius.
       mesh.verts.push(Vec3::new(x * radius, y * radius, z * radius));
       mesh.normals.push(Vec3::new(x, y, z));
+      mesh.uvs.push(Vec2::new(0.0, 0.0)) // TODO: uv for spheres
     }
   }
 
@@ -188,6 +207,7 @@ pub fn new_teapot() -> Mesh {
 
     if lc % 2 == 0 {
       out.verts.push(v);
+      out.uvs.push(Vec2 { x: 0.0, y: 0.0 });
     } else {
       out.normals.push(v);
     }

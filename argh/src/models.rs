@@ -6,19 +6,36 @@
 // Notes:
 // ==============================================================================================
 
+use image::{DynamicImage, GenericImageView, ImageError, ImageReader};
+use std::io;
+
 use crate::{
   colour::Colour,
-  engine::MeshHandle,
-  math::{Mat4, Quat, Vec3},
+  engine::{MaterialHandle, MeshHandle},
+  math::{Mat4, Quat, Vec2, Vec3},
 };
 
 // ===================================
 // Textures
 // ===================================
 
+#[derive(thiserror::Error)]
+pub enum TextureError {
+  #[error("image error: {0}")]
+  ImageError(#[from] ImageError),
+  #[error("io error: {0}")]
+  IoError(#[from] io::Error),
+}
+
+impl std::fmt::Debug for TextureError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    std::fmt::Display::fmt(self, f)
+  }
+}
+
 /// Texture abstraction around bitmap images or other types of procedural textures
 pub trait Texture {
-  fn get_colour_at(&self, u: f64, v: f64) -> Colour;
+  fn sample(&self, u: f64, v: f64) -> Colour;
 }
 
 /// A flat uniform colour, handy for debugging
@@ -39,8 +56,33 @@ impl SimpleColourTexture {
 }
 
 impl Texture for SimpleColourTexture {
-  fn get_colour_at(&self, _u: f64, _v: f64) -> Colour {
+  fn sample(&self, _u: f64, _v: f64) -> Colour {
     self.colour
+  }
+}
+
+pub struct ImageTexture {
+  image: DynamicImage,
+  w: u32,
+  h: u32,
+}
+
+impl ImageTexture {
+  pub fn new(path: &str) -> Result<Self, TextureError> {
+    let img = ImageReader::open(path)?.decode()?;
+    let w = img.width();
+    let h = img.height();
+    Ok(Self { image: img, w, h })
+  }
+}
+
+impl Texture for ImageTexture {
+  fn sample(&self, u: f64, v: f64) -> Colour {
+    let x = u * self.w as f64;
+    let y = v * self.h as f64;
+    let pix = self.image.get_pixel(x as u32, y as u32);
+
+    Colour::from_rgb8(pix.0[0], pix.0[1], pix.0[2])
   }
 }
 
@@ -50,9 +92,9 @@ impl Texture for SimpleColourTexture {
 
 /// Material holds parameters for rendering the surface of a mesh
 pub struct Material {
-  pub(crate) diffuse: f64,
-  pub(crate) specular: f64,
-  pub(crate) hardness: f64,
+  pub diffuse: f64,
+  pub specular: f64,
+  pub hardness: f64,
   pub(crate) texture: Box<dyn Texture>,
 }
 
@@ -65,6 +107,10 @@ impl Material {
       texture: Box::new(t),
     }
   }
+
+  pub fn set_texture<T: Texture + 'static>(&mut self, t: T) {
+    self.texture = Box::new(t)
+  }
 }
 
 // ===================================
@@ -75,6 +121,7 @@ impl Material {
 pub struct Mesh {
   pub(crate) verts: Vec<Vec3>,   // Internal mesh vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
+  pub(crate) uvs: Vec<Vec2>,     // Texture coords
   pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
 }
 
@@ -84,6 +131,7 @@ impl Mesh {
     Self {
       verts: vec![],
       normals: vec![],
+      uvs: vec![],
       indices: vec![],
     }
   }
@@ -95,23 +143,23 @@ impl Mesh {
 
 /// Instance of a mesh in the world, with position, scale and rotation
 pub struct Instance {
-  pub(crate) material: Material, // Surface material, colour etc
-  pub(crate) pos: Vec3,          // Position
-  pub(crate) rot: Quat,          // Rotation held as a Quat
-  pub(crate) scale: Vec3,        // Scaling factors
-  pub(crate) mesh: MeshHandle,   // Reference to mesh via handle
+  pub(crate) material_handle: MaterialHandle, // Surface material, colour etc
+  pub(crate) pos: Vec3,                       // Position
+  pub(crate) rot: Quat,                       // Rotation held as a Quat
+  pub(crate) scale: Vec3,                     // Scaling factors
+  pub(crate) mesh_handle: MeshHandle,         // Reference to mesh via handle
 
   pub smooth: bool, // Gouraud shading enabled
 }
 
 impl Instance {
-  pub fn set_material(&mut self, m: Material) -> &mut Self {
-    self.material = m;
+  pub fn set_material(&mut self, m: MaterialHandle) -> &mut Self {
+    self.material_handle = m;
     self
   }
 
-  pub fn get_material(&self) -> &Material {
-    &self.material
+  pub fn get_material(&self) -> MaterialHandle {
+    self.material_handle
   }
 
   pub fn set_pos(&mut self, pos: Vec3) -> &mut Self {
