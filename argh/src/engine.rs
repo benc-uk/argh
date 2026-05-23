@@ -7,7 +7,6 @@
 // ==============================================================================================
 
 use slotmap::{SlotMap, new_key_type};
-use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::camera::Camera;
@@ -37,9 +36,9 @@ new_key_type! {
   pub struct MaterialHandle;
 }
 
-// This is a internal way to lookup Meshes
 new_key_type! {
-  pub(crate) struct MeshHandle;
+  /// A handle to reference meshes held by the engine
+  pub struct MeshHandle;
 }
 
 #[derive(thiserror::Error)]
@@ -66,10 +65,9 @@ pub struct Engine {
   lights: Vec<Light>,
   exit: bool,
 
-  // Meshes & instances
+  // Things tracked & cached by the engine
   meshes: SlotMap<MeshHandle, Mesh>,
   materials: SlotMap<MaterialHandle, Material>,
-  mesh_lookup: HashMap<String, MeshHandle>,
   instances: SlotMap<InstanceHandle, Instance>,
 
   // Inputs
@@ -135,7 +133,6 @@ impl Engine {
       target_fps: 60,
       aspect: w as f64 / h as f64,
       exit: false,
-      mesh_lookup: HashMap::new(),
       meshes: SlotMap::with_key(),
       materials: SlotMap::with_key(),
       instances: SlotMap::with_key(),
@@ -219,8 +216,8 @@ impl Engine {
   }
 
   /// Add a mesh to the cache and give it a name
-  pub fn add_mesh(&mut self, name: &str, mesh: Mesh) {
-    self.mesh_lookup.insert(name.to_string(), self.meshes.insert(mesh));
+  pub fn add_mesh(&mut self, mesh: Mesh) -> MeshHandle {
+    self.meshes.insert(mesh)
   }
 
   /// Add a light to the scene, used by 3D rendering
@@ -229,21 +226,17 @@ impl Engine {
   }
 
   /// Create an instance of a mesh with given name, using the material
-  pub fn add_instance(&mut self, mesh_name: &str, mat_handle: MaterialHandle) -> Result<InstanceHandle, EngineError> {
-    if let Some(mesh_handle) = self.mesh_lookup.get(mesh_name) {
-      let i = Instance {
-        material_handle: mat_handle,
-        pos: VEC3_ZERO,
-        scale: VEC3_ONE,
-        rot: Quat::ident(),
-        smooth: true,
-        mesh_handle: *mesh_handle,
-      };
+  pub fn add_instance(&mut self, mesh_handle: MeshHandle, mat_handle: MaterialHandle) -> InstanceHandle {
+    let i = Instance {
+      material_handle: mat_handle,
+      pos: VEC3_ZERO,
+      scale: VEC3_ONE,
+      rot: Quat::ident(),
+      smooth: true,
+      mesh_handle: mesh_handle,
+    };
 
-      Ok(self.instances.insert(i))
-    } else {
-      Err(EngineError::MeshNotFound(String::from(mesh_name)))
-    }
+    self.instances.insert(i)
   }
 
   pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {

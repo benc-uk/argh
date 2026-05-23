@@ -129,18 +129,20 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
     let phi = pi * (i as f64) / (stacks as f64); // 0 at +Y pole, pi at -Y pole
     let sin_phi = phi.sin();
     let cos_phi = phi.cos();
+    let v = i as f64 / stacks as f64; // 0 at top pole, 1 at bottom pole
 
     for j in 0..=sectors {
       let theta = 2.0 * pi * (j as f64) / (sectors as f64);
       let x = sin_phi * theta.cos();
       let y = cos_phi;
       let z = sin_phi * theta.sin();
+      let u = j as f64 / sectors as f64; // 0..1 around the sphere, seam at the back
 
       // (x, y, z) is already a unit vector on the sphere, so it doubles as the
       // outward normal. Position is just that scaled by the radius.
       mesh.verts.push(Vec3::new(x * radius, y * radius, z * radius));
       mesh.normals.push(Vec3::new(x, y, z));
-      mesh.uvs.push(Vec2::new(0.0, 0.0)) // TODO: uv for spheres
+      mesh.uvs.push(Vec2::new(u, v));
     }
   }
 

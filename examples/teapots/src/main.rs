@@ -37,12 +37,12 @@ fn main() {
 
   let mat1 = e.add_material(Material::new(SimpleColourTexture::new(Colour::rand())));
   let mat2 = e.add_material(Material::new(SimpleColourTexture::new(Colour::rand())));
-  e.add_mesh("teapot", primitives::new_teapot());
+  let teapot = e.add_mesh(primitives::new_teapot());
 
-  let h1 = e.add_instance("teapot", mat1).unwrap();
+  let h1 = e.add_instance(teapot, mat1);
   e.instance_mut(h1).set_pos_xyz(2.0, -1.0, -3.0);
 
-  let h2 = e.add_instance("teapot", mat2).unwrap();
+  let h2 = e.add_instance(teapot, mat2);
   e.instance_mut(h2).set_pos_xyz(-2.0, -1.0, -6.0);
 
   let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 3.0, 2.3), Vec3::new(0.0, 0.5, -2.0), 60.0, 0.01, 10.0).unwrap();

@@ -6,15 +6,12 @@ use argh::models::{ImageTexture, Material, SimpleColourTexture};
 use argh::{colour::*, primitives};
 
 struct MyScene {
-  h1: InstanceHandle,
-  h2: InstanceHandle,
-  h3: InstanceHandle,
-  mh: MaterialHandle,
+  instances: Vec<InstanceHandle>,
+  materials: Vec<MaterialHandle>,
   camera: Camera,
 }
 
 impl Scene for MyScene {
-  // You must always implement the update method it will be called once per frame
   fn update(&mut self, engine: &mut Engine, dt: f64, t: f64) {
     engine.clear(BLACK);
 
@@ -24,14 +21,14 @@ impl Scene for MyScene {
     let px = f64::sin(t * 0.7);
     let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
     let pz2 = f64::sin(t * 0.9) * 0.6;
-    engine.instance_mut(self.h1).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(Vec3::new(-px, py, pz));
-    engine.instance_mut(self.h2).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(Vec3::new(px, -py, pz2));
-    engine.instance_mut(self.h3).rot_y(0.1 * dt).set_pos(Vec3::new(px * 0.7, py * 1.0, 0.0));
+    engine.instance_mut(self.instances[0]).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(Vec3::new(-px, py, pz));
+    engine.instance_mut(self.instances[1]).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(Vec3::new(px, -py, pz2));
+    engine.instance_mut(self.instances[2]).rot_y(0.1 * dt).set_pos(Vec3::new(px * 0.7, py * 1.0, 0.0));
 
     engine.render_all(&self.camera);
 
     if !engine.get_keys_pressed().is_empty() && engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
-      let mat = engine.material_mut(self.mh);
+      let mat = engine.material_mut(self.materials[2]);
       mat.set_texture(SimpleColourTexture::new(Colour::rand()));
     }
   }
@@ -46,23 +43,28 @@ fn main() {
   e.add_light(Light::new(Vec3::new(-6.0, 7.0, 5.0), 0.8, BLUE));
   e.add_light(Light::new(Vec3::new(8.0, -2.0, 9.0), 0.5, RED));
 
-  let tex = ImageTexture::new("crate.png").unwrap();
-  let tex2 = SimpleColourTexture::new(Colour::rand());
-  let tex3 = SimpleColourTexture::new(Colour::rand());
-  let mat = e.add_material(Material::new(tex));
-  let mat2 = e.add_material(Material::new(tex2));
-  let mat3 = e.add_material(Material::new(tex3));
-  e.add_mesh("cube", primitives::new_cube());
-  e.add_mesh("sphere1", primitives::new_sphere(8, 12));
-  e.add_mesh("sphere2", primitives::new_sphere(24, 48));
+  let crate_tex = ImageTexture::new("checker_256.png").unwrap();
+  let col_tex1 = SimpleColourTexture::new(Colour::rand());
+  let col_tex2 = SimpleColourTexture::new(Colour::rand());
+  let crate_mat = e.add_material(Material::new(crate_tex));
+  let col_tex1 = e.add_material(Material::new(col_tex1));
+  let col_tex2 = e.add_material(Material::new(col_tex2));
 
-  let h1 = e.add_instance("cube", mat).expect("bad");
-  let h2 = e.add_instance("sphere1", mat2).expect("bad");
-  let h3 = e.add_instance("sphere2", mat3).expect("bad");
+  let cube = e.add_mesh(primitives::new_cube());
+  let sphere1 = e.add_mesh(primitives::new_sphere(8, 12));
+  let sphere2 = e.add_mesh(primitives::new_sphere(24, 48));
+
+  let inst1 = e.add_instance(cube, crate_mat);
+  let inst2 = e.add_instance(sphere1, col_tex1);
+  let inst3 = e.add_instance(sphere2, col_tex2);
 
   let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 0.0, 2.8), Vec3::new(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
 
-  let s = MyScene { h1, h2, h3, mh: mat2, camera };
+  let s = MyScene {
+    instances: vec![inst1, inst2, inst3],
+    materials: vec![crate_mat, col_tex1, col_tex2],
+    camera,
+  };
 
   e.start(s);
 }
