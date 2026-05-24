@@ -24,7 +24,7 @@ impl Scene for MyScene {
 
     for p in &self.polys {
       let trans = Mat3::new_scale_rot_trans(p.scale, p.scale, p.speed * t, p.trans.x, p.trans.y);
-      engine.draw_poly_line(trans * &p.points, p.colour);
+      engine.draw_poly_line(&(trans * &p.points), p.colour);
     }
   }
 }

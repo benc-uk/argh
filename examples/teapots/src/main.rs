@@ -1,9 +1,10 @@
 use argh::camera::Camera;
-use argh::engine::{Engine, InstanceHandle, Scene};
+use argh::colour::*;
+use argh::engine::{Engine, InstanceHandle, Key, Scene};
 use argh::light::Light;
 use argh::math::Vec3;
 use argh::models::{Material, SimpleColourTexture};
-use argh::{colour::*, primitives};
+use argh::primitives;
 
 struct TeapotScene {
   h1: InstanceHandle,
@@ -20,7 +21,7 @@ impl Scene for TeapotScene {
     engine.instance_mut(self.h2).rot_y(dt * -0.7);
     engine.render_all(&self.camera);
 
-    if !engine.get_keys_pressed().is_empty() && engine.get_keys_pressed()[0].eq(&argh::engine::Key::Escape) {
+    if !engine.get_keys_pressed().is_empty() && engine.get_keys_pressed()[0].eq(&Key::Escape) {
       engine.stop();
     }
   }

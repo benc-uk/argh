@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{colour::Colour, engine::ScreenVert, helpers, models::Texture};
+use crate::colour::Colour;
 
 /// Internal struct wrapping a Vec<u32> to be used with minifb update_with_buffer(), each u32 is a single pixel
 /// The encoding for each pixel is 0RGB: The upper 8-bits are ignored, the next 8-bits are for the red channel, the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
@@ -14,8 +14,8 @@ use crate::{colour::Colour, engine::ScreenVert, helpers, models::Texture};
 pub struct Buffer {
   pub pixels: Vec<u32>,
   pub depth: Vec<f32>,
-  w: usize,
-  h: usize,
+  pub(crate) w: usize,
+  pub(crate) h: usize,
 }
 
 impl Buffer {
@@ -61,94 +61,6 @@ impl Buffer {
       let start = row * self.w + x.min(self.w);
       let end = row * self.w + (x + w).min(self.w);
       self.pixels[start..end].fill(c.to_packed_0rgb());
-    }
-  }
-
-  /// Fill a 3D triangle between three ScreenVertex points which form a triangle
-  /// Not public outside the crate
-  #[inline(always)]
-  pub fn fill_triangle(&mut self, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, tex: &dyn Texture, smooth: bool) {
-    let area = helpers::edge_function(v1, v2, v0.x, v0.y);
-    if area == 0.0 {
-      return;
-    } // degenerate triangle, save ourselves a NaN
-
-    // We need inverse area for Barycentric gubbins later
-    let inv_area = 1.0 / area;
-
-    let min_x = v1.x.min(v0.x).min(v2.x).max(0.0);
-    let min_y = v1.y.min(v0.y).min(v2.y).max(0.0);
-    let max_x = v1.x.max(v0.x).max(v2.x).min(self.w as f64 - 1.0);
-    let max_y = v1.y.max(v0.y).max(v2.y).min(self.h as f64 - 1.0);
-    let min_xi = min_x.floor() as i32;
-    let max_xi = max_x.ceil() as i32;
-    let min_yi = min_y.floor() as i32;
-    let max_yi = max_y.ceil() as i32;
-
-    // Sample at the centre of the first pixel in the loop range
-    let start_x = min_xi as f64 + 0.5;
-    let start_y = min_yi as f64 + 0.5;
-
-    // CONVENTION: triangles arrive here AFTER back-face cull, in screen space
-    // (Y-down). Our cull keeps triangles with NEGATIVE screen-space signed area
-    // (CW on screen, from CCW-in-world meshes after the viewport Y-flip).
-    //
-    // We use the textbook CCW edge setup. Because our triangles are CW on screen,
-    // inside points produce NEGATIVE edge values, so the inside test is `w <= 0`.
-    // If the cull/Y convention ever changes, flip all three test signs back to >=.
-
-    // Edge values at the centre of the first pixel
-    let mut w0_row = helpers::edge_function(v1, v2, start_x, start_y);
-    let mut w1_row = helpers::edge_function(v2, v0, start_x, start_y);
-    let mut w2_row = helpers::edge_function(v0, v1, start_x, start_y);
-
-    // Step amounts: how much each edge value changes per pixel
-    let dx0 = v1.y - v2.y;
-    let dx1 = v2.y - v0.y;
-    let dx2 = v0.y - v1.y;
-
-    let dy0 = v2.x - v1.x;
-    let dy1 = v0.x - v2.x;
-    let dy2 = v1.x - v0.x;
-
-    for y in min_yi..=max_yi {
-      let mut w0 = w0_row;
-      let mut w1 = w1_row;
-      let mut w2 = w2_row;
-
-      for x in min_xi..=max_xi {
-        if w0 <= 0.0 && w1 <= 0.0 && w2 <= 0.0 {
-          // Barycentric weights (positive, sum to 1)
-          let b0 = w0 * inv_area;
-          let b1 = w1 * inv_area;
-          let b2 = w2 * inv_area;
-
-          // Linear depth interpolation (correct in screen space, no /w needed)
-          let z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
-
-          // Texture mapping requires voodoo with inv_w
-          let inv_w = b0 * v0.inv_w + b1 * v1.inv_w + b2 * v2.inv_w;
-          let w = 1.0 / inv_w; // one divide instead of two
-          let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
-          let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
-          let texel = tex.sample(u, v);
-
-          let mut colour = v0.colour;
-          if smooth {
-            // Gouraud shading interpolates between colours at each vert
-            colour = v0.colour * b0 + v1.colour * b1 + v2.colour * b2;
-          }
-
-          self.set_pixel_depth(x as usize, y as usize, texel * colour, z as f32);
-        }
-        w0 += dx0;
-        w1 += dx1;
-        w2 += dx2;
-      }
-
-      w0_row += dy0;
-      w1_row += dy1;
-      w2_row += dy2;
     }
   }
 

@@ -13,6 +13,7 @@ use std::ops::Mul;
 #[path = "quat_tests.rs"]
 mod quat_tests;
 
+/// A minimal implementation of of a 4-tuple Quaternion [x,y,z,w] used for rotations
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Quat {
   pub x: f64, // imaginary i

@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-//! This module holds structs & methods for working with vectors and transformation matrices
+//! This module holds structs & methods for working with 2D and 3D vectors plus transformation matrices, in order to support most 3D graphics operations and algorithms
 
 mod matrix3;
 mod matrix4;

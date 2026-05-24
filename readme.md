@@ -19,15 +19,15 @@ Features:
 - 3D rendering
   - Matrix operations for affine transforms
   - Rendering pipeline for meshes, with z-buffering and basic clipping (no Sutherland-Hodgman polygon clipping yet)
-  - Diffuse illumination and Gouraud shading
+  - Diffuse illumination and Gouraud shading + texture mapping
   - Cameras with perspective projection
-  - Simple meshes, materials and textures (no UV / texture mapping yet)
-  - Generators for cubes and spheres
+  - Simple meshes, materials and textures
+  - Generators for cubes and spheres, and teapots (what graphics system would be complete without the classic Newell Teapot)
 - Methods for drawing 2D primitives, pixels, lines and text
 
 ## Examples
 
-<video src="https://github.com/user-attachments/assets/d7c25032-ad3b-451b-be79-cd355bc293eb" controls></video>
+<video src="https://github.com/user-attachments/assets/d7a717f7-1ad2-4392-9c1d-51f683e005f0" controls></video>
 
 See the [`examples/`](./examples) directory for runnable demos (`basic1`, `hello_world`, `poly_2d`, `rects`, `simple_3d`).
 

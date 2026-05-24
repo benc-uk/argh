@@ -1,14 +1,20 @@
 # Project To Do List & Ideas Pot
 
-- [ ] FPS aware time stuff
-- [ ] Texture mapping
-- [ ] Specular lighting
+- [x] FPS aware time stuff
+- [x] Texture mapping
+- [x] Specular lighting
+- [ ] Light handles
+- [ ] Monomorphizing the dyn texture
 - [ ] More inputs like mouse
-- [ ] Make ESC to exit optional
-- [ ] Lock window from resizing
-- [ ] Instancing redesign Mesh struct
+- [x] Make ESC to exit optional
+- [x] Lock window from resizing
+- [x] Instancing redesign Mesh struct
 - [ ] Sub-meshes, complex models
 - [ ] OBJ loader
 - [ ] More primitives
 - [ ] Skyboxes
 - [ ] Transparency
+
+# PS1 Info
+
+https://www.david-colson.com/2021/11/30/ps1-style-renderer.html

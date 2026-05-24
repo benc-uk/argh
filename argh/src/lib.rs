@@ -36,8 +36,7 @@ pub mod math; // This has it's own docs in math/mod.rs
 /// Module for working with 8-bit RGB colour
 pub mod colour;
 
-/// The core of argh is the engine module
-pub mod engine;
+pub mod engine; // This has it's own docs in engine/mod.rs
 
 /// Models, meshes, textures, materials and 3D objects
 pub mod models;

@@ -6,7 +6,11 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{colour::*, engine::*, light::*, math::*};
+use crate::{
+  colour::*,
+  light::Light,
+  math::{Vec3, Vec4},
+};
 
 // One bit per frustum plane
 pub const OUT_LEFT: u8 = 1 << 0;
@@ -15,11 +19,6 @@ pub const OUT_BOTTOM: u8 = 1 << 2;
 pub const OUT_TOP: u8 = 1 << 3;
 pub const OUT_NEAR: u8 = 1 << 4;
 pub const OUT_FAR: u8 = 1 << 5;
-
-#[inline(always)]
-pub fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
-  (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
-}
 
 /// Don't ask me to explain this one!
 #[inline(always)]
@@ -47,7 +46,7 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
 }
 
 // Internal function for calculating the light at a vertex in world space
-// We return colours which are in fact light values not the colour of the surface
+// We return light values (as RGB Colours) falling on that vert, NOT the colour of the surface
 pub fn shade_vert(lights: &Vec<Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
   // Shading & lighting over multiple lights
   let mut diff_sum = BLACK;

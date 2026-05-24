@@ -8,7 +8,7 @@
 
 use std::error::Error;
 
-use crate::math::*;
+use crate::math::{Mat4, Vec3};
 
 /// Camera is used to render a 3D scene (set of meshes) from a given position and pointing in a given direction
 pub struct Camera {
@@ -32,7 +32,7 @@ impl Camera {
       pos,
       look_at,
       pers_mat: Mat4::new_perspective(fov.to_radians(), aspect, near, far)?,
-      view_mat: Mat4::new_look_at(pos, look_at, AXIS_Y),
+      view_mat: Mat4::new_look_at(pos, look_at, crate::math::AXIS_Y),
     })
   }
 
@@ -55,6 +55,6 @@ impl Camera {
 
   // Internal method used to update the main view matrix
   fn update(&mut self) {
-    self.view_mat = Mat4::new_look_at(self.pos, self.look_at, AXIS_Y);
+    self.view_mat = Mat4::new_look_at(self.pos, self.look_at, crate::math::AXIS_Y);
   }
 }
