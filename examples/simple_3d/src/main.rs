@@ -42,7 +42,7 @@ impl Scene for MyScene {
 }
 
 fn main() {
-  let mut e = Engine::new(800, 600, String::from("Argh: simple_3d"), 2);
+  let mut e = Engine::new(800, 600, "Argh: simple_3d", 2);
   e.debug = true;
   e.target_fps = 60;
 

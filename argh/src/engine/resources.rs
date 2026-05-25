@@ -8,7 +8,7 @@
 
 use crate::{
   light::Light,
-  math::{Quat, VEC3_ONE, VEC3_ZERO},
+  math::{Quat, VEC3_ONE, VEC3_ZERO, Vec3},
   models::{Instance, Material, Mesh},
 };
 
@@ -35,6 +35,26 @@ impl Engine {
       smooth: true,
       mesh_handle,
     };
+
+    self.instances.insert(i)
+  }
+
+  /// Create an instance of a mesh with given name, using the material transformed into the world
+  pub fn add_instance_trans(&mut self, mesh_handle: MeshHandle, mat_handle: MaterialHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
+    let mut i = Instance {
+      material_handle: mat_handle,
+      pos: VEC3_ZERO,
+      scale: VEC3_ONE,
+      rot: Quat::ident(),
+      smooth: true,
+      mesh_handle,
+    };
+    i.scale = scale;
+    i.pos = pos;
+    i.rot = Quat::ident();
+    i.rot.rot_x(rot.x);
+    i.rot.rot_y(rot.y);
+    i.rot.rot_z(rot.z);
 
     self.instances.insert(i)
   }

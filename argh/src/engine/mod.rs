@@ -102,11 +102,11 @@ impl Engine {
   /// * `w` - Width of the window in pixels
   /// * `h` - Height of the window in pixels
   /// * `title` - Title of the window
-  pub fn new(w: i32, h: i32, title: String, scale: u8) -> Self {
+  pub fn new(w: i32, h: i32, title: &str, scale: u8) -> Self {
     Self {
       win_size: (w as usize, h as usize),
       buffer: Buffer::new(w as usize, h as usize),
-      win_title: title,
+      win_title: String::from(title),
       t: 0.0,
       last_time: Instant::now(),
       scale,

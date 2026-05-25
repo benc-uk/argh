@@ -13,8 +13,3 @@ console_error_panic_hook = "0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }
-
-[profile.dev]
-opt-level = 0      # No optimizations (fastest compile time)
-debug = true       # Keep debug symbols
-incremental = true # Enable incremental compilation

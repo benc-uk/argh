@@ -2,38 +2,34 @@ use std::cell::RefCell;
 
 use argh::camera::Camera;
 use argh::colour::*;
-use argh::engine::{Engine, InstanceHandle, Scene};
+use argh::engine::{Engine, Scene};
 use argh::light::Light;
-use argh::math::Vec3;
+use argh::math::{AXIS_Y, Quat, Vec3};
 use argh::models::{ImageTexture, Material, SimpleColourTexture};
 use argh::primitives;
 use wasm_bindgen::prelude::*;
 
-const W: i32 = 800;
-const H: i32 = 600;
+const W: i32 = 854;
+const H: i32 = 480;
 
 struct MyScene {
-  instances: Vec<InstanceHandle>,
   camera: Camera,
 }
 
-const CHECKER_IMG_BYTES: &[u8] = include_bytes!("../../../assets/checker_256.png");
-const EARTH_IMG_BYTES: &[u8] = include_bytes!("../../../assets/earth.png");
+const CRATE_IMG_BYTES: &[u8] = include_bytes!("../../../assets/crate.png");
 
 impl Scene for MyScene {
   fn update(&mut self, e: &mut Engine, dt: f64, t: f64) {
     e.clear(BLACK);
 
-    let mut axis = Vec3::new(0.6, 0.3, 0.9);
-    axis.normalize();
-    let py = f64::cos(t * 1.0);
-    let px = f64::sin(t * 0.7);
-    let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
-    let pz2 = f64::sin(t * 0.9) * 0.6;
-    e.instance_mut(self.instances[0]).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(Vec3::new(-px, py, pz));
-    e.instance_mut(self.instances[1]).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(Vec3::new(px, -py, pz2));
-    e.instance_mut(self.instances[2]).rot_y(0.1 * dt).set_pos(Vec3::new(px * 0.7, py * 1.0, 0.0));
+    // This makes the animation independent of framerate
+    let rot = Quat::new(AXIS_Y, 0.5 * dt);
+    // Rotate & move the camera
+    let mut p = rot.rotate_vec3(self.camera.get_pos());
+    p.y = (f64::sin(t * 0.75) * 2.6) + 6.0;
+    self.camera.set_pos(p);
 
+    // Draw the scene
     e.render_all(&self.camera);
   }
 }
@@ -48,45 +44,33 @@ thread_local! {
 pub fn start() {
   console_error_panic_hook::set_once();
 
-  let mut e = Engine::new(W, H, String::from("Argh: simple_3d"), 2);
+  let mut e = Engine::new(W, H, "", 1);
   e.debug = true;
-  e.target_fps = 60;
+  e.target_fps = 0;
 
-  e.add_light(Light::new(Vec3::new(3.0, 7.0, 5.0), 1.0, WHITE));
-  e.add_light(Light::new(Vec3::new(-6.0, 7.0, 5.0), 0.8, BLUE));
-  e.add_light(Light::new(Vec3::new(8.0, -2.0, 9.0), 0.5, RED));
+  e.add_light(Light::new(Vec3::new(15.0, 2.0, 5.0), 0.6, BLUE));
+  e.add_light(Light::new(Vec3::new(-9.0, 1.0, 9.0), 0.7, RED));
+  e.add_light(Light::new(Vec3::new(4.0, 9.0, 10.0), 0.9, WHITE));
 
-  let cube_tex = ImageTexture::from_bytes(CHECKER_IMG_BYTES).unwrap();
-  let earth_tex = ImageTexture::from_bytes(EARTH_IMG_BYTES).unwrap();
-  let col_tex1 = SimpleColourTexture::new(Colour::rand());
-  let col_tex2 = SimpleColourTexture::new(Colour::rand());
+  let crate_tex = ImageTexture::from_bytes(CRATE_IMG_BYTES).unwrap();
+  let mut crate_mat = Material::new(crate_tex);
+  crate_mat.specular = 0.0;
 
-  let crate_mat = e.add_material(Material::new(cube_tex));
-  let earth_mat = e.add_material(Material::new(earth_tex));
-  let col_mat1 = e.add_material(Material::new(col_tex1));
-  let col_mat2 = e.add_material(Material::new(col_tex2));
+  let teapot_mat1 = e.add_material(Material::new(SimpleColourTexture::new(Colour::new(0.7, 0.7, 0.8))));
+  let teapot_mat2 = e.add_material(Material::new(SimpleColourTexture::new(Colour::new(0.6, 0.2, 0.7))));
+  let crate_mat_hdl = e.add_material(crate_mat);
 
-  let cube = e.add_mesh(primitives::new_cube());
-  let sphere1 = e.add_mesh(primitives::new_sphere(8, 12));
-  let sphere2 = e.add_mesh(primitives::new_sphere(24, 48));
   let teapot = e.add_mesh(primitives::new_teapot());
+  let cube = e.add_mesh(primitives::new_cube());
 
-  let inst1 = e.add_instance(cube, crate_mat);
-  let inst2 = e.add_instance(sphere1, col_mat1);
-  let inst3 = e.add_instance(sphere2, earth_mat);
-  let inst4 = e.add_instance(teapot, col_mat2);
-  e.instance_mut(inst2).smooth = false;
-  e.instance_mut(inst4).scale(0.5).set_pos_xyz(0.5, -1.55, -2.0);
+  e.add_instance_trans(teapot, teapot_mat1, Vec3::new(2.0, 0.0, 2.3), Vec3::new(0.0, 3.0, 0.0), Vec3::new(1.2, 1.5, 1.2));
+  e.add_instance_trans(teapot, teapot_mat2, Vec3::new(-2.0, 0.0, -2.9), Vec3::new(0.0, 2.0, 0.0), Vec3::new(1.2, 1.2, 1.2));
+  e.add_instance_trans(cube, crate_mat_hdl, Vec3::new(0.0, -6.0, 0.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(12.0, 12.0, 12.0));
 
-  let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 1.0, 2.8), Vec3::new(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
+  let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 5.0, 14.0), Vec3::new(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
 
   ENGINE.with(|c| *c.borrow_mut() = Some(e));
-  SCENE.with(|c| {
-    *c.borrow_mut() = Some(MyScene {
-      instances: vec![inst1, inst2, inst3],
-      camera,
-    })
-  });
+  SCENE.with(|c| *c.borrow_mut() = Some(MyScene { camera }));
   RGBA.with(|c| *c.borrow_mut() = vec![0u8; (W * H * 4) as usize]);
 }
 
@@ -113,6 +97,7 @@ pub fn update(dt: f64) -> Vec<u8> {
 
         e.tick(s, dt);
 
+        // Get the raw pixels in the buffer and unpack into Vec<u8> (will be Uint8ClampedArray on JS side)
         for (i, &p) in e.buffer_content().iter().enumerate() {
           let o = i * 4;
           r[o] = ((p >> 16) & 0xff) as u8;

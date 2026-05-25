@@ -25,7 +25,7 @@ release: ## 🚀 Build all crates (release)
 release-win: ## 🚀 Build all crates for Windows x64 (release)
 	cargo build --workspace --release --target x86_64-pc-windows-gnu
 
-run: ## 🚀 Run an example (MODULE=basic1)
+run: ## 🚀 Run an example (MODULE=teapots)
 	cargo run --bin $(MODULE)
 
 test: ## 🧪 Run all tests
@@ -53,7 +53,8 @@ doc-open: ## 📖 Generate and open documentation
 
 clean: ## 🗑️  Clean build artefacts
 	cargo clean
-	rm -rf examples/web_wasm/pkg examples/web_wasm/dist
+	rm -rf examples/web_wasm/pkg
+	rm -rf site
 
 wasm-build: ## 🕸️  Build the web_wasm example with wasm-pack
 	wasm-pack build examples/web_wasm --target web --out-dir pkg --no-typescript --no-pack

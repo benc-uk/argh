@@ -3,10 +3,14 @@
 members = [
   "argh",
   "examples/hello_world",
-  "examples/rects",
   "examples/poly_2d",
   "examples/simple_3d",
   "examples/teapots",
   "examples/web_wasm",
 ]
 resolver = "3"
+
+[profile.dev]
+opt-level = 0      # No optimizations (fastest compile time)
+debug = true       # Keep debug symbols
+incremental = true # Enable incremental compilation
