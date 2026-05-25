@@ -38,7 +38,7 @@ jobs:
           cp -r examples/web_wasm/pkg site/examples/web_wasm/
           cp examples/web_wasm/index.html site/examples/web_wasm/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
