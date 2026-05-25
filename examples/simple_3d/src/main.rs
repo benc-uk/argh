@@ -28,15 +28,21 @@ impl Scene for MyScene {
 
     engine.render_all(&self.camera);
 
-    if !engine.get_keys_pressed().is_empty() && engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
-      let mat = engine.material_mut(self.materials[2]);
-      mat.set_texture(SimpleColourTexture::new(Colour::rand()));
+    if !engine.get_keys_pressed().is_empty() {
+      if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
+        let mat = engine.material_mut(self.materials[2]);
+        mat.set_texture(SimpleColourTexture::new(Colour::rand()));
+      }
+
+      if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Escape) {
+        engine.stop();
+      }
     }
   }
 }
 
 fn main() {
-  let mut e = Engine::new(640, 360, String::from("Argh: simple_3d"), 2);
+  let mut e = Engine::new(800, 600, String::from("Argh: simple_3d"), 2);
   e.debug = true;
   e.target_fps = 60;
 

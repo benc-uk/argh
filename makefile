@@ -2,7 +2,7 @@ MODULE ?= teapots
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build run clean fmt fmt-check lint clippy doc doc-open test check
+.PHONY: help build build-win release release-win run clean fmt fmt-check lint clippy doc doc-open test check wasm-build wasm-serve
 
 
 help: ## 💡 Show this help message
@@ -14,10 +14,16 @@ help: ## 💡 Show this help message
 	@echo ""
 
 build: ## 🔨 Build all crates
-	cargo build --workspace
+	cargo build --workspace 
 
 build-win: ## 🔨 Build all crates for Windows x64
 	cargo build --workspace --target x86_64-pc-windows-gnu
+
+release: ## 🚀 Build all crates (release)
+	cargo build --workspace --release
+
+release-win: ## 🚀 Build all crates for Windows x64 (release)
+	cargo build --workspace --release --target x86_64-pc-windows-gnu
 
 run: ## 🚀 Run an example (MODULE=basic1)
 	cargo run --bin $(MODULE)
@@ -47,3 +53,11 @@ doc-open: ## 📖 Generate and open documentation
 
 clean: ## 🗑️  Clean build artefacts
 	cargo clean
+	rm -rf examples/web_wasm/pkg examples/web_wasm/dist
+
+wasm-build: ## 🕸️  Build the web_wasm example with wasm-pack
+	wasm-pack build examples/web_wasm --target web --out-dir pkg --no-typescript --no-pack
+
+wasm-serve: wasm-build ## 🌐 Build and serve the web_wasm example on http://localhost:8000
+	@echo "Serving at http://localhost:8000 (Ctrl+C to stop)"
+	cd examples/web_wasm && python3 -m http.server 8000

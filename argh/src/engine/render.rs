@@ -49,6 +49,11 @@ impl Engine {
     self.buffer.set_pixel(x, y, colour);
   }
 
+  /// Access the current pixels in the frame buffer
+  pub fn buffer_content(&self) -> &[u32] {
+    &self.buffer.pixels
+  }
+
   /// Render all instances available
   pub fn render_all(&mut self, cam: &Camera) {
     let keys: Vec<_> = self.instances.keys().collect();

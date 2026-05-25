@@ -10,13 +10,15 @@
 //! the window & frame buffer, and to carry out rendering
 
 mod draw2d;
+#[cfg(feature = "desktop")]
 mod input;
 mod render;
 mod resources;
 
+#[cfg(feature = "desktop")]
 use minifb::{Window, WindowOptions};
 use slotmap::{SlotMap, new_key_type};
-use std::time::Instant;
+use web_time::Instant;
 
 use crate::{
   buffer::Buffer,
@@ -25,8 +27,8 @@ use crate::{
   models::{Instance, Material, Mesh},
 };
 
-// Re-export some of the minifb enums for inputs
-pub use minifb::{Key, MouseButton};
+#[cfg(feature = "desktop")]
+pub use minifb::Key;
 
 new_key_type! {
   /// A handle to reference instances held by the engine
@@ -51,23 +53,30 @@ impl std::fmt::Debug for EngineError {
 
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
+  #[allow(dead_code)]
+  scale: u8, // Not used on web/wasm so dead_code cfg neeeded to stop warning
+  #[allow(dead_code)]
+  win_title: String, // Not used on web/wasm so dead_code cfg neeeded to stop warning
+
   win_size: (usize, usize),
-  win_title: String,
   aspect: f64,
+
   buffer: Buffer,
   t: f64,
-  scale: minifb::Scale,
+  last_time: Instant,
   fps: f64,
-  lights: Vec<Light>,
   exit: bool,
 
   // Things tracked & cached by the engine
+  lights: Vec<Light>,
   meshes: SlotMap<MeshHandle, Mesh>,
   materials: SlotMap<MaterialHandle, Material>,
   instances: SlotMap<InstanceHandle, Instance>,
 
-  // Inputs
+  // Inputs - Gated to desktop only not web/wasm
+  #[cfg(feature = "desktop")]
   keys: Vec<Key>,
+  #[cfg(feature = "desktop")]
   keys_pressed: Vec<Key>,
 
   // Public fields...
@@ -93,22 +102,14 @@ impl Engine {
   /// * `w` - Width of the window in pixels
   /// * `h` - Height of the window in pixels
   /// * `title` - Title of the window
-  pub fn new(w: i32, h: i32, title: String, scale: i32) -> Self {
-    let scl = match scale {
-      n if n <= 0 => minifb::Scale::FitScreen,
-      1 => minifb::Scale::X1,
-      2 => minifb::Scale::X2,
-      4 => minifb::Scale::X4,
-      8 => minifb::Scale::X8,
-      _ => minifb::Scale::X1,
-    };
-
+  pub fn new(w: i32, h: i32, title: String, scale: u8) -> Self {
     Self {
       win_size: (w as usize, h as usize),
       buffer: Buffer::new(w as usize, h as usize),
       win_title: title,
       t: 0.0,
-      scale: scl,
+      last_time: Instant::now(),
+      scale,
       fps: 0.0,
       debug: false,
       target_fps: 60,
@@ -122,7 +123,9 @@ impl Engine {
       lights: vec![],
       ambient_light: Colour::new(0.1, 0.1, 0.1),
 
+      #[cfg(feature = "desktop")]
       keys: vec![],
+      #[cfg(feature = "desktop")]
       keys_pressed: vec![],
     }
   }
@@ -130,11 +133,21 @@ impl Engine {
   /// Begin the main loop, open the window and blocks until the window is closed or escape is pressed
   /// # Arguments
   /// * `scene` - Implementation of Scene with your own `update()` function
+  #[cfg(feature = "desktop")]
   pub fn start<S: Scene>(mut self, mut scene: S) {
+    let scl = match self.scale {
+      0 => minifb::Scale::FitScreen,
+      1 => minifb::Scale::X1,
+      2 => minifb::Scale::X2,
+      4 => minifb::Scale::X4,
+      8 => minifb::Scale::X8,
+      _ => minifb::Scale::X1,
+    };
+
     let opt = WindowOptions {
       scale_mode: minifb::ScaleMode::Stretch,
       resize: false,
-      scale: self.scale,
+      scale: scl,
       ..Default::default()
     };
 
@@ -144,39 +157,41 @@ impl Engine {
       window.set_target_fps(self.target_fps);
     }
 
-    // Lights check
-    if self.lights.is_empty() {
-      println!("You have added no lights, there will be no shading just flat colours!")
-    }
-
-    let mut last_time = Instant::now();
-
     while window.is_open() {
       if self.exit {
         break;
       }
 
       let now = Instant::now();
-      let dt = now.duration_since(last_time).as_secs_f64();
-      self.t += dt;
-      self.fps = 1.0 / dt;
-      last_time = now;
+      let dt = now.duration_since(self.last_time).as_secs_f64();
+
+      self.tick(&mut scene, dt);
 
       self.keys = window.get_keys();
       self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
 
-      // This is the hook, the user does their rendering here.
-      let t = self.t;
-      scene.update(&mut self, dt, t);
-
-      if self.debug {
-        self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
-        self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, WHITE);
-      }
-
       if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.win_size.0, self.win_size.1) {
         println!("Error updating buffer: {}", e);
       }
+    }
+  }
+
+  /// Tick advances the engine one frame
+  /// # Arguments
+  /// * `scene` - Implementation of Scene with your own `update()` function
+  /// * `dt` - Delta time since tick was last called in millisecs
+  pub fn tick<S: Scene>(&mut self, scene: &mut S, dt: f64) {
+    self.t += dt;
+    self.fps = 1.0 / dt;
+    self.last_time = Instant::now();
+
+    // This is the scene update hook, the user does their rendering here
+    let t = self.t;
+    scene.update(self, dt, t);
+
+    if self.debug {
+      self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
+      self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, WHITE);
     }
   }
 

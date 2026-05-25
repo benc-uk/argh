@@ -6,9 +6,8 @@
 // Notes:
 // ==============================================================================================
 
-use minifb::Key;
-
 use super::Engine;
+use super::Key;
 
 impl Engine {
   /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().

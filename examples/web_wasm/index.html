@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Argh Web / WASM Example</title>
+    <style>
+      body {
+        margin: 0;
+        background: #111;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        overflow-y: hidden;
+      }
+      canvas {
+        image-rendering: pixelated;
+        border: 1px solid black;
+        width: 98%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="argh-canvas"></canvas>
+    <script type="module">
+      import init, { update, width, height } from "./pkg/web_wasm.js";
+
+      await init();
+
+      const canvas = document.getElementById("argh-canvas");
+      canvas.width = width();
+      canvas.height = height();
+      const ctx = canvas.getContext("2d");
+
+      let last = 0;
+      function frame(now) {
+        const dt = last ? (now - last) / 1000 : 1 / 60;
+        last = now;
+
+        const bytes = update(dt);
+        const image = new ImageData(
+          new Uint8ClampedArray(bytes),
+          width(),
+          height(),
+        );
+
+        ctx.putImageData(image, 0, 0);
+
+        requestAnimationFrame(frame);
+      }
+
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>

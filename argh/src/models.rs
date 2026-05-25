@@ -74,6 +74,13 @@ impl ImageTexture {
     let h = img.height();
     Ok(Self { image: img, w, h })
   }
+
+  pub fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
+    let img = image::load_from_memory(bytes)?;
+    let w = img.width();
+    let h = img.height();
+    Ok(Self { image: img, w, h })
+  }
 }
 
 impl Texture for ImageTexture {

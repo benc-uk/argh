@@ -3,12 +3,18 @@ name = "argh"
 version = "0.0.1"
 edition = "2024"
 
+[features]
+default = ["desktop"]
+desktop = ["dep:minifb"]
+web = []
+
 [dependencies]
-minifb = "0.28"
+minifb = { version = "0.28", optional = true }
 rand = "0.10.1"
 thiserror = "2.0.18"
 slotmap = "1.1.1"
 image = "0.25.10"
+web-time = "1.1.0"
 
 [lints.clippy]
 collapsible-if = "allow"
