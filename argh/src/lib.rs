@@ -2,20 +2,26 @@
 //!
 //! # Examples
 //! Minimal usage and getting started
-//! ```
+//! ```no_run
 //! use argh::colour::BLUE;
 //! use argh::engine::{Engine, Scene};
 //!
 //! struct MyScene {}
+//!
 //! impl Scene for MyScene {
-//!     fn update(&mut self, e: &mut Engine, _: f64) {
-//!         e.clear(BLUE);
-//!     }
+//!   fn new(_: &mut Engine) -> Self {
+//!     MyScene {}
+//!   }
+//!
+//!   fn update(&mut self, e: &mut Engine, _dt: f64, _t: f64) {
+//!     e.clear(BLUE);
+//!   }
 //! }
 //!
 //! fn main() {
-//!     let eng = Engine::new(800, 600, String::from("Hello World"), 1);
-//!     eng.start(MyScene {});
+//!   let mut e = Engine::new(800, 600);
+//!   let s = MyScene::new(&mut e);
+//!   e.start_window(s, "Hello World", 1);
 //! }
 //! ```
 

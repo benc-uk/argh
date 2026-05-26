@@ -2,8 +2,7 @@ EXAMPLE ?= teapots
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build build-win release release-win run clean fmt fmt-check lint clippy doc doc-open test check wasm-build wasm-serve
-
+.PHONY: help build build-win release release-win run clean fmt fmt-check lint clippy doc doc-open test check wasm-build wasm-serve site
 
 help: ## 💡 Show this help message
 	@echo ""
@@ -62,3 +61,11 @@ wasm-build: ## 🕸️  Build the web_wasm example with wasm-pack
 wasm-serve: wasm-build ## 🌐 Build and serve the web_wasm example on http://localhost:8000
 	@echo "Serving at http://localhost:8000 (Ctrl+C to stop)"
 	cd examples/web_wasm && python3 -m http.server 8000
+
+site: wasm-build doc ## 📚 Build the project site combining docs and WASM example(s)
+	mkdir -p site/examples/web_wasm
+	cp misc/pages-index.html site/index.html
+	cp -r target/doc/ site/
+	echo '<meta http-equiv="refresh" content="0;url=argh/index.html">' > site/doc/index.html
+	cp -r examples/web_wasm/pkg site/examples/web_wasm/
+	cp examples/web_wasm/index.html site/examples/web_wasm/

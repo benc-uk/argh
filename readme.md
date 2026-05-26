@@ -40,23 +40,29 @@ ARGH is not currently published to crates.io. Add it as a git dependency in your
 argh = { git = "https://github.com/benc-uk/argh" }
 ```
 
-Then create a simple application by implementing the `Scene` trait and starting the engine:
+Then create a simple application by implementing the `Scene` trait and `update()` method, and creating & starting the engine (with your an instance of your scene implementation):
 
 ```rust
 use argh::colour::BLUE;
 use argh::engine::{Engine, Scene};
 
 struct MyScene {}
+
 impl Scene for MyScene {
-    fn update(&mut self, e: &mut Engine, _: f64) {
-        e.clear(BLUE);
-        // Draw the rest of your frame here
-    }
+  fn new(_: &mut Engine) -> Self {
+    MyScene {}
+  }
+
+  fn update(&mut self, e: &mut Engine, _dt: f64, _t: f64) {
+    e.clear(BLUE);
+    // Draw the rest of your frame here
+  }
 }
 
 fn main() {
-    let eng = Engine::new(800, 600, String::from("Hello World"), 1);
-    eng.start(MyScene {});
+  let mut e = Engine::new(800, 600);
+  let s = MyScene::new(&mut e);
+  e.start_window(s, "Hello World", 1);
 }
 ```
 
@@ -86,7 +92,7 @@ Graphics & 3D conventions followed internally by this engine are mostly the same
   build-win       🔨 Build all crates for Windows x64
   build           🔨 Build all crates
   check           ✅ Type check all crates
-  clean           🗑️  Clean build artefacts
+  clean           🗑️ Clean build artefacts
   clippy          📎 Run clippy lints
   doc-open        📖 Generate and open documentation
   doc             📚 Generate documentation
@@ -94,8 +100,13 @@ Graphics & 3D conventions followed internally by this engine are mostly the same
   fmt             🎨 Format all code
   help            💡 Show this help message
   lint            🧹 Run all lints (fmt + clippy)
-  run             🚀 Run an example (MODULE=basic1)
+  release-win     🚀 Build all crates for Windows x64 (release)
+  release         🚀 Build all crates (release)
+  run-example     🚀 Run an example as a desktop app
+  site            📚 Build the project site combining docs and WASM example(s)
   test            🧪 Run all tests
+  wasm-build      🕸️  Build the web_wasm example with wasm-pack
+  wasm-serve      🌐 Build and serve the web_wasm example on http://localhost:8000
 ```
 
 ## License
