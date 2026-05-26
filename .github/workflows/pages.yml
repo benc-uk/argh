@@ -3,7 +3,7 @@ name: Build & Deploy Site
 on:
   push:
     branches: [main]
-    paths: ["argh/**", "examples/**"]
+    paths: ["argh/**", "examples/**", ".github/workflows/pages.yml"]
 
 permissions:
   contents: read
@@ -26,5 +26,9 @@ jobs:
           tool: wasm-pack
 
       - run: make site
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
 
       - uses: actions/deploy-pages@v5
