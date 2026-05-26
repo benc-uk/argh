@@ -3,7 +3,7 @@ use argh::colour::*;
 use argh::engine::{Engine, Scene};
 use argh::light::Light;
 use argh::math::{AXIS_Y, Quat, Vec3};
-use argh::models::{ImageTexture, Material, SimpleColourTexture};
+use argh::models::{Material, Texture};
 use argh::primitives;
 
 pub struct MyScene {
@@ -36,12 +36,12 @@ impl Scene for MyScene {
     e.add_light(Light::new(Vec3::new(-9.0, 1.0, 9.0), 0.7, RED));
     e.add_light(Light::new(Vec3::new(4.0, 9.0, 10.0), 0.9, WHITE));
 
-    let crate_tex = ImageTexture::from_bytes(CRATE_IMG_BYTES).unwrap();
+    let crate_tex = Texture::image_from_bytes(CRATE_IMG_BYTES).unwrap();
     let mut crate_mat = Material::new(crate_tex);
     crate_mat.specular = 0.0;
 
-    let teapot_mat1 = e.add_material(Material::new(SimpleColourTexture::new(Colour::new(0.7, 0.7, 0.8))));
-    let teapot_mat2 = e.add_material(Material::new(SimpleColourTexture::new(Colour::new(0.6, 0.2, 0.7))));
+    let teapot_mat1 = e.add_material(Material::new(Texture::solid(Colour::new(0.7, 0.7, 0.8))));
+    let teapot_mat2 = e.add_material(Material::new(Texture::solid(Colour::new(0.6, 0.2, 0.7))));
     let crate_mat_hdl = e.add_material(crate_mat);
 
     let teapot = e.add_mesh(primitives::new_teapot());

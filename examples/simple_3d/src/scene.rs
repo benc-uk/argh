@@ -2,7 +2,7 @@ use argh::camera::Camera;
 use argh::engine::{Engine, InstanceHandle, MaterialHandle, Scene};
 use argh::light::Light;
 use argh::math::Vec3;
-use argh::models::{ImageTexture, Material, SimpleColourTexture};
+use argh::models::{Material, Texture};
 use argh::{colour::*, primitives};
 
 pub struct MyScene {
@@ -31,7 +31,7 @@ impl Scene for MyScene {
     if !engine.get_keys_pressed().is_empty() {
       if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
         let mat = engine.material_mut(self.materials[2]);
-        mat.set_texture(SimpleColourTexture::new(Colour::rand()));
+        mat.set_texture(Texture::solid(Colour::rand()));
       }
 
       if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Escape) {
@@ -48,10 +48,10 @@ impl Scene for MyScene {
     e.add_light(Light::new(Vec3::new(-6.0, 7.0, 5.0), 0.8, BLUE));
     e.add_light(Light::new(Vec3::new(8.0, -2.0, 9.0), 0.5, RED));
 
-    let crate_tex = ImageTexture::new("assets/checker_256.png").unwrap();
-    let earth_tex = ImageTexture::new("assets/earth.png").unwrap();
-    let col_tex1 = SimpleColourTexture::new(Colour::rand());
-    let col_tex2 = SimpleColourTexture::new(Colour::rand());
+    let crate_tex = Texture::image("assets/checker_256.png").unwrap();
+    let earth_tex = Texture::image("assets/earth.png").unwrap();
+    let col_tex1 = Texture::Solid(Colour::rand());
+    let col_tex2 = Texture::Solid(Colour::rand());
 
     let crate_mat = e.add_material(Material::new(crate_tex));
     let earth_mat = e.add_material(Material::new(earth_tex));

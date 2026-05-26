@@ -87,7 +87,7 @@ impl Engine {
 
     // Get texture via the material
     let mat = self.materials.get(instance.material_handle).unwrap();
-    let tex = mat.texture.as_ref();
+    let tex = &mat.texture;
 
     // 1. Combine MVP (model, view, perspective) matrix
     let m = instance.get_model_mat();
@@ -219,7 +219,7 @@ fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
 // Fill a 3D triangle between three ScreenVertex points which form a triangle
 // Not public outside the crate
 #[inline(always)]
-fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, tex: &dyn Texture, smooth: bool) {
+fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, tex: &Texture, smooth: bool) {
   let area = edge_function(v1, v2, v0.x, v0.y);
   if area == 0.0 {
     return;

@@ -33,34 +33,38 @@ impl std::fmt::Debug for TextureError {
   }
 }
 
-/// Texture abstraction around bitmap images or other types of procedural textures
-pub trait Texture {
-  fn sample(&self, u: f64, v: f64) -> Colour;
+/// Texture is an enum type used to hold several different styles of textures
+pub enum Texture {
+  Solid(Colour),
+  Image(ImageTexture),
 }
 
-/// A flat uniform colour, handy for debugging
-pub struct SimpleColourTexture {
-  colour: Colour,
-}
-
-impl SimpleColourTexture {
-  /// Create a texture with a single flat colour
-  pub fn new(c: Colour) -> Self {
-    Self { colour: c }
+impl Texture {
+  #[inline(always)]
+  pub(crate) fn sample(&self, u: f64, v: f64) -> Colour {
+    match self {
+      Self::Solid(c) => *c,
+      Self::Image(img) => img.sample(u, v),
+    }
   }
 
-  /// Modify the colour of this texture
-  pub fn set_colour(&mut self, c: Colour) {
-    self.colour = c
+  /// Create a simple single solid colour texture
+  pub fn solid(c: Colour) -> Self {
+    Self::Solid(c)
+  }
+
+  /// Create a texture from an image file
+  pub fn image(path: &str) -> Result<Self, TextureError> {
+    Ok(Self::Image(ImageTexture::new(path)?))
+  }
+
+  /// Create a texture from an array of u8 bytes, underlying method will make a guess on format
+  pub fn image_from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
+    Ok(Self::Image(ImageTexture::from_bytes(bytes)?))
   }
 }
 
-impl Texture for SimpleColourTexture {
-  fn sample(&self, _u: f64, _v: f64) -> Colour {
-    self.colour
-  }
-}
-
+/// Holds a [DynamicImage] and not much else
 pub struct ImageTexture {
   image: DynamicImage,
   w: u32,
@@ -68,22 +72,21 @@ pub struct ImageTexture {
 }
 
 impl ImageTexture {
-  pub fn new(path: &str) -> Result<Self, TextureError> {
+  // Private only called vis Texture enum methods
+  fn new(path: &str) -> Result<Self, TextureError> {
     let img = ImageReader::open(path)?.decode()?;
     let w = img.width();
     let h = img.height();
     Ok(Self { image: img, w, h })
   }
 
-  pub fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
+  fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
     let img = image::load_from_memory(bytes)?;
     let w = img.width();
     let h = img.height();
     Ok(Self { image: img, w, h })
   }
-}
 
-impl Texture for ImageTexture {
   fn sample(&self, u: f64, v: f64) -> Colour {
     let x = u * self.w as f64;
     let y = v * self.h as f64;
@@ -102,21 +105,21 @@ pub struct Material {
   pub diffuse: f64,
   pub specular: f64,
   pub hardness: f64,
-  pub(crate) texture: Box<dyn Texture>,
+  pub(crate) texture: Texture,
 }
 
 impl Material {
-  pub fn new<T: Texture + 'static>(t: T) -> Self {
+  pub fn new(tex: Texture) -> Self {
     Self {
       diffuse: 1.0,
       specular: 1.0,
       hardness: 12.0,
-      texture: Box::new(t),
+      texture: tex,
     }
   }
 
-  pub fn set_texture<T: Texture + 'static>(&mut self, t: T) {
-    self.texture = Box::new(t)
+  pub fn set_texture(&mut self, tex: Texture) {
+    self.texture = tex
   }
 }
 
