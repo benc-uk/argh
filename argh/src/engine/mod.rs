@@ -67,6 +67,7 @@ pub struct Engine {
   meshes: SlotMap<MeshHandle, Mesh>,
   materials: SlotMap<MaterialHandle, Material>,
   instances: SlotMap<InstanceHandle, Instance>,
+  render_keys: Vec<InstanceHandle>,
 
   // Inputs - Gated to desktop only not web/wasm
   #[cfg(feature = "desktop")]
@@ -114,6 +115,7 @@ impl Engine {
       meshes: SlotMap::with_key(),
       materials: SlotMap::with_key(),
       instances: SlotMap::with_key(),
+      render_keys: vec![],
 
       lights: vec![],
       ambient_light: Colour::new(0.1, 0.1, 0.1),

@@ -54,6 +54,20 @@ impl Engine {
     &self.buffer.pixels
   }
 
+  /// Used by WASM only to re-encode/pack the internal frame buffer as RGBA (rather than ARGB)
+  /// Output array should be pre-allocated and sized (W * H * 4)
+  pub fn write_rgba_bytes(&self, out: &mut [u8]) {
+    debug_assert_eq!(out.len(), self.buffer.pixels.len() * 4);
+
+    for (chunk, &p) in out.chunks_exact_mut(4).zip(&self.buffer.pixels) {
+      let [_, r, g, b] = p.to_be_bytes();
+      chunk[0] = r;
+      chunk[1] = g;
+      chunk[2] = b;
+      chunk[3] = 0xFF;
+    }
+  }
+
   /// Render all instances available
   pub fn render_all(&mut self, cam: &Camera) {
     let keys: Vec<_> = self.instances.keys().collect();

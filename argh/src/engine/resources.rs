@@ -36,7 +36,9 @@ impl Engine {
       mesh_handle,
     };
 
-    self.instances.insert(i)
+    let h = self.instances.insert(i);
+    self.render_keys.push(h);
+    h
   }
 
   /// Create an instance of a mesh with given name, using the material transformed into the world
@@ -56,7 +58,9 @@ impl Engine {
     i.rot.rot_y(rot.y);
     i.rot.rot_z(rot.z);
 
-    self.instances.insert(i)
+    let h = self.instances.insert(i);
+    self.render_keys.push(h);
+    h
   }
 
   pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {
@@ -69,6 +73,7 @@ impl Engine {
 
   pub fn remove_instance(&mut self, h: InstanceHandle) {
     self.instances.remove(h);
+    self.render_keys.retain(|&k| k != h);
   }
 
   pub fn add_material(&mut self, mat: Material) -> MaterialHandle {
