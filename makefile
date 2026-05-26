@@ -1,4 +1,4 @@
-MODULE ?= teapots
+EXAMPLE ?= teapots
 
 .DEFAULT_GOAL := help
 
@@ -25,8 +25,8 @@ release: ## 🚀 Build all crates (release)
 release-win: ## 🚀 Build all crates for Windows x64 (release)
 	cargo build --workspace --release --target x86_64-pc-windows-gnu
 
-run: ## 🚀 Run an example (MODULE=teapots)
-	cargo run --bin $(MODULE)
+run-example: ## 🚀 Run an example as a desktop app
+	cargo run --bin $(EXAMPLE)
 
 test: ## 🧪 Run all tests
 	cargo test --lib

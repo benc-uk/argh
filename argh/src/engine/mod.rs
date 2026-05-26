@@ -53,12 +53,7 @@ impl std::fmt::Debug for EngineError {
 
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
-  #[allow(dead_code)]
-  scale: u8, // Not used on web/wasm so dead_code cfg neeeded to stop warning
-  #[allow(dead_code)]
-  win_title: String, // Not used on web/wasm so dead_code cfg neeeded to stop warning
-
-  win_size: (usize, usize),
+  size: (usize, usize),
   aspect: f64,
 
   buffer: Buffer,
@@ -94,6 +89,7 @@ pub struct Engine {
 pub trait Scene {
   /// This method will be called every frame by the main loop, use it to draw and render your scene
   fn update(&mut self, engine: &mut Engine, dt: f64, t: f64);
+  fn new(e: &mut Engine) -> Self;
 }
 
 impl Engine {
@@ -101,20 +97,19 @@ impl Engine {
   /// # Arguments
   /// * `w` - Width of the window in pixels
   /// * `h` - Height of the window in pixels
-  /// * `title` - Title of the window
-  pub fn new(w: i32, h: i32, title: &str, scale: u8) -> Self {
+  pub fn new(w: i32, h: i32) -> Self {
     Self {
-      win_size: (w as usize, h as usize),
+      size: (w as usize, h as usize),
       buffer: Buffer::new(w as usize, h as usize),
-      win_title: String::from(title),
+
       t: 0.0,
       last_time: Instant::now(),
-      scale,
       fps: 0.0,
-      debug: false,
       target_fps: 60,
       aspect: w as f64 / h as f64,
+
       exit: false,
+      debug: false,
 
       meshes: SlotMap::with_key(),
       materials: SlotMap::with_key(),
@@ -131,11 +126,14 @@ impl Engine {
   }
 
   /// Begin the main loop, open the window and blocks until the window is closed or escape is pressed
+  /// Only use this on desktop, WASM or other runtimes will not ever call this but use `tick()`
   /// # Arguments
   /// * `scene` - Implementation of Scene with your own `update()` function
+  /// * `title` - Title of the window
+  /// * `scale` - Scale up the viewport; Values: 0,1,2,4,8
   #[cfg(feature = "desktop")]
-  pub fn start<S: Scene>(mut self, mut scene: S) {
-    let scl = match self.scale {
+  pub fn start_window<S: Scene>(mut self, mut scene: S, title: &str, scale: u8) {
+    let scl = match scale {
       0 => minifb::Scale::FitScreen,
       1 => minifb::Scale::X1,
       2 => minifb::Scale::X2,
@@ -151,7 +149,7 @@ impl Engine {
       ..Default::default()
     };
 
-    let mut window = Window::new(&self.win_title, self.win_size.0, self.win_size.1, opt).expect("failed to create window");
+    let mut window = Window::new(title, self.size.0, self.size.1, opt).expect("failed to create window");
 
     if self.target_fps > 0 {
       window.set_target_fps(self.target_fps);
@@ -170,13 +168,13 @@ impl Engine {
       self.keys = window.get_keys();
       self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
 
-      if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.win_size.0, self.win_size.1) {
+      if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.size.0, self.size.1) {
         println!("Error updating buffer: {}", e);
       }
     }
   }
 
-  /// Tick advances the engine one frame
+  /// Tick advances the engine one frame, essentially calls the scene.update() with a tiny bit of book-keeping
   /// # Arguments
   /// * `scene` - Implementation of Scene with your own `update()` function
   /// * `dt` - Delta time since tick was last called in millisecs
@@ -202,7 +200,7 @@ impl Engine {
 
   /// Return the width & height of the window
   pub fn get_size(&self) -> (usize, usize) {
-    (self.win_size.0, self.win_size.1)
+    (self.size.0, self.size.1)
   }
 
   /// Get the aspect ratio of the viewport and window

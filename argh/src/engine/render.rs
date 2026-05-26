@@ -105,8 +105,8 @@ impl Engine {
         let ndc_y = clip.y * inv_w;
         let ndc_z = clip.z * inv_w;
         // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * self.win_size.0 as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.win_size.1 as f64; // Flip Y here
+        let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
 
         // Reach out to the UV array and pre-mult by 1/w
         let uv = mesh.uvs[i];
