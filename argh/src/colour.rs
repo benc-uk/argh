@@ -42,7 +42,7 @@ impl Colour {
     }
   }
 
-  /// Return as packed argb u32 representation of the colour for use with the [Buffer]. Alpha is always 0 as minifb ignores it
+  /// Return as packed argb u32 representation of the colour for use with the internal `Buffer`. Alpha is always 0 as minifb ignores it
   #[inline(always)]
   pub fn to_packed_0rgb(self) -> u32 {
     let r = (self.r.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;

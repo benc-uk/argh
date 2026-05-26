@@ -29,7 +29,7 @@ impl Light {
     Self { pos, brightness, colour }
   }
 
-  /// Create a default light at [0,0,0] with white colour and full brightness
+  /// Create a default light at (0, 0, 0) with white colour and full brightness
   pub fn new_default() -> Self {
     Self {
       pos: VEC3_ZERO,
