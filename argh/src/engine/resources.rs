@@ -7,6 +7,7 @@
 // ==============================================================================================
 
 use crate::{
+  engine::LightHandle,
   light::Light,
   math::{Quat, VEC3_ONE, VEC3_ZERO, Vec3},
   models::{Instance, Material, Mesh},
@@ -20,9 +21,16 @@ impl Engine {
     self.meshes.insert(mesh)
   }
 
-  /// Add a light to the scene, used by 3D rendering
+  /// Add a light to the scene
   pub fn add_light(&mut self, light: Light) {
-    self.lights.push(light);
+    let h = self.lights.insert(light);
+    self.light_keys.push(h);
+  }
+
+  /// Remove a light from the scene
+  pub fn remove_light(&mut self, h: LightHandle) {
+    self.lights.remove(h);
+    self.light_keys.retain(|&k| k != h);
   }
 
   /// Create an instance of a mesh with given name, using the material
@@ -37,7 +45,7 @@ impl Engine {
     };
 
     let h = self.instances.insert(i);
-    self.render_keys.push(h);
+    self.instance_keys.push(h);
     h
   }
 
@@ -59,7 +67,7 @@ impl Engine {
     i.rot.rot_z(rot.z);
 
     let h = self.instances.insert(i);
-    self.render_keys.push(h);
+    self.instance_keys.push(h);
     h
   }
 
@@ -73,7 +81,7 @@ impl Engine {
 
   pub fn remove_instance(&mut self, h: InstanceHandle) {
     self.instances.remove(h);
-    self.render_keys.retain(|&k| k != h);
+    self.instance_keys.retain(|&k| k != h);
   }
 
   pub fn add_material(&mut self, mat: Material) -> MaterialHandle {

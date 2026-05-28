@@ -3,8 +3,8 @@
 - [x] FPS aware time stuff
 - [x] Texture mapping
 - [x] Specular lighting
-- [ ] Light handles
-- [ ] Monomorphizing the dyn texture
+- [x] Light handles
+- [x] Monomorphizing the dyn texture
 - [ ] More inputs like mouse
 - [x] Make ESC to exit optional
 - [x] Lock window from resizing

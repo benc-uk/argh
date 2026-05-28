@@ -56,7 +56,7 @@ impl Engine {
 
   /// Used by WASM only to re-encode/pack the internal frame buffer as RGBA (rather than ARGB)
   /// Output array should be pre-allocated and sized (W * H * 4)
-  pub fn write_rgba_bytes(&self, out: &mut [u8]) {
+  pub fn buffer_copy_bytes(&self, out: &mut [u8]) {
     debug_assert_eq!(out.len(), self.buffer.pixels.len() * 4);
 
     for (chunk, &p) in out.chunks_exact_mut(4).zip(&self.buffer.pixels) {
@@ -70,10 +70,9 @@ impl Engine {
 
   /// Render all instances available
   pub fn render_all(&mut self, cam: &Camera) {
-    let keys: Vec<_> = self.instances.keys().collect();
-
-    for i in keys {
-      self.render_instance(cam, i);
+    for i in 0..self.instance_keys.len() {
+      let h = self.instance_keys[i];
+      self.render_instance(cam, h);
     }
   }
 
@@ -164,7 +163,7 @@ impl Engine {
 
       // It's convention that the normals list is in the same order as the verts list
       // Otherwise we're in impossible mess TBH
-      let n0 = normals[i0];
+      let mut n0 = normals[i0];
       let n1 = normals[i1];
       let n2 = normals[i2];
 
@@ -195,8 +194,17 @@ impl Engine {
       let eye = cam.get_pos();
 
       // Calc shading & lighting at each world vertex, and set into screen vert
+
+      // Cludge n0 to be a normal for the whole face for flat shading
+      if !instance.smooth {
+        n0 = (wv1 - wv0).cross(wv2 - wv0).normalize_new();
+      }
+
+      // Always shade vert 0
       let (d0, s0) = shade_vert(&self.lights, wv0, n0, eye, mat.hardness);
       sv0.colour = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
+
+      // Only shade vert 1 & 2 when smooth shading
       if instance.smooth {
         let (d1, s1) = shade_vert(&self.lights, wv1, n1, eye, mat.hardness);
         let (d2, s2) = shade_vert(&self.lights, wv2, n2, eye, mat.hardness);
@@ -285,9 +293,11 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
         let texel = tex.sample(u, v);
 
+        // Default shading uses on vert 0 only (flat)
         let mut colour = v0.colour;
+
+        // Gouraud shading interpolates between colours at all 3 verts
         if smooth {
-          // Gouraud shading interpolates between colours at each vert
           colour = v0.colour * b0 + v1.colour * b1 + v2.colour * b2;
         }
 

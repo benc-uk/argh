@@ -28,6 +28,7 @@ impl Scene for MyScene {
     e.render_all(&self.camera);
   }
 
+  // Initialize & create the scene
   fn new(e: &mut Engine) -> Self {
     e.debug = true;
     e.target_fps = 0;

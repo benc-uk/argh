@@ -10,7 +10,7 @@ use image::{DynamicImage, GenericImageView, ImageError, ImageReader};
 use std::io;
 
 use crate::{
-  colour::Colour,
+  colour::{Colour, WHITE},
   engine::{MaterialHandle, MeshHandle},
   math::{Mat4, Quat, Vec2, Vec3},
 };
@@ -39,6 +39,15 @@ pub enum Texture {
   Image(ImageTexture),
 }
 
+/// Most basic Material possible
+pub const MATERIAL_PLACEHOLDER: Material = Material {
+  diffuse: 1.0,
+  hardness: 20.0,
+  specular: 1.0,
+  texture: Texture::Solid(WHITE),
+};
+
+// In Rust enums can have methods and an implementation, which is kinda wild
 impl Texture {
   #[inline(always)]
   pub(crate) fn sample(&self, u: f64, v: f64) -> Colour {
@@ -48,7 +57,7 @@ impl Texture {
     }
   }
 
-  /// Create a simple single solid colour texture
+  /// Create a basic single solid colour texture
   pub fn solid(c: Colour) -> Self {
     Self::Solid(c)
   }

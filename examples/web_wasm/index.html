@@ -20,14 +20,15 @@
     </style>
   </head>
   <body>
-    <canvas id="argh-canvas"></canvas>
+    <canvas id="canvas"></canvas>
+
     <script type="module">
       import init from "./pkg/web_wasm.js";
 
       const wasm = await init();
       wasm.start();
 
-      // ptr is a raw pointer to the PIXELS Vec<u8> on the Rust side
+      // ptr is a raw pointer to the framebuffer PIXELS Vec<u8> on the Rust side
       const ptr = wasm.pixel_ptr();
 
       // Allocate ImageData over buffer in memory
@@ -36,7 +37,7 @@
       const imageData = new ImageData(pixels, wasm.width(), wasm.height());
 
       // Standard canvas stuff
-      const canvas = document.getElementById("argh-canvas");
+      const canvas = document.getElementById("canvas");
       canvas.width = wasm.width();
       canvas.height = wasm.height();
       const ctx = canvas.getContext("2d");

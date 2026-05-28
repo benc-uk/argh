@@ -37,6 +37,8 @@ new_key_type! {
   pub struct MaterialHandle;
   /// A handle to reference meshes held by the engine
   pub struct MeshHandle;
+  /// A handle to reference lights held by the engine
+  pub struct LightHandle;
 }
 
 #[derive(thiserror::Error)]
@@ -63,11 +65,13 @@ pub struct Engine {
   exit: bool,
 
   // Things tracked & cached by the engine
-  lights: Vec<Light>,
+  lights: SlotMap<LightHandle, Light>,
   meshes: SlotMap<MeshHandle, Mesh>,
   materials: SlotMap<MaterialHandle, Material>,
   instances: SlotMap<InstanceHandle, Instance>,
-  render_keys: Vec<InstanceHandle>,
+  // Used to speed up looping, minimise copies in the render loops
+  instance_keys: Vec<InstanceHandle>,
+  light_keys: Vec<LightHandle>,
 
   // Inputs - Gated to desktop only not web/wasm
   #[cfg(feature = "desktop")]
@@ -90,6 +94,8 @@ pub struct Engine {
 pub trait Scene {
   /// This method will be called every frame by the main loop, use it to draw and render your scene
   fn update(&mut self, engine: &mut Engine, dt: f64, t: f64);
+
+  /// This is a convention and not used by the argh engine
   fn new(e: &mut Engine) -> Self;
 }
 
@@ -114,10 +120,11 @@ impl Engine {
 
       meshes: SlotMap::with_key(),
       materials: SlotMap::with_key(),
+      lights: SlotMap::with_key(),
       instances: SlotMap::with_key(),
-      render_keys: vec![],
+      instance_keys: vec![],
+      light_keys: vec![],
 
-      lights: vec![],
       ambient_light: Colour::new(0.1, 0.1, 0.1),
 
       #[cfg(feature = "desktop")]

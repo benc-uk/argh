@@ -22,7 +22,8 @@ Features:
   - Diffuse illumination and Gouraud shading + texture mapping
   - Cameras with perspective projection
   - Simple meshes, materials and textures
-  - Generators for cubes and spheres, and teapots (what graphics system would be complete without the classic Newell Teapot)
+    - Textures can be image based texture maps or simple solid colours
+  - Generators for cubes and spheres, and teapots (what graphics system would be complete without the classic Newell Teapot!)
 - Methods for drawing 2D primitives, pixels, lines and text
 
 ## Examples

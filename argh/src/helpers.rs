@@ -6,8 +6,11 @@
 // Notes:
 // ==============================================================================================
 
+use slotmap::SlotMap;
+
 use crate::{
   colour::*,
+  engine::LightHandle,
   light::Light,
   math::{Vec3, Vec4},
 };
@@ -47,12 +50,12 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
 
 // Internal function for calculating the light at a vertex in world space
 // We return light values (as RGB Colours) falling on that vert, NOT the colour of the surface
-pub fn shade_vert(lights: &Vec<Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
+pub fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
   // Shading & lighting over multiple lights
   let mut diff_sum = BLACK;
   let mut spec_sum = BLACK;
 
-  for light in lights {
+  for light in lights.values() {
     // Vectors to and from the surface and the light
     let l = (light.pos - world).normalize_new();
     let li = l.invert();

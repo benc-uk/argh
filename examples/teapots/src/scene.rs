@@ -49,7 +49,6 @@ impl Scene for MyScene {
     e.add_instance_trans(teapot, teapot_mat1, Vec3::new(2.0, 0.0, 2.3), Vec3::new(0.0, 3.0, 0.0), Vec3::new(1.2, 1.5, 1.2));
     e.add_instance_trans(teapot, teapot_mat2, Vec3::new(-2.0, 0.0, -2.9), Vec3::new(0.0, 2.0, 0.0), Vec3::new(1.2, 1.2, 1.2));
     e.add_instance_trans(cube, crate_mat_hdl, Vec3::new(0.0, -6.0, 0.0), Vec3::new(0.0, 0.0, 0.0), Vec3::new(12.0, 12.0, 12.0));
-
     let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 5.0, 14.0), Vec3::new(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
 
     MyScene { camera }

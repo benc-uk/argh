@@ -57,17 +57,16 @@ pub fn pixel_ptr() -> *const u8 {
 #[wasm_bindgen]
 // Called every frame from the JS side to trigger engine tick (and render) then grab the frame as bytes
 pub fn update(dt: f64) {
-  ENGINE.with(|e| {
-    SCENE.with(|s| {
-      PIXELS.with(|p| {
-        let mut eng_binding = e.borrow_mut(); // Engine used twice so we need this weirdness
-        let e = eng_binding.as_mut().expect("engine not initialized");
+  ENGINE.with_borrow_mut(|e| {
+    SCENE.with_borrow_mut(|s| {
+      PIXELS.with_borrow_mut(|p| {
+        let e = e.as_mut().expect("engine not initialized");
 
         // Advance the engine one tick or frame
-        e.tick(s.borrow_mut().as_mut().unwrap(), dt);
+        e.tick(s.as_mut().expect("scene not initialized"), dt);
 
-        // This writes directly into the chunk of memory of PIXELS
-        e.write_rgba_bytes(&mut p.borrow_mut());
+        // This copies frame the chunk of memory of PIXELS
+        e.buffer_copy_bytes(p);
       })
     })
   });
