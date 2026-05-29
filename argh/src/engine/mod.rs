@@ -14,6 +14,7 @@ mod draw2d;
 mod input;
 mod render;
 mod resources;
+mod scene;
 
 #[cfg(feature = "desktop")]
 use minifb::{Window, WindowOptions};
@@ -26,6 +27,7 @@ use crate::{
   light::Light,
   models::{Instance, Material, Mesh},
 };
+pub use scene::Scene;
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -88,15 +90,6 @@ pub struct Engine {
 
   /// Ambient light colour, defaults to [0.1, 0.1, 0.1], beware setting this too high it will look washed out
   pub ambient_light: Colour,
-}
-
-/// All users of argh are expected to provide their own Scene implementation
-pub trait Scene {
-  /// This method will be called every frame by the main loop, use it to draw and render your scene
-  fn update(&mut self, engine: &mut Engine, dt: f64, t: f64);
-
-  /// This is a convention and not used by the argh engine
-  fn new(e: &mut Engine) -> Self;
 }
 
 impl Engine {

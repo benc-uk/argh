@@ -16,6 +16,8 @@ pub struct Colour {
   b: f32,
 }
 
+const INV_255: f32 = 1.0 / 255.0;
+
 // Helper static colours
 
 pub const BLACK: Colour = Colour::new(0.0, 0.0, 0.0);
@@ -42,13 +44,23 @@ impl Colour {
     }
   }
 
-  /// Return as packed argb u32 representation of the colour for use with the internal `Buffer`. Alpha is always 0 as minifb ignores it
+  /// Return as packed 0rgb u32 representation of the colour for use with the internal `Buffer`. Alpha is always 0 as minifb ignores it
   #[inline(always)]
   pub fn to_packed_0rgb(self) -> u32 {
     let r = (self.r.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;
     let g = (self.g.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;
     let b = (self.b.clamp(0.0, 1.0) * 255.0 + 0.5) as u32;
     (r << 16) | (g << 8) | b
+  }
+
+  /// Take a packed 0rgb u32 and output as a Colour
+  #[inline(always)]
+  pub const fn from_packed_0rgb(p: u32) -> Self {
+    Self {
+      r: ((p >> 16) & 0xFF) as f32 * INV_255,
+      g: ((p >> 8) & 0xFF) as f32 * INV_255,
+      b: (p & 0xFF) as f32 * INV_255,
+    }
   }
 
   /// Create a random RGB colour

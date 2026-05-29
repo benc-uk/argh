@@ -75,7 +75,7 @@ impl Texture {
 
 /// Holds a [DynamicImage] and not much else
 pub struct ImageTexture {
-  image: DynamicImage,
+  pixels: Vec<u32>, // packed 0RGB to match buffer format
   w: u32,
   h: u32,
 }
@@ -83,25 +83,33 @@ pub struct ImageTexture {
 impl ImageTexture {
   // Private only called vis Texture enum methods
   fn new(path: &str) -> Result<Self, TextureError> {
-    let img = ImageReader::open(path)?.decode()?;
-    let w = img.width();
-    let h = img.height();
-    Ok(Self { image: img, w, h })
+    let img = ImageReader::open(path)?.decode()?.to_rgb8();
+    let (w, h) = img.dimensions();
+    let pixels = img.pixels().map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | (p[2] as u32)).collect();
+    Ok(Self { pixels, w, h })
   }
 
   fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
-    let img = image::load_from_memory(bytes)?;
-    let w = img.width();
-    let h = img.height();
-    Ok(Self { image: img, w, h })
+    let img = image::load_from_memory(bytes)?.to_rgb8();
+    let (w, h) = img.dimensions();
+    let pixels = img.pixels().map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | (p[2] as u32)).collect();
+    Ok(Self { pixels, w, h })
   }
 
-  fn sample(&self, u: f64, v: f64) -> Colour {
-    let x = u * self.w as f64;
-    let y = v * self.h as f64;
-    let pix = self.image.get_pixel(x as u32, y as u32);
-
-    Colour::from_rgb8(pix.0[0], pix.0[1], pix.0[2])
+  /// Sample the texture with wrap-around addressing.
+  ///
+  /// Uses `u - u.floor()` to fold any UV into [0, 1) before scaling to texel
+  /// space. Works for any texture size (pow2 or not), no division, no branch.
+  /// The previous bitmask wrap only worked for power-of-two dimensions and
+  /// garbled non-pow2 textures (e.g. the 500x500 crate.png).
+  #[inline(always)]
+  pub fn sample(&self, u: f64, v: f64) -> Colour {
+    let uf = u - u.floor();
+    let vf = v - v.floor();
+    let x = (uf * self.w as f64) as u32;
+    let y = (vf * self.h as f64) as u32;
+    let p = unsafe { *self.pixels.get_unchecked((y * self.w + x) as usize) };
+    Colour::from_packed_0rgb(p)
   }
 }
 

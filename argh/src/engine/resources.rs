@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   engine / resources.rs
-// Purpose:         Engine operations for resources like meshes, instances & materials
+// Purpose:         Operations for engine managed resources like lights, meshes, instances & materials
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:
@@ -16,10 +16,14 @@ use crate::{
 use super::{Engine, InstanceHandle, MaterialHandle, MeshHandle};
 
 impl Engine {
+  // ===== Meshes ======================================================================================================
+
   /// Add a mesh to the cache and give it a name
   pub fn add_mesh(&mut self, mesh: Mesh) -> MeshHandle {
     self.meshes.insert(mesh)
   }
+
+  // ===== Lights ======================================================================================================
 
   /// Add a light to the scene
   pub fn add_light(&mut self, light: Light) {
@@ -32,6 +36,16 @@ impl Engine {
     self.lights.remove(h);
     self.light_keys.retain(|&k| k != h);
   }
+
+  pub fn light_mut(&mut self, h: LightHandle) -> &mut Light {
+    self.lights.get_mut(h).expect("light not found")
+  }
+
+  pub fn light(&self, h: LightHandle) -> &Light {
+    self.lights.get(h).expect("light not found")
+  }
+
+  // ===== Instances ======================================================================================================
 
   /// Create an instance of a mesh with given name, using the material
   pub fn add_instance(&mut self, mesh_handle: MeshHandle, mat_handle: MaterialHandle) -> InstanceHandle {
@@ -50,9 +64,9 @@ impl Engine {
   }
 
   /// Create an instance of a mesh with given name, using the material transformed into the world
-  pub fn add_instance_trans(&mut self, mesh_handle: MeshHandle, mat_handle: MaterialHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
+  pub fn add_instance_trans(&mut self, mesh_handle: MeshHandle, material_handle: MaterialHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
     let mut i = Instance {
-      material_handle: mat_handle,
+      material_handle,
       pos: VEC3_ZERO,
       scale: VEC3_ONE,
       rot: Quat::ident(),
@@ -83,6 +97,8 @@ impl Engine {
     self.instances.remove(h);
     self.instance_keys.retain(|&k| k != h);
   }
+
+  // ===== Materials ======================================================================================================
 
   pub fn add_material(&mut self, mat: Material) -> MaterialHandle {
     self.materials.insert(mat)
