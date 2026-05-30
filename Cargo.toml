@@ -7,6 +7,7 @@ members = [
   "examples/simple_3d",
   "examples/teapots",
   "examples/web_wasm",
+  "examples/scenes",
 ]
 resolver = "3"
 

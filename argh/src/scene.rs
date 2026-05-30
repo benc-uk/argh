@@ -1,24 +1,22 @@
+// ==============================================================================================
+// Module & file:   scene.rs
+// Purpose:         Scene holds instances, lights etc to be rendered on demand
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:
+// ==============================================================================================
+
 use slotmap::SlotMap;
 
 use crate::{
   colour::Colour,
   engine::{InstanceHandle, LightHandle, MaterialHandle, MeshHandle},
   light::Light,
-  math::{Quat, VEC3_ONE, VEC3_ZERO, Vec3},
+  math::{Quat, V3_ONE, V3_ZERO, Vec3},
   models::Instance,
 };
 
-use super::Engine;
-
-/// All users of argh are expected to provide their own App implementation
-pub trait App {
-  /// This method will be called every frame by the main loop, use it to draw and render your scene
-  /// *NOTE!* Only applies in desktop mode, if you are using web or WASM, or other host;
-  /// You will need to call your update() method yourself and also call tick with a frame delta-time
-  /// e.g. `let t = eng.tick(dt); app.update(e, dt, t);`
-  fn update(&mut self, engine: &mut Engine, dt: f64, t: f64);
-}
-
+/// Scene holds instances, lights etc to be rendered on demand
 pub struct Scene {
   // Things tracked & cached by the engine
   pub(super) lights: SlotMap<LightHandle, Light>,
@@ -31,7 +29,6 @@ pub struct Scene {
   pub ambient_light: Colour,
 }
 
-/// A Scene holds all the information need to render something
 impl Scene {
   /// Create an empty scene
   pub fn new() -> Self {
@@ -73,8 +70,8 @@ impl Scene {
   pub fn add_instance(&mut self, mesh_handle: MeshHandle, mat_handle: MaterialHandle) -> InstanceHandle {
     let i = Instance {
       material_handle: mat_handle,
-      pos: VEC3_ZERO,
-      scale: VEC3_ONE,
+      pos: V3_ZERO,
+      scale: V3_ONE,
       rot: Quat::ident(),
       smooth: true,
       mesh_handle,
@@ -89,8 +86,8 @@ impl Scene {
   pub fn add_instance_trans(&mut self, mesh_handle: MeshHandle, material_handle: MaterialHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
     let mut i = Instance {
       material_handle,
-      pos: VEC3_ZERO,
-      scale: VEC3_ONE,
+      pos: V3_ZERO,
+      scale: V3_ONE,
       rot: Quat::ident(),
       smooth: true,
       mesh_handle,
@@ -119,6 +116,14 @@ impl Scene {
   pub fn remove_instance(&mut self, h: InstanceHandle) {
     self.instances.remove(h);
     self.instance_keys.retain(|&k| k != h);
+  }
+
+  pub fn list_instances(&self) -> impl Iterator<Item = &Instance> {
+    self.instances.values()
+  }
+
+  pub fn instances_mut(&mut self) -> impl Iterator<Item = &mut Instance> {
+    self.instances.values_mut()
   }
 }
 

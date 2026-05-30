@@ -32,7 +32,7 @@ impl Light {
   /// Create a default light at (0, 0, 0) with white colour and full brightness
   pub fn new_default() -> Self {
     Self {
-      pos: VEC3_ZERO,
+      pos: V3_ZERO,
       brightness: 1.0,
       colour: WHITE,
     }

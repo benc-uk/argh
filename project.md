@@ -6,7 +6,7 @@
 - [x] Light handles
 - [x] Monomorphizing the dyn texture
 - [ ] More inputs like mouse
-- [ ] Scene / engine refactor
+- [x] Scene / engine refactor
 - [x] Make ESC to exit optional
 - [x] Lock window from resizing
 - [x] Instancing redesign Mesh struct

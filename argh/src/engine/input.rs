@@ -9,14 +9,55 @@
 use super::Engine;
 use super::Key;
 
+pub struct Inputs {
+  pub(super) keys: Vec<Key>,
+  pub(super) keys_pressed: Vec<Key>,
+  pub(super) mouse_buttons: [bool; 3],
+}
+
+impl Inputs {
+  pub fn new() -> Self {
+    Self {
+      keys: vec![],
+      keys_pressed: vec![],
+      mouse_buttons: [false, false, false],
+    }
+  }
+}
+
 impl Engine {
   /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
   pub fn get_keys(&self) -> &[Key] {
-    &self.keys
+    &self.inputs.keys
   }
 
   /// Returns the keys recently pressed. Snapshot taken once per frame before scene.update().
   pub fn get_keys_pressed(&self) -> &[Key] {
-    &self.keys_pressed
+    &self.inputs.keys_pressed
+  }
+
+  /// Returns the mouse buttons
+  pub fn get_mouse_buttons(&self) -> [bool; 3] {
+    self.inputs.mouse_buttons
+  }
+
+  /// Helper to check if a key is pressed
+  pub fn is_pressed(&self, k: Key) -> bool {
+    self.inputs.keys.contains(&k)
+  }
+
+  /// Helper to check if left mouse button is pressed
+  pub fn is_mouse_down_left(&self) -> bool {
+    self.inputs.mouse_buttons[0]
+  }
+
+  /// Helper to check if middle mouse button is pressed
+  pub fn is_mouse_down_middle(&self) -> bool {
+    self.inputs.mouse_buttons[1]
+  }
+
+  /// Helper to check if right mouse button is pressed
+  pub fn is_mouse_down_right(&self) -> bool {
+    self.inputs.mouse_buttons[2]
   }
 }

@@ -1,8 +1,7 @@
 use std::f64::consts::PI;
 
-use argh::colour::{BLACK, Colour};
-use argh::engine::{App, Engine};
-use argh::math::{Mat3, Vec2};
+use argh::prelude::*;
+
 use rand::random_range;
 
 pub struct MyApp {

@@ -1,9 +1,4 @@
-use argh::camera::Camera;
-use argh::engine::{App, Engine, InstanceHandle, MaterialHandle, Scene};
-use argh::light::Light;
-use argh::math::Vec3;
-use argh::models::{Material, Texture};
-use argh::{colour::*, primitives};
+use argh::prelude::*;
 
 pub struct MyApp {
   cube_hdl: InstanceHandle,
@@ -20,15 +15,15 @@ impl App for MyApp {
     engine.clear(BLACK);
     let scn = &mut self.scene; // Just for convenience 
 
-    let mut axis = Vec3::new(0.6, 0.3, 0.9);
+    let mut axis = v3(0.6, 0.3, 0.9);
     axis.normalize();
     let py = f64::cos(t * 1.0);
     let px = f64::sin(t * 0.7);
     let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
     let pz2 = f64::sin(t * 0.9) * 0.6;
-    scn.instance_mut(self.cube_hdl).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(Vec3::new(-px, py, pz));
-    scn.instance_mut(self.sphere1_hdl).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(Vec3::new(px, -py, pz2));
-    scn.instance_mut(self.sphere2_hdl).rot_y(0.1 * dt).set_pos(Vec3::new(px * 0.7, py * 1.0, 0.0));
+    scn.instance_mut(self.cube_hdl).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(v3(-px, py, pz));
+    scn.instance_mut(self.sphere1_hdl).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(v3(px, -py, pz2));
+    scn.instance_mut(self.sphere2_hdl).rot_y(0.1 * dt).set_pos(v3(px * 0.7, py * 1.0, 0.0));
     scn.instance_mut(self.teapot_hdl).rot_y(0.3 * dt);
 
     engine.render(&self.camera, &self.scene);
@@ -51,9 +46,9 @@ impl App for MyApp {
 pub fn new(e: &mut Engine) -> MyApp {
   let mut scene = Scene::new();
 
-  scene.add_light(Light::new(Vec3::new(3.0, 7.0, 5.0), 1.0, WHITE));
-  scene.add_light(Light::new(Vec3::new(-6.0, 7.0, 5.0), 0.8, BLUE));
-  scene.add_light(Light::new(Vec3::new(8.0, -2.0, 9.0), 0.5, RED));
+  scene.add_light(Light::new(v3(3.0, 7.0, 5.0), 1.0, WHITE));
+  scene.add_light(Light::new(v3(-6.0, 7.0, 5.0), 0.8, BLUE));
+  scene.add_light(Light::new(v3(8.0, -2.0, 9.0), 0.5, RED));
 
   let crate_tex = Texture::image("assets/checker_256.png").unwrap();
   let earth_tex = Texture::image("assets/earth.png").unwrap();
@@ -77,7 +72,7 @@ pub fn new(e: &mut Engine) -> MyApp {
   scene.instance_mut(sphere1_hdl).smooth = false;
   scene.instance_mut(teapot_hdl).scale(0.5).set_pos_xyz(0.5, -1.55, -2.0);
 
-  let camera = Camera::new_perspective(e.get_aspect(), Vec3::new(0.0, 1.0, 2.8), Vec3::new(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
+  let camera = Camera::new_perspective(e.get_aspect(), v3(0.0, 1.0, 2.8), v3(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
 
   MyApp {
     cube_hdl,

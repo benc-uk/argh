@@ -51,3 +51,29 @@ pub mod camera;
 
 /// Light source with position & colour
 pub mod light;
+
+pub mod app;
+pub mod scene;
+
+// Prelude
+pub mod prelude {
+  pub use crate::app::App;
+  pub use crate::camera::Camera;
+  pub use crate::colour::*;
+  pub use crate::engine::{Engine, InstanceHandle, LightHandle, MaterialHandle, MeshHandle};
+  pub use crate::light::Light;
+  pub use crate::math::{Mat3, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
+  pub use crate::models::{MATERIAL_PLACEHOLDER, Material, Texture};
+  pub use crate::primitives;
+  pub use crate::scene::Scene;
+
+  #[inline]
+  pub fn v3(x: f64, y: f64, z: f64) -> Vec3 {
+    Vec3::new(x, y, z)
+  }
+
+  #[inline]
+  pub fn v2(x: f64, y: f64) -> Vec2 {
+    Vec2::new(x, y)
+  }
+}

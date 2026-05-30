@@ -1225,6 +1225,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
+name = "scenes"
+version = "0.1.0"
+dependencies = [
+ "argh",
+]
+
+[[package]]
 name = "scoped-tls"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1328,7 +1335,6 @@ name = "simple_3d"
 version = "0.1.0"
 dependencies = [
  "argh",
- "rand 0.10.1",
 ]
 
 [[package]]

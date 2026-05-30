@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   engine / resources.rs
-// Purpose:         Operations for engine managed resources like lights, meshes, instances & materials
+// Purpose:         Operations for engine managed resources like meshes & materials
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:

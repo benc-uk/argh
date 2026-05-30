@@ -9,7 +9,6 @@
 //! The engine is the core construct of argh, used to hold everything being rendered (meshes, instances, textures),
 //! the window & frame buffer, and to carry out rendering
 
-mod app_scene;
 mod draw2d;
 #[cfg(feature = "desktop")]
 mod input;
@@ -21,13 +20,15 @@ use minifb::{Window, WindowOptions};
 use slotmap::{SlotMap, new_key_type};
 use web_time::Instant;
 
+#[cfg(feature = "desktop")]
+use crate::engine::input::Inputs;
 use crate::{
+  app::App,
   buffer::Buffer,
   colour::*,
   models::{Material, Mesh},
+  scene::Scene,
 };
-pub use app_scene::App;
-pub use app_scene::Scene;
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -71,9 +72,7 @@ pub struct Engine {
 
   // Inputs - Gated to desktop only not web/wasm
   #[cfg(feature = "desktop")]
-  keys: Vec<Key>,
-  #[cfg(feature = "desktop")]
-  keys_pressed: Vec<Key>,
+  inputs: input::Inputs,
 
   // Public fields...
   /// Rate to try to update the buffer, used at engine start only
@@ -105,9 +104,7 @@ impl Engine {
       materials: SlotMap::with_key(),
 
       #[cfg(feature = "desktop")]
-      keys: vec![],
-      #[cfg(feature = "desktop")]
-      keys_pressed: vec![],
+      inputs: Inputs::new(),
     }
   }
 
@@ -150,13 +147,19 @@ impl Engine {
       let t = self.tick(dt); // time bookkeeping
       app.update(self, dt, t); // app paints the world
 
+      // Render debug info like FPS
       if self.debug {
         self.draw_debug();
       }
 
-      self.keys = window.get_keys();
-      self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
+      // Scrape the inputs
+      self.inputs.keys = window.get_keys();
+      self.inputs.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
+      self.inputs.mouse_buttons[0] = window.get_mouse_down(minifb::MouseButton::Left);
+      self.inputs.mouse_buttons[1] = window.get_mouse_down(minifb::MouseButton::Middle);
+      self.inputs.mouse_buttons[2] = window.get_mouse_down(minifb::MouseButton::Right);
 
+      // Finally actually put the image/framebuffer on the screen
       if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.size.0, self.size.1) {
         println!("Error updating buffer: {}", e);
       }

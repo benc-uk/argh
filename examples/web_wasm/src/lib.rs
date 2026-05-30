@@ -9,7 +9,7 @@
 
 use std::cell::RefCell;
 
-use argh::engine::{App, Engine};
+use argh::prelude::*;
 use wasm_bindgen::prelude::*;
 mod app;
 

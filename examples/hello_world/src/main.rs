@@ -1,5 +1,5 @@
 use argh::colour;
-use argh::engine::{App, Engine};
+use argh::prelude::*;
 
 struct MyApp {}
 
