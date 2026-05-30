@@ -1,26 +1,21 @@
 use argh::colour;
-use argh::engine::{Engine, Scene};
+use argh::engine::{App, Engine};
 
-struct MyScene {}
+struct MyApp {}
 
-// Minimal implementation of Scene
-impl Scene for MyScene {
+// Minimal implementation of an argh App
+impl App for MyApp {
   // Clear the screen with blue colour then draw some text
   fn update(&mut self, e: &mut Engine, _: f64, _: f64) {
     e.clear(colour::BLUE);
     e.draw_string("Hello World!", 20, 20, colour::WHITE);
   }
-
-  // Minimal new function as our scene has no fields
-  fn new(_: &mut Engine) -> Self {
-    MyScene {}
-  }
 }
 
 fn main() {
+  let mut app = MyApp {};
+
   let mut e = Engine::new(320, 240);
 
-  let s = MyScene::new(&mut e);
-
-  e.start_window(s, "Argh: Hello World", 2);
+  e.start_window(&mut app, "Argh: Hello World", 2);
 }

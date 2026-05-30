@@ -9,12 +9,12 @@
 //! The engine is the core construct of argh, used to hold everything being rendered (meshes, instances, textures),
 //! the window & frame buffer, and to carry out rendering
 
+mod app_scene;
 mod draw2d;
 #[cfg(feature = "desktop")]
 mod input;
 mod render;
 mod resources;
-mod scene;
 
 #[cfg(feature = "desktop")]
 use minifb::{Window, WindowOptions};
@@ -24,10 +24,10 @@ use web_time::Instant;
 use crate::{
   buffer::Buffer,
   colour::*,
-  light::Light,
-  models::{Instance, Material, Mesh},
+  models::{Material, Mesh},
 };
-pub use scene::Scene;
+pub use app_scene::App;
+pub use app_scene::Scene;
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -59,7 +59,6 @@ impl std::fmt::Debug for EngineError {
 pub struct Engine {
   size: (usize, usize),
   aspect: f64,
-
   buffer: Buffer,
   t: f64,
   last_time: Instant,
@@ -67,13 +66,8 @@ pub struct Engine {
   exit: bool,
 
   // Things tracked & cached by the engine
-  lights: SlotMap<LightHandle, Light>,
   meshes: SlotMap<MeshHandle, Mesh>,
   materials: SlotMap<MaterialHandle, Material>,
-  instances: SlotMap<InstanceHandle, Instance>,
-  // Used to speed up looping, minimise copies in the render loops
-  instance_keys: Vec<InstanceHandle>,
-  light_keys: Vec<LightHandle>,
 
   // Inputs - Gated to desktop only not web/wasm
   #[cfg(feature = "desktop")]
@@ -87,9 +81,6 @@ pub struct Engine {
 
   /// Output debug info like FPS onto the top right of the screen
   pub debug: bool,
-
-  /// Ambient light colour, defaults to [0.1, 0.1, 0.1], beware setting this too high it will look washed out
-  pub ambient_light: Colour,
 }
 
 impl Engine {
@@ -101,7 +92,6 @@ impl Engine {
     Self {
       size: (w as usize, h as usize),
       buffer: Buffer::new(w as usize, h as usize),
-
       t: 0.0,
       last_time: Instant::now(),
       fps: 0.0,
@@ -113,12 +103,6 @@ impl Engine {
 
       meshes: SlotMap::with_key(),
       materials: SlotMap::with_key(),
-      lights: SlotMap::with_key(),
-      instances: SlotMap::with_key(),
-      instance_keys: vec![],
-      light_keys: vec![],
-
-      ambient_light: Colour::new(0.1, 0.1, 0.1),
 
       #[cfg(feature = "desktop")]
       keys: vec![],
@@ -134,7 +118,7 @@ impl Engine {
   /// * `title` - Title of the window
   /// * `scale` - Scale up the viewport; Values: 0,1,2,4,8
   #[cfg(feature = "desktop")]
-  pub fn start_window<S: Scene>(mut self, mut scene: S, title: &str, scale: u8) {
+  pub fn start_window<A: App>(&mut self, app: &mut A, title: &str, scale: u8) {
     let scl = match scale {
       0 => minifb::Scale::FitScreen,
       1 => minifb::Scale::X1,
@@ -162,10 +146,13 @@ impl Engine {
         break;
       }
 
-      let now = Instant::now();
-      let dt = now.duration_since(self.last_time).as_secs_f64();
+      let dt = Instant::now().duration_since(self.last_time).as_secs_f64();
+      let t = self.tick(dt); // time bookkeeping
+      app.update(self, dt, t); // app paints the world
 
-      self.tick(&mut scene, dt);
+      if self.debug {
+        self.draw_debug();
+      }
 
       self.keys = window.get_keys();
       self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
@@ -173,25 +160,6 @@ impl Engine {
       if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.size.0, self.size.1) {
         println!("Error updating buffer: {}", e);
       }
-    }
-  }
-
-  /// Tick advances the engine one frame, essentially calls the scene.update() with a tiny bit of book-keeping
-  /// # Arguments
-  /// * `scene` - Implementation of Scene with your own `update()` function
-  /// * `dt` - Delta time since tick was last called in millisecs
-  pub fn tick<S: Scene>(&mut self, scene: &mut S, dt: f64) {
-    self.t += dt;
-    self.fps = 1.0 / dt;
-    self.last_time = Instant::now();
-
-    // This is the scene update hook, the user does their rendering here
-    let t = self.t;
-    scene.update(self, dt, t);
-
-    if self.debug {
-      self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
-      self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, WHITE);
     }
   }
 
@@ -208,5 +176,20 @@ impl Engine {
   /// Get the aspect ratio of the viewport and window
   pub fn get_aspect(&self) -> f64 {
     self.aspect
+  }
+
+  /// Advance engine bookkeeping for one frame, returns the accumulated time `t`.
+  pub fn tick(&mut self, dt: f64) -> f64 {
+    self.t += dt;
+    self.fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
+    self.last_time = Instant::now();
+
+    self.t
+  }
+
+  /// Draw the debug overlay on top of the current frame. Call AFTER app.update.
+  pub fn draw_debug(&mut self) {
+    self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
+    self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, WHITE);
   }
 }

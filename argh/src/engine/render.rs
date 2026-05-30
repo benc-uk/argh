@@ -10,6 +10,7 @@ use crate::{
   buffer::Buffer,
   camera::Camera,
   colour::{BLACK, Colour},
+  engine::Scene,
   helpers::{OUT_NEAR, compute_outcode, shade_vert},
   math::{Vec3, Vec4},
   models::Texture,
@@ -68,19 +69,19 @@ impl Engine {
     }
   }
 
-  /// Render all instances available
-  pub fn render_all(&mut self, cam: &Camera) {
-    for i in 0..self.instance_keys.len() {
-      let h = self.instance_keys[i];
-      self.render_instance(cam, h);
+  /// Render a scene from given camera
+  pub fn render(&mut self, cam: &Camera, scn: &Scene) {
+    for i in 0..scn.instance_keys.len() {
+      let hdl = scn.instance_keys[i];
+      self.render_instance(hdl, cam, scn);
     }
   }
 
   /// Renders a 3D mesh onto the screen from given camera position
   /// This triggers a rendering pipeline
-  pub fn render_instance(&mut self, cam: &Camera, h: InstanceHandle) {
+  pub fn render_instance(&mut self, hdl: InstanceHandle, cam: &Camera, scn: &Scene) {
     // Shorthand for finding the instance
-    let Some(instance) = self.instances.get(h) else {
+    let Some(instance) = scn.instances.get(hdl) else {
       return;
     };
 
@@ -189,7 +190,7 @@ impl Engine {
       }
 
       // Ambient light
-      let amb = self.ambient_light * mat.diffuse;
+      let amb = scn.ambient_light * mat.diffuse;
 
       let eye = cam.get_pos();
 
@@ -201,13 +202,13 @@ impl Engine {
       }
 
       // Always shade vert 0
-      let (d0, s0) = shade_vert(&self.lights, wv0, n0, eye, mat.hardness);
+      let (d0, s0) = shade_vert(&scn.lights, wv0, n0, eye, mat.hardness);
       sv0.colour = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
 
       // Only shade vert 1 & 2 when smooth shading
       if instance.smooth {
-        let (d1, s1) = shade_vert(&self.lights, wv1, n1, eye, mat.hardness);
-        let (d2, s2) = shade_vert(&self.lights, wv2, n2, eye, mat.hardness);
+        let (d1, s1) = shade_vert(&scn.lights, wv1, n1, eye, mat.hardness);
+        let (d2, s2) = shade_vert(&scn.lights, wv2, n2, eye, mat.hardness);
         sv1.colour = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
         sv2.colour = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
       }

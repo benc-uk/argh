@@ -1,14 +1,13 @@
-mod scene;
+mod app;
 
-use argh::engine::{Engine, Scene};
-use scene::MyScene;
+use argh::engine::Engine;
 
 fn main() {
-  let mut e = Engine::new(640, 480);
+  let mut eng = Engine::new(640, 480);
+  let mut app = app::new(&mut eng);
 
-  e.debug = true;
-  e.target_fps = 0;
+  eng.debug = true;
+  eng.target_fps = 0;
 
-  let s = MyScene::new(&mut e);
-  e.start_window(s, "Argh: simple_3d", 2);
+  eng.start_window(&mut app, "Argh: simple_3d", 2);
 }

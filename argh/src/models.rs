@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use image::{DynamicImage, GenericImageView, ImageError, ImageReader};
+use image::{ImageError, ImageReader};
 use std::io;
 
 use crate::{

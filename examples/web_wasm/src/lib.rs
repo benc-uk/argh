@@ -9,20 +9,20 @@
 
 use std::cell::RefCell;
 
-use argh::engine::{Engine, Scene};
+use argh::engine::{App, Engine};
 use wasm_bindgen::prelude::*;
-mod scene;
+mod app;
 
-use scene::MyScene;
+use app::WasmApp;
 
 const W: i32 = 1024;
 const H: i32 = 576;
 
 // Static globals in Rust require a lot of ugly gymnastics
 thread_local! {
-  static ENGINE: RefCell<Option<Engine>> = const { RefCell::new(None) };
-  static SCENE: RefCell<Option<MyScene>> = const { RefCell::new(None) };
-  static PIXELS: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+  static ENGINE: RefCell<Option<Engine>>  = const { RefCell::new(None) };
+  static APP:    RefCell<Option<WasmApp>> = const { RefCell::new(None) };
+  static PIXELS: RefCell<Vec<u8>>         = const { RefCell::new(Vec::new()) };
 }
 
 // Allocate everything we need including the shared globals
@@ -30,12 +30,12 @@ thread_local! {
 pub fn start() {
   console_error_panic_hook::set_once();
 
-  let mut e = Engine::new(W, H);
-  let scene = MyScene::new(&mut e);
+  let mut eng = Engine::new(W, H);
+  let app = app::new(&mut eng);
 
-  ENGINE.with(|c| *c.borrow_mut() = Some(e));
-  SCENE.with(|c| *c.borrow_mut() = Some(scene));
   PIXELS.with(|c| *c.borrow_mut() = vec![0u8; (W * H * 4) as usize]);
+  APP.with(|c| *c.borrow_mut() = Some(app));
+  ENGINE.with(|c| *c.borrow_mut() = Some(eng));
 }
 
 #[wasm_bindgen]
@@ -55,17 +55,20 @@ pub fn pixel_ptr() -> *const u8 {
 }
 
 #[wasm_bindgen]
-// Called every frame from the JS side to trigger engine tick (and render) then grab the frame as bytes
+// Called every frame from the JS side to advance the app and copy the framebuffer out as bytes
 pub fn update(dt: f64) {
   ENGINE.with_borrow_mut(|e| {
-    SCENE.with_borrow_mut(|s| {
+    APP.with_borrow_mut(|a| {
       PIXELS.with_borrow_mut(|p| {
         let e = e.as_mut().expect("engine not initialized");
+        let a = a.as_mut().expect("app not initialized");
 
-        // Advance the engine one tick or frame
-        e.tick(s.as_mut().expect("scene not initialized"), dt);
+        // Frame pipeline: time bookkeep, render, overlay, copy out
+        let t = e.tick(dt);
+        a.update(e, dt, t);
+        e.draw_debug();
 
-        // This copies frame the chunk of memory of PIXELS
+        // This is unique to WASM, copy the framebuffer out to our own location
         e.buffer_copy_bytes(p);
       })
     })

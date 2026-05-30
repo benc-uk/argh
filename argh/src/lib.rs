@@ -4,24 +4,20 @@
 //! Minimal usage and getting started
 //! ```no_run
 //! use argh::colour::BLUE;
-//! use argh::engine::{Engine, Scene};
+//! use argh::engine::{Engine, App};
 //!
-//! struct MyScene {}
+//! struct MyApp {}
 //!
-//! impl Scene for MyScene {
-//!   fn new(_: &mut Engine) -> Self {
-//!     MyScene {}
-//!   }
-//!
+//! impl App for MyApp {
 //!   fn update(&mut self, e: &mut Engine, _dt: f64, _t: f64) {
 //!     e.clear(BLUE);
 //!   }
 //! }
 //!
 //! fn main() {
-//!   let mut e = Engine::new(800, 600);
-//!   let s = MyScene::new(&mut e);
-//!   e.start_window(s, "Hello World", 1);
+//!   let mut eng = Engine::new(800, 600);
+//!   let mut app = MyApp {};
+//!   eng.start_window(&mut app, "Hello World", 1);
 //! }
 //! ```
 
