@@ -1,0 +1,12 @@
+[package]
+name = "obj_files"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "obj_files"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+argh = { path = "../../argh" }

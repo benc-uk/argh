@@ -12,6 +12,7 @@
 mod draw2d;
 #[cfg(feature = "desktop")]
 mod input;
+mod parse;
 mod render;
 mod resources;
 
@@ -26,7 +27,7 @@ use crate::{
   app::App,
   buffer::Buffer,
   colour::*,
-  models::{Material, Mesh},
+  models::{MATERIAL_PLACEHOLDER, Material, Mesh},
   scene::Scene,
 };
 
@@ -44,18 +45,6 @@ new_key_type! {
   pub struct LightHandle;
 }
 
-#[derive(thiserror::Error)]
-pub enum EngineError {
-  #[error("no mesh registered with the name: '{0}'")]
-  MeshNotFound(String),
-}
-
-impl std::fmt::Debug for EngineError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    std::fmt::Display::fmt(self, f)
-  }
-}
-
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
   size: (usize, usize),
@@ -69,6 +58,7 @@ pub struct Engine {
   // Things tracked & cached by the engine
   meshes: SlotMap<MeshHandle, Mesh>,
   materials: SlotMap<MaterialHandle, Material>,
+  mat_placeholder: MaterialHandle,
 
   // Inputs - Gated to desktop only not web/wasm
   #[cfg(feature = "desktop")]
@@ -88,6 +78,8 @@ impl Engine {
   /// * `w` - Width of the window in pixels
   /// * `h` - Height of the window in pixels
   pub fn new(w: i32, h: i32) -> Self {
+    let mut mat_slots = SlotMap::with_key();
+
     Self {
       size: (w as usize, h as usize),
       buffer: Buffer::new(w as usize, h as usize),
@@ -96,12 +88,13 @@ impl Engine {
       fps: 0.0,
       target_fps: 60,
       aspect: w as f64 / h as f64,
+      mat_placeholder: mat_slots.insert(MATERIAL_PLACEHOLDER),
 
       exit: false,
       debug: false,
 
       meshes: SlotMap::with_key(),
-      materials: SlotMap::with_key(),
+      materials: mat_slots,
 
       #[cfg(feature = "desktop")]
       inputs: Inputs::new(),

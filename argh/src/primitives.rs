@@ -15,7 +15,7 @@ use crate::{math::*, models::Mesh};
 /// per-vertex (Gouraud) lighting; a shared-vertex cube would smooth across
 /// the edges and look like a wonky sphere.
 pub fn new_cube() -> Mesh {
-  let mut mesh = Mesh::new();
+  let mut mesh = Mesh::new("cube");
 
   // 6 faces * 4 verts each = 24 verts. Order per face: bl, br, tr, tl
   // (relative to looking AT the face from outside the cube).
@@ -116,7 +116,8 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
 
   let pi = std::f64::consts::PI;
 
-  let mut mesh = Mesh::new();
+  let name = format!("sphere_{}_{}", stacks, sectors);
+  let mut mesh = Mesh::new(&name);
 
   // --- 1. Generate verts + per-vert radial normals.
   // (stacks+1) rings of (sectors+1) verts.
@@ -181,7 +182,7 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
 pub fn new_teapot() -> Mesh {
   let txt = include_str!("models/teapot.txt");
 
-  let mut out = Mesh::new();
+  let mut out = Mesh::new("teapot");
   let mut lc = 0;
 
   let flush_tri = |out: &mut Mesh| {

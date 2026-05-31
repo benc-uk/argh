@@ -39,14 +39,6 @@ pub enum Texture {
   Image(ImageTexture),
 }
 
-/// Most basic Material possible
-pub const MATERIAL_PLACEHOLDER: Material = Material {
-  diffuse: 1.0,
-  hardness: 20.0,
-  specular: 1.0,
-  texture: Texture::Solid(WHITE),
-};
-
 // In Rust enums can have methods and an implementation, which is kinda wild
 impl Texture {
   #[inline(always)]
@@ -83,6 +75,7 @@ pub struct ImageTexture {
 impl ImageTexture {
   // Private only called vis Texture enum methods
   fn new(path: &str) -> Result<Self, TextureError> {
+    println!("Trying to load texture image file: {}", path);
     let img = ImageReader::open(path)?.decode()?.to_rgb8();
     let (w, h) = img.dimensions();
     let pixels = img.pixels().map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | (p[2] as u32)).collect();
@@ -125,6 +118,14 @@ pub struct Material {
   pub(crate) texture: Texture,
 }
 
+/// Most basic Material possible
+pub const MATERIAL_PLACEHOLDER: Material = Material {
+  diffuse: 1.0,
+  hardness: 20.0,
+  specular: 1.0,
+  texture: Texture::Solid(WHITE),
+};
+
 impl Material {
   pub fn new(tex: Texture) -> Self {
     Self {
@@ -146,20 +147,22 @@ impl Material {
 
 /// Triangle based 3D mesh
 pub struct Mesh {
-  pub(crate) verts: Vec<Vec3>,   // Internal mesh vert position
+  pub(crate) verts: Vec<Vec3>,   // Vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
   pub(crate) uvs: Vec<Vec2>,     // Texture coords
   pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
+  pub(crate) name: String,
 }
 
 impl Mesh {
   // Internal only method for creating an "empty" mesh
-  pub(crate) fn new() -> Self {
+  pub(crate) fn new(name: &str) -> Self {
     Self {
       verts: vec![],
       normals: vec![],
       uvs: vec![],
       indices: vec![],
+      name: name.to_string(),
     }
   }
 }

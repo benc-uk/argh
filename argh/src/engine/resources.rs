@@ -15,6 +15,7 @@ impl Engine {
 
   /// Add a mesh to the cache and give it a name
   pub fn add_mesh(&mut self, mesh: Mesh) -> MeshHandle {
+    println!("Adding mesh '{}' to the engine cache", mesh.name);
     self.meshes.insert(mesh)
   }
 
@@ -30,5 +31,9 @@ impl Engine {
 
   pub fn material(&self, h: MaterialHandle) -> &Material {
     self.materials.get(h).expect("material not found")
+  }
+
+  pub fn material_placeholder(&self) -> MaterialHandle {
+    self.mat_placeholder
   }
 }

@@ -44,6 +44,11 @@ impl Colour {
     }
   }
 
+  /// Create a new Colour from a three tuple
+  pub const fn from_slice(v: [f32; 3]) -> Self {
+    Self { r: v[0], g: v[1], b: v[2] }
+  }
+
   /// Return as packed 0rgb u32 representation of the colour for use with the internal `Buffer`. Alpha is always 0 as minifb ignores it
   #[inline(always)]
   pub fn to_packed_0rgb(self) -> u32 {

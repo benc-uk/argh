@@ -52,7 +52,10 @@ pub mod camera;
 /// Light source with position & colour
 pub mod light;
 
+/// App trait
 pub mod app;
+
+/// Scenes hold instances of objects to be rendered
 pub mod scene;
 
 // Prelude
@@ -75,5 +78,15 @@ pub mod prelude {
   #[inline]
   pub fn v2(x: f64, y: f64) -> Vec2 {
     Vec2::new(x, y)
+  }
+
+  #[inline]
+  pub fn col(r: f32, g: f32, b: f32) -> Colour {
+    Colour::new(r, g, b)
+  }
+
+  #[inline]
+  pub fn col8(r: u8, g: u8, b: u8) -> Colour {
+    Colour::from_rgb8(r, g, b)
   }
 }
