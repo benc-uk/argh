@@ -13,7 +13,7 @@ use crate::{
   engine::Scene,
   helpers::{OUT_NEAR, compute_outcode, shade_vert},
   math::{Vec3, Vec4},
-  models::Texture,
+  models::Material,
 };
 
 use super::{Engine, InstanceHandle};
@@ -30,13 +30,13 @@ struct ProcessedVert {
 // It's a hybrid of x & Y being screen pixel values, and z being a float representing depth in 0-1 range
 #[derive(Copy, Clone)]
 struct ScreenVert {
-  x: f64,         // pixel coordinate, [0, width]
-  y: f64,         // pixel coordinate, [0, height], origin top-left
-  z: f64,         // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
-  colour: Colour, // Gouraud shading needs colour per vertex
-  inv_w: f64,     // Inverse of w
-  u_w: f64,       // PRE-DIVIDED, not raw u and v.
-  v_w: f64,       // PRE-DIVIDED, not raw u and v.
+  x: f64,        // pixel coordinate, [0, width]
+  y: f64,        // pixel coordinate, [0, height], origin top-left
+  z: f64,        // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
+  shade: Colour, // Gouraud shading needs lighting per vertex
+  inv_w: f64,    // Inverse of w
+  u_w: f64,      // PRE-DIVIDED, not raw u and v.
+  v_w: f64,      // PRE-DIVIDED, not raw u and v.
 }
 
 impl Engine {
@@ -87,7 +87,7 @@ impl Engine {
 
     // Get texture via the material
     let mat = self.materials.get(instance.material_handle).unwrap();
-    let tex = &mat.texture;
+    //let tex = &mat.texture;
 
     // 1. Combine MVP (model, view, perspective) matrix
     let m = instance.get_model_mat();
@@ -135,7 +135,7 @@ impl Engine {
             y: sy,
             z: ndc_z,
             inv_w,
-            colour: BLACK, // Mutated later
+            shade: BLACK, // Mutated later
             u_w,
             v_w,
           },
@@ -203,18 +203,18 @@ impl Engine {
 
       // Always shade vert 0
       let (d0, s0) = shade_vert(&scn.lights, wv0, n0, eye, mat.hardness);
-      sv0.colour = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
+      sv0.shade = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
 
       // Only shade vert 1 & 2 when smooth shading
       if instance.smooth {
         let (d1, s1) = shade_vert(&scn.lights, wv1, n1, eye, mat.hardness);
         let (d2, s2) = shade_vert(&scn.lights, wv2, n2, eye, mat.hardness);
-        sv1.colour = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
-        sv2.colour = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
+        sv1.shade = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
+        sv2.shade = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
       }
 
       // Finally draw the damn triangle based on the screen verts and interpolate
-      fill_triangle(&mut self.buffer, sv0, sv1, sv2, tex, instance.smooth);
+      fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
     }
   }
 }
@@ -228,7 +228,7 @@ fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
 // Fill a 3D triangle between three ScreenVertex points which form a triangle
 // Not public outside the crate
 #[inline(always)]
-fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, tex: &Texture, smooth: bool) {
+fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material, smooth: bool) {
   let area = edge_function(v1, v2, v0.x, v0.y);
   if area == 0.0 {
     return;
@@ -287,23 +287,42 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         // Linear depth interpolation (correct in screen space, no /w needed)
         let z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
 
-        // Texture mapping requires voodoo with inv_w
-        let inv_w = b0 * v0.inv_w + b1 * v1.inv_w + b2 * v2.inv_w;
-        let w = 1.0 / inv_w; // one divide instead of two
-        let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
-        let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
-        let texel = tex.sample(u, v);
+        // Get diffuse colour from texture or from material
+        let surface_colour = match &mat.texture {
+          Some(tex) => {
+            // Texture mapping requires voodoo with inv_w
+            let inv_w = b0 * v0.inv_w + b1 * v1.inv_w + b2 * v2.inv_w;
+            let w = 1.0 / inv_w; // one divide instead of two
+            let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
+            let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
+
+            let (texel, alpha) = tex.sample(u, v);
+            if alpha < 0.5 {
+              // /* skip this pixel, including depth write */
+              w0 += dx0;
+              w1 += dx1;
+              w2 += dx2;
+
+              continue;
+            }
+
+            texel * mat.diffuse
+          }
+
+          None => mat.diffuse,
+        };
 
         // Default shading uses on vert 0 only (flat)
-        let mut colour = v0.colour;
+        let mut lighting = v0.shade;
 
-        // Gouraud shading interpolates between colours at all 3 verts
+        // Gouraud shading interpolates between shade at all 3 verts
         if smooth {
-          colour = v0.colour * b0 + v1.colour * b1 + v2.colour * b2;
+          lighting = v0.shade * b0 + v1.shade * b1 + v2.shade * b2;
         }
 
-        buff.set_pixel_depth(x as usize, y as usize, texel * colour, z as f32);
+        buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z as f32);
       }
+
       w0 += dx0;
       w1 += dx1;
       w2 += dx2;

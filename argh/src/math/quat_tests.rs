@@ -674,3 +674,95 @@ fn test_rot_x_then_rot_z_compose_via_vector() {
   assert!((via_quat.y - manual.y).abs() < EPSILON);
   assert!((via_quat.z - manual.z).abs() < EPSILON);
 }
+
+// ============================================================================
+// World-frame vs local-frame rotation (the "wine bottle problem")
+//
+// rot_x/y/z         (LOCAL frame, post-multiply): self_new = self * R_axis(a)
+// rot_x/y/z_world   (WORLD frame, pre-multiply):  self_new = R_axis(a) * self
+//
+// Classic scenario: a mesh authored along its +Z axis is "pre-tilted" upright
+// with rot_x(-PI/2). After that pre-tilt:
+//   - Model +Z points along world +Y (the "up" direction).
+//   - Model +Y points along world -Z.
+// So calling LOCAL rot_y after the pre-tilt rotates around world -Z (tumble),
+// while WORLD rot_y_world rotates around world Y (spin like a top).
+// These tests pin that distinction in for good.
+// ============================================================================
+
+#[test]
+fn test_pretilt_puts_model_z_at_world_y() {
+  // Identity, then pre-tilt by -90 around X (first rotation, so local == world).
+  let mut q = Quat::ident();
+  q.rot_x(-FRAC_PI_2);
+
+  // Bottle neck direction (model +Z) should now point along world +Y.
+  let neck = q.rotate_vec3(Vec3::new(0.0, 0.0, 1.0));
+  assert!(approx_eq(neck.x, 0.0));
+  assert!(approx_eq(neck.y, 1.0));
+  assert!(approx_eq(neck.z, 0.0));
+
+  // Model +Y now points along world -Z. This is what makes a subsequent
+  // LOCAL rot_y "tumble" the bottle rather than spin it.
+  let model_y = q.rotate_vec3(Vec3::new(0.0, 1.0, 0.0));
+  assert!(approx_eq(model_y.x, 0.0));
+  assert!(approx_eq(model_y.y, 0.0));
+  assert!(approx_eq(model_y.z, -1.0));
+}
+
+#[test]
+fn test_rot_y_world_after_pretilt_preserves_world_up() {
+  // After the pre-tilt, world-frame rotation around Y must leave the "up"
+  // direction unchanged, because rotating around the Y axis leaves Y fixed.
+  let mut q = Quat::ident();
+  q.rot_x(-FRAC_PI_2);
+  q.rot_y_world(FRAC_PI_2);
+
+  // Bottle neck (model +Z, already aligned with world +Y) stays at world +Y.
+  let neck = q.rotate_vec3(Vec3::new(0.0, 0.0, 1.0));
+  assert!(approx_eq(neck.x, 0.0));
+  assert!(approx_eq(neck.y, 1.0));
+  assert!(approx_eq(neck.z, 0.0));
+
+  // Sanity: a horizontal feature on the bottle (model +X, which the pre-tilt
+  // leaves at world +X) moves to world -Z under a +90 spin around world +Y.
+  let side = q.rotate_vec3(Vec3::new(1.0, 0.0, 0.0));
+  assert!(approx_eq(side.x, 0.0));
+  assert!(approx_eq(side.y, 0.0));
+  assert!(approx_eq(side.z, -1.0));
+}
+
+#[test]
+fn test_rot_y_local_after_pretilt_tumbles_instead_of_spinning() {
+  // The "broken-feeling" behaviour: local-Y rotation after the pre-tilt
+  // rotates around the MODEL's +Y, which the pre-tilt placed at world -Z.
+  // So the bottle's neck does NOT stay at world +Y; it tumbles to world +X.
+  let mut q = Quat::ident();
+  q.rot_x(-FRAC_PI_2);
+  q.rot_y(FRAC_PI_2);
+
+  let neck = q.rotate_vec3(Vec3::new(0.0, 0.0, 1.0));
+  assert!(approx_eq(neck.x, 1.0));
+  assert!(approx_eq(neck.y, 0.0));
+  assert!(approx_eq(neck.z, 0.0));
+}
+
+#[test]
+fn test_rot_y_world_and_local_only_diverge_when_prior_rotation_exists() {
+  // From identity the two frames are equivalent: the local frame IS the world
+  // frame when nothing has rotated yet.
+  let mut q_local = Quat::ident();
+  q_local.rot_y(FRAC_PI_2);
+  let mut q_world = Quat::ident();
+  q_world.rot_y_world(FRAC_PI_2);
+  assert!(quat_approx_eq(&q_local, &q_world), "from identity, local and world Y must agree");
+
+  // With a prior rotation in play, the two frames must produce different quats.
+  let mut q_local = Quat::ident();
+  q_local.rot_x(-FRAC_PI_2);
+  q_local.rot_y(FRAC_PI_2);
+  let mut q_world = Quat::ident();
+  q_world.rot_x(-FRAC_PI_2);
+  q_world.rot_y_world(FRAC_PI_2);
+  assert!(!quat_approx_eq(&q_local, &q_world), "after a prior rotation, local and world Y must differ");
+}

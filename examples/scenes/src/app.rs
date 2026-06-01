@@ -47,10 +47,8 @@ pub fn new(e: &mut Engine) -> MyApp {
   scene1.add_light(Light::new(v3(8.0, 7.0, 5.0), 1.0, WHITE));
   scene2.add_light(Light::new(v3(-8.0, 7.0, 5.0), 1.0, WHITE));
 
-  let col_tex1 = Texture::Solid(Colour::rand());
-  let col_tex2 = Texture::Solid(Colour::rand());
-  let col_mat1 = e.add_material(Material::new(col_tex1));
-  let col_mat2 = e.add_material(Material::new(col_tex2));
+  let col_mat1 = e.add_material(Material::new_flat(Colour::rand()));
+  let col_mat2 = e.add_material(Material::new_flat(Colour::rand()));
 
   let sphere1 = e.add_mesh(primitives::new_sphere(24, 48));
   let cube = e.add_mesh(primitives::new_cube());

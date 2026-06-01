@@ -27,8 +27,20 @@ impl std::fmt::Debug for ObjError {
 }
 
 impl Engine {
+  /// Load & parse an OBJ file, this will also load any referenced MTL files
+  /// Resulting mesh & material will be loaded into the engine and handles returned
+  /// If material loading fails a placeholder will be used
   pub fn load_obj(&mut self, path: &str) -> Result<(MeshHandle, MaterialHandle), ObjError> {
-    let loaded_obj = tobj::load_obj(path, &tobj::GPU_LOAD_OPTIONS)?;
+    //
+    let loaded_obj = tobj::load_obj(
+      path,
+      &tobj::LoadOptions {
+        single_index: true,
+        triangulate: true,
+        ignore_points: true,
+        ignore_lines: true,
+      },
+    )?;
 
     let (models, materials) = loaded_obj;
 
@@ -60,22 +72,27 @@ impl Engine {
     for chunk in in_mesh.positions.chunks_exact(3) {
       out_mesh.verts.push(v3(chunk[0] as f64, chunk[1] as f64, chunk[2] as f64));
     }
-    println!("  pos verts: {}", out_mesh.verts.len());
+    println!("    pos verts: {}", out_mesh.verts.len());
 
-    // Texture coords (UVs): flat [u,v, u,v, ...]
-    for chunk in in_mesh.texcoords.chunks_exact(2) {
-      // We flip Y or V texture coord
-      out_mesh.uvs.push(v2(chunk[0] as f64, 1.0 - chunk[1] as f64));
+    if !in_mesh.texcoords.is_empty() {
+      // Texture coords (UVs): flat [u,v, u,v, ...]
+      for chunk in in_mesh.texcoords.chunks_exact(2) {
+        // We flip Y or V texture coord, super important
+        out_mesh.uvs.push(v2(chunk[0] as f64, 1.0 - chunk[1] as f64));
+      }
+      println!("    tex uvs: {}", out_mesh.uvs.len());
+    } else {
+      println!("    tex uvs: none");
+      out_mesh.uvs = vec![v2(0.0, 0.0); out_mesh.verts.len()];
     }
-    println!("  tex uvs: {}", out_mesh.uvs.len());
 
     // Normals: flat [x,y,z, x,y,z, ...]
     for chunk in in_mesh.normals.chunks_exact(3) {
       out_mesh.normals.push(v3(chunk[0] as f64, chunk[1] as f64, chunk[2] as f64));
     }
-    println!("  normals: {}", out_mesh.normals.len());
+    println!("    normals: {}", out_mesh.normals.len());
 
-    // Faces Indexes
+    // Thanks to single_index in load options we just need to do this
     for i in &in_mesh.indices {
       out_mesh.indices.push(*i as i32);
     }
@@ -87,7 +104,8 @@ impl Engine {
       println!("\n  Material: {}", in_material.name);
 
       let diff_col = in_material.diffuse.unwrap_or([1.0, 1.0, 1.0]);
-      let mut tex = Texture::Solid(Colour::from_slice(diff_col));
+      let mut mat = ArghMaterial::new_flat(Colour::from_slice(diff_col));
+      println!("    diffuse: {}", mat.diffuse);
 
       // We only support `map_Kd` (diffuse texture)
       if let Some(diffuse_texture_file) = &in_material.diffuse_texture {
@@ -95,10 +113,11 @@ impl Engine {
         let tex_path = dir.join(diffuse_texture_file);
         println!("    texture: {}", tex_path.display());
 
-        tex = Texture::image(tex_path.to_str().unwrap())?;
+        let tex = Texture::new(tex_path.to_str().unwrap())?;
+        mat = ArghMaterial::new_textured(tex);
+        mat.diffuse = Colour::from_slice(diff_col);
       }
 
-      let mut mat = ArghMaterial::new(tex);
       mat.hardness = in_material.shininess.unwrap_or(20.0) as f64;
       mat_hdl = self.add_material(mat);
     }

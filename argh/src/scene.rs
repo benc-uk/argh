@@ -86,16 +86,13 @@ impl Scene {
   pub fn add_instance_trans(&mut self, mesh_handle: MeshHandle, material_handle: MaterialHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
     let mut i = Instance {
       material_handle,
-      pos: V3_ZERO,
-      scale: V3_ONE,
+      pos,
+      scale,
       rot: Quat::ident(),
       smooth: true,
       mesh_handle,
     };
 
-    i.scale = scale;
-    i.pos = pos;
-    i.rot = Quat::ident();
     i.rot.rot_x(rot.x);
     i.rot.rot_y(rot.y);
     i.rot.rot_z(rot.z);
@@ -106,6 +103,8 @@ impl Scene {
   }
 
   pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {
+    debug_assert!(self.instances.contains_key(h));
+
     self.instances.get_mut(h).expect("instance not found")
   }
 

@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   models.rs
-// Purpose:         Module for 3D meshes, materials and higher level models & object
+// Purpose:         Module for 3D meshes, materials and textures
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:
@@ -10,7 +10,7 @@ use image::{ImageError, ImageReader};
 use std::io;
 
 use crate::{
-  colour::{Colour, WHITE},
+  colour::{Colour, INV_255, WHITE},
   engine::{MaterialHandle, MeshHandle},
   math::{Mat4, Quat, Vec2, Vec3},
 };
@@ -33,56 +33,27 @@ impl std::fmt::Debug for TextureError {
   }
 }
 
-/// Texture is an enum type used to hold several different styles of textures
-pub enum Texture {
-  Solid(Colour),
-  Image(ImageTexture),
-}
-
 // In Rust enums can have methods and an implementation, which is kinda wild
 impl Texture {
-  #[inline(always)]
-  pub(crate) fn sample(&self, u: f64, v: f64) -> Colour {
-    match self {
-      Self::Solid(c) => *c,
-      Self::Image(img) => img.sample(u, v),
-    }
-  }
-
-  /// Create a basic single solid colour texture
-  pub fn solid(c: Colour) -> Self {
-    Self::Solid(c)
-  }
-
-  /// Create a texture from an image file
-  pub fn image(path: &str) -> Result<Self, TextureError> {
-    Ok(Self::Image(ImageTexture::new(path)?))
-  }
-
-  /// Create a texture from an array of u8 bytes, underlying method will make a guess on format
-  pub fn image_from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
-    Ok(Self::Image(ImageTexture::from_bytes(bytes)?))
-  }
-}
-
-/// Holds a [DynamicImage] and not much else
-pub struct ImageTexture {
-  pixels: Vec<u32>, // packed 0RGB to match buffer format
-  w: u32,
-  h: u32,
-}
-
-impl ImageTexture {
   // Private only called vis Texture enum methods
-  fn new(path: &str) -> Result<Self, TextureError> {
+  pub fn new(path: &str) -> Result<Self, TextureError> {
     println!("Trying to load texture image file: {}", path);
-    let img = ImageReader::open(path)?.decode()?.to_rgb8();
+
+    let img = ImageReader::open(path)?.decode()?.to_rgba8(); // was to_rgb8
     let (w, h) = img.dimensions();
-    let pixels = img.pixels().map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | (p[2] as u32)).collect();
+    let pixels = img
+      .pixels()
+      .map(|p| {
+        ((p[3] as u32) << 24) |   // alpha in top byte
+        ((p[0] as u32) << 16) |
+        ((p[1] as u32) << 8)  |
+        (p[2] as u32)
+      })
+      .collect();
     Ok(Self { pixels, w, h })
   }
 
-  fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
+  pub fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
     let img = image::load_from_memory(bytes)?.to_rgb8();
     let (w, h) = img.dimensions();
     let pixels = img.pixels().map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | (p[2] as u32)).collect();
@@ -93,51 +64,82 @@ impl ImageTexture {
   ///
   /// Uses `u - u.floor()` to fold any UV into [0, 1) before scaling to texel
   /// space. Works for any texture size (pow2 or not), no division, no branch.
-  /// The previous bitmask wrap only worked for power-of-two dimensions and
-  /// garbled non-pow2 textures (e.g. the 500x500 crate.png).
   #[inline(always)]
-  pub fn sample(&self, u: f64, v: f64) -> Colour {
+  pub(crate) fn sample(&self, u: f64, v: f64) -> (Colour, f32) {
     let uf = u - u.floor();
     let vf = v - v.floor();
     let x = (uf * self.w as f64) as u32;
     let y = (vf * self.h as f64) as u32;
     let p = unsafe { *self.pixels.get_unchecked((y * self.w + x) as usize) };
-    Colour::from_packed_0rgb(p)
+    let a = ((p >> 24) & 0xFF) as f32 * INV_255;
+
+    (Colour::from_packed_0rgb(p), a)
   }
+}
+
+/// Holds a [DynamicImage] and not much else
+pub struct Texture {
+  pixels: Vec<u32>, // packed 0RGB to match buffer format
+  w: u32,
+  h: u32,
 }
 
 // ===================================
 // Material
 // ===================================
 
-/// Material holds parameters for rendering the surface of a mesh
+/// Material holds parameters for rendering the surface of a mesh, can be textured or flat
 pub struct Material {
-  pub diffuse: f64,
-  pub specular: f64,
+  /// Diffuse or base colour of the object
+  pub diffuse: Colour,
+
+  /// How this object reflects specular lighting, nearly always WHITE
+  pub specular: Colour,
+
+  /// Size of specular highlights, higher > smaller
   pub hardness: f64,
-  pub(crate) texture: Texture,
+
+  // Intern
+  pub(crate) texture: Option<Texture>,
 }
 
 /// Most basic Material possible
 pub const MATERIAL_PLACEHOLDER: Material = Material {
-  diffuse: 1.0,
+  diffuse: WHITE,
   hardness: 20.0,
-  specular: 1.0,
-  texture: Texture::Solid(WHITE),
+  specular: WHITE,
+  texture: None,
 };
 
 impl Material {
-  pub fn new(tex: Texture) -> Self {
+  /// Create a textured material from given texture
+  pub fn new_textured(tex: Texture) -> Self {
     Self {
-      diffuse: 1.0,
-      specular: 1.0,
-      hardness: 12.0,
-      texture: tex,
+      diffuse: WHITE,
+      specular: WHITE,
+      hardness: 20.0,
+      texture: Some(tex),
     }
   }
 
+  /// Create a flat or solid coloured material
+  pub fn new_flat(colour: Colour) -> Self {
+    Self {
+      diffuse: colour,
+      specular: WHITE,
+      hardness: 20.0,
+      texture: None,
+    }
+  }
+
+  /// Simple setter for the texture
   pub fn set_texture(&mut self, tex: Texture) {
-    self.texture = tex
+    self.texture = Some(tex)
+  }
+
+  /// Get the internal texture
+  pub fn get_texture(&mut self) -> &Option<Texture> {
+    &self.texture
   }
 }
 
@@ -214,6 +216,21 @@ impl Instance {
 
   pub fn rot_z(&mut self, a: f64) -> &mut Self {
     self.rot.rot_z(a);
+    self
+  }
+
+  pub fn rot_x_world(&mut self, a: f64) -> &mut Self {
+    self.rot.rot_x_world(a);
+    self
+  }
+
+  pub fn rot_y_world(&mut self, a: f64) -> &mut Self {
+    self.rot.rot_y_world(a);
+    self
+  }
+
+  pub fn rot_z_world(&mut self, a: f64) -> &mut Self {
+    self.rot.rot_z_world(a);
     self
   }
 

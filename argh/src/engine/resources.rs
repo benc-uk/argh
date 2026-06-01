@@ -16,6 +16,10 @@ impl Engine {
   /// Add a mesh to the cache and give it a name
   pub fn add_mesh(&mut self, mesh: Mesh) -> MeshHandle {
     println!("Adding mesh '{}' to the engine cache", mesh.name);
+
+    debug_assert_eq!(mesh.uvs.len(), mesh.verts.len(), "UVs must match vert count");
+    debug_assert_eq!(mesh.normals.len(), mesh.verts.len(), "normals must match vert count");
+
     self.meshes.insert(mesh)
   }
 

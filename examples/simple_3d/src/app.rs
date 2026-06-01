@@ -32,7 +32,7 @@ impl App for MyApp {
       // When space is pressed change the teapot colour, don't ask why
       if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
         let mat = engine.material_mut(self.teapot_mat_hdl);
-        mat.set_texture(Texture::solid(Colour::rand()));
+        mat.diffuse = Colour::rand();
       }
 
       // Quit on escape
@@ -50,15 +50,13 @@ pub fn new(e: &mut Engine) -> MyApp {
   scene.add_light(Light::new(v3(-6.0, 7.0, 5.0), 0.8, BLUE));
   scene.add_light(Light::new(v3(8.0, -2.0, 9.0), 0.5, RED));
 
-  let crate_tex = Texture::image("assets/checker_256.png").unwrap();
-  let earth_tex = Texture::image("assets/earth.png").unwrap();
-  let col_tex1 = Texture::Solid(Colour::rand());
-  let col_tex2 = Texture::Solid(Colour::rand());
+  let crate_tex = Texture::new("assets/checker_256.png").unwrap();
+  let earth_tex = Texture::new("assets/earth.png").unwrap();
 
-  let crate_mat = e.add_material(Material::new(crate_tex));
-  let earth_mat = e.add_material(Material::new(earth_tex));
-  let col_mat1 = e.add_material(Material::new(col_tex1));
-  let col_mat2 = e.add_material(Material::new(col_tex2));
+  let crate_mat = e.add_material(Material::new_textured(crate_tex));
+  let earth_mat = e.add_material(Material::new_textured(earth_tex));
+  let col_mat1 = e.add_material(Material::new_flat(Colour::rand()));
+  let col_mat2 = e.add_material(Material::new_flat(Colour::rand()));
 
   let cube = e.add_mesh(primitives::new_cube());
   let sphere1 = e.add_mesh(primitives::new_sphere(8, 12));

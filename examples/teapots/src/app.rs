@@ -36,12 +36,11 @@ pub fn new(e: &mut Engine) -> MyApp {
   scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 0.7, RED));
   scene.add_light(Light::new(v3(4.0, 9.0, 10.0), 0.9, WHITE));
 
-  let crate_tex = Texture::image("assets/crate.png").unwrap();
-  let mut crate_mat = Material::new(crate_tex);
-  crate_mat.specular = 0.0;
+  let mut crate_mat = Material::new_textured(Texture::new("assets/crate.png").unwrap());
+  crate_mat.specular = BLACK;
 
-  let teapot_mat1 = e.add_material(Material::new(Texture::solid(Colour::new(0.7, 0.7, 0.8))));
-  let teapot_mat2 = e.add_material(Material::new(Texture::solid(Colour::new(0.6, 0.2, 0.7))));
+  let teapot_mat1 = e.add_material(Material::new_flat(Colour::new(0.7, 0.7, 0.8)));
+  let teapot_mat2 = e.add_material(Material::new_flat(Colour::new(0.6, 0.2, 0.7)));
   let crate_mat_hdl = e.add_material(crate_mat);
 
   let teapot = e.add_mesh(primitives::new_teapot());

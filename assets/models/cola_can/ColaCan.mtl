@@ -1,0 +1,32 @@
+# Blender 4.0.2 MTL File: 'None'
+# www.blender.org
+
+newmtl bottommate
+Ns 4.999998
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd bottom.png
+
+newmtl sidemate
+Ns 8.599999
+Ka 1.000000 1.000000 1.000000
+Ks 0.874500 0.874500 0.874500
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd cocacola.png
+
+newmtl topmatw
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd top.png

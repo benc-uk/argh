@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::math::Vec3;
+use crate::math::{V3_AXIS_X, V3_AXIS_Y, V3_AXIS_Z, Vec3};
 use std::ops::Mul;
 
 #[cfg(test)]
@@ -64,41 +64,44 @@ impl Quat {
     v + t * self.w + q_xyz.cross(t)
   }
 
-  /// Rotate around the local X axis by given angle (post-multiplies self by R_x(a))
+  /// Rotate around the local X axis by given angle (post-multiplies)
   pub fn rot_x(&mut self, a: f64) {
-    let half = a * 0.5;
-    let s = f64::sin(half);
-    let c = f64::cos(half);
-    // Snapshot, since each new component depends on the old ones.
-    let (x, y, z, w) = (self.x, self.y, self.z, self.w);
-    self.x = x * c + w * s;
-    self.y = y * c + z * s;
-    self.z = z * c - y * s;
-    self.w = w * c - x * s;
+    self.rotate_local(V3_AXIS_X, a);
   }
 
-  /// Rotate around the local Y axis by given angle (post-multiplies self by R_y(a))
+  /// Rotate around the local Y axis by given angle (post-multiplies)
   pub fn rot_y(&mut self, a: f64) {
-    let half = a * 0.5;
-    let s = f64::sin(half);
-    let c = f64::cos(half);
-    let (x, y, z, w) = (self.x, self.y, self.z, self.w);
-    self.x = x * c - z * s;
-    self.y = y * c + w * s;
-    self.z = z * c + x * s;
-    self.w = w * c - y * s;
+    self.rotate_local(V3_AXIS_Y, a);
   }
 
-  /// Rotate around the local Z axis by given angle (post-multiplies self by R_z(a))
+  /// Rotate around the local Z axis by given angle (post-multiplies)
   pub fn rot_z(&mut self, a: f64) {
-    let half = a * 0.5;
-    let s = f64::sin(half);
-    let c = f64::cos(half);
-    let (x, y, z, w) = (self.x, self.y, self.z, self.w);
-    self.x = x * c + y * s;
-    self.y = y * c - x * s;
-    self.z = z * c + w * s;
-    self.w = w * c - z * s;
+    self.rotate_local(V3_AXIS_Z, a);
+  }
+
+  /// Rotate around the world X axis by given angle (pre-multiplies)
+  pub fn rot_x_world(&mut self, a: f64) {
+    self.rotate_world(V3_AXIS_X, a);
+  }
+
+  /// Rotate around the world Y axis by given angle (pre-multiplies)
+  pub fn rot_y_world(&mut self, a: f64) {
+    self.rotate_world(V3_AXIS_Y, a);
+  }
+
+  /// Rotate around the world Z axis by given angle (pre-multiplies)
+  pub fn rot_z_world(&mut self, a: f64) {
+    self.rotate_world(V3_AXIS_Z, a);
+  }
+
+  /// Rotate around an axis in world space
+  pub fn rotate_world(&mut self, axis: Vec3, a: f64) {
+    *self = Self::new(axis, a) * *self; // pre-multiply
+  }
+
+  /// Rotate around an axis in local object space
+  pub fn rotate_local(&mut self, axis: Vec3, a: f64) {
+    *self = *self * Self::new(axis, a); // post-multiply
   }
 }
 

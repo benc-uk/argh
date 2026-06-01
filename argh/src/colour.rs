@@ -6,7 +6,8 @@
 // Notes:
 // ==============================================================================================
 
-use std::ops::*;
+use core::fmt;
+use std::{fmt::Formatter, ops::*};
 
 /// A RGB colour tuple. Linear RGB colour, components in [0.0, 1.0] for normal use but range is not enforced
 #[derive(Debug, Clone, Copy)]
@@ -16,7 +17,7 @@ pub struct Colour {
   b: f32,
 }
 
-const INV_255: f32 = 1.0 / 255.0;
+pub(crate) const INV_255: f32 = 1.0 / 255.0;
 
 // Helper static colours
 
@@ -127,5 +128,12 @@ impl MulAssign<Self> for Colour {
 impl AddAssign<Self> for Colour {
   fn add_assign(&mut self, c: Self) {
     *self = *self + c;
+  }
+}
+
+impl fmt::Display for Colour {
+  /// Human readable form [x, y, z]
+  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    write!(f, "[{}, {}, {}]", self.r, self.g, self.b)
   }
 }
