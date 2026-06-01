@@ -85,136 +85,134 @@ impl Engine {
       return;
     };
 
-    // Get texture via the material
-    let mat = self.materials.get(instance.material_handle).unwrap();
-    //let tex = &mat.texture;
+    // We unwrap here, as model existence is checked when instance is created
+    let model = self.models.get(instance.model_handle).unwrap();
 
-    // 1. Combine MVP (model, view, perspective) matrix
-    let m = instance.get_model_mat();
-    let mvp = cam.pers_mat * cam.view_mat * m;
+    // Model is made of meshes, iterate over them
+    for mesh in model.meshes.iter() {
+      // 1. Combine MVP (model, view, perspective) matrix
+      let m = instance.get_model_mat();
+      let mvp = cam.pers_mat * cam.view_mat * m;
 
-    // We unwrap here, as mesh existence is checked when instance is created
-    let mesh = self.meshes.get(instance.mesh_handle).unwrap();
+      // 2. Process verts, into world space, clip space and screen space
+      let verts: Vec<ProcessedVert> = mesh
+        .verts
+        .iter()
+        .enumerate()
+        .map(|(i, vert)| {
+          // World space: vert transformed by model matrix M
+          let world = m * vert;
 
-    // 2. Process verts, into world space, clip space and screen space
-    let verts: Vec<ProcessedVert> = mesh
-      .verts
-      .iter()
-      .enumerate()
-      .map(|(i, vert)| {
-        // World space: vert transformed by model matrix M
-        let world = m * vert;
+          // Clip space: vert transformed by MVP
+          let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
 
-        // Clip space: vert transformed by MVP
-        let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
+          // Calc how vertex is clipped or not
+          let outcode = compute_outcode(&clip);
 
-        // Calc how vertex is clipped or not
-        let outcode = compute_outcode(&clip);
+          // 1/w used for perspective and we store it for other reasons too
+          let inv_w = 1.0 / clip.w;
 
-        // 1/w used for perspective and we store it for other reasons too
-        let inv_w = 1.0 / clip.w;
+          // Clip space -> NDCs, which get us towards screen space
+          let ndc_x = clip.x * inv_w;
+          let ndc_y = clip.y * inv_w;
+          let ndc_z = clip.z * inv_w;
+          // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
+          let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
+          let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
 
-        // Clip space -> NDCs, which get us towards screen space
-        let ndc_x = clip.x * inv_w;
-        let ndc_y = clip.y * inv_w;
-        let ndc_z = clip.z * inv_w;
-        // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
+          // Reach out to the UV array and pre-mult by 1/w
+          let uv = mesh.uvs[i];
+          let u_w = uv.x * inv_w;
+          let v_w = uv.y * inv_w;
 
-        // Reach out to the UV array and pre-mult by 1/w
-        let uv = mesh.uvs[i];
-        let u_w = uv.x * inv_w;
-        let v_w = uv.y * inv_w;
+          // Bundle up processed data into a single struct
+          ProcessedVert {
+            world,
+            screen: ScreenVert {
+              x: sx,
+              y: sy,
+              z: ndc_z,
+              inv_w,
+              shade: BLACK, // Mutated later
+              u_w,
+              v_w,
+            },
+            outcode,
+          }
+        })
+        .collect();
 
-        // Bundle up processed data into a single struct
-        ProcessedVert {
-          world,
-          screen: ScreenVert {
-            x: sx,
-            y: sy,
-            z: ndc_z,
-            inv_w,
-            shade: BLACK, // Mutated later
-            u_w,
-            v_w,
-          },
-          outcode,
+      // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
+      // We just rotate them by the model rotation quat for now
+      // TODO: We probably do need to do this the proper way at some point
+      let normals: Vec<Vec3> = mesh.normals.iter().map(|n| instance.rot.rotate_vec3(*n)).collect();
+
+      // 3. Now to rendering triangles
+      // Walk the index list 3 at a time for triangles, cull, shade & rasterize
+      for tri in mesh.indices.chunks(3) {
+        let i0 = tri[0] as usize;
+        let i1 = tri[1] as usize;
+        let i2 = tri[2] as usize;
+        let mut sv0 = verts[i0].screen;
+        let mut sv1 = verts[i1].screen;
+        let mut sv2 = verts[i2].screen;
+        let wv0 = verts[i0].world;
+        let wv1 = verts[i1].world;
+        let wv2 = verts[i2].world;
+
+        // It's convention that the normals list is in the same order as the verts list
+        // Otherwise we're in impossible mess TBH
+        let mut n0 = normals[i0];
+        let n1 = normals[i1];
+        let n2 = normals[i2];
+
+        // Trivial reject: all three vertices outside the SAME plane.
+        let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
+        if combined_out != 0 {
+          continue;
         }
-      })
-      .collect();
 
-    // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
-    // We just rotate them by the model rotation quat for now
-    // TODO: We probably do need to do this the proper way at some point
-    let normals: Vec<Vec3> = mesh.normals.iter().map(|n| instance.rot.rotate_vec3(*n)).collect();
+        // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
+        // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
+        let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & OUT_NEAR;
+        if any_near != 0 {
+          continue;
+        }
 
-    // 3. Now to rendering triangles
-    // Walk the index list 3 at a time for triangles, cull, shade & rasterize
-    for tri in mesh.indices.chunks(3) {
-      let i0 = tri[0] as usize;
-      let i1 = tri[1] as usize;
-      let i2 = tri[2] as usize;
-      let mut sv0 = verts[i0].screen;
-      let mut sv1 = verts[i1].screen;
-      let mut sv2 = verts[i2].screen;
-      let wv0 = verts[i0].world;
-      let wv1 = verts[i1].world;
-      let wv2 = verts[i2].world;
+        // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
+        //  - Back faces (mesh CW or back of CCW) have POSITIVE area
+        // So we discard anything non-negative.
+        let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
+        if area >= 0.0 {
+          continue;
+        }
 
-      // It's convention that the normals list is in the same order as the verts list
-      // Otherwise we're in impossible mess TBH
-      let mut n0 = normals[i0];
-      let n1 = normals[i1];
-      let n2 = normals[i2];
+        let mat = &mesh.material;
 
-      // Trivial reject: all three vertices outside the SAME plane.
-      let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
-      if combined_out != 0 {
-        continue;
+        // Cludge n0 to be a normal for the whole face for flat shading
+        if !instance.smooth {
+          n0 = (wv1 - wv0).cross(wv2 - wv0).normalize_new();
+        }
+
+        // Ambient light
+        let amb = scn.ambient_light * mat.diffuse;
+        let eye = cam.get_pos();
+
+        // Always shade vert 0
+        let (d0, s0) = shade_vert(&scn.lights, wv0, n0, eye, mat.hardness);
+        sv0.shade = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
+
+        // Only shade vert 1 & 2 when smooth shading
+        if instance.smooth {
+          let (d1, s1) = shade_vert(&scn.lights, wv1, n1, eye, mat.hardness);
+          let (d2, s2) = shade_vert(&scn.lights, wv2, n2, eye, mat.hardness);
+          sv1.shade = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
+          sv2.shade = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
+        }
+
+        // Finally draw the damn triangle based on the screen verts and interpolate
+        fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
       }
-
-      // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
-      // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
-      let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & OUT_NEAR;
-      if any_near != 0 {
-        continue;
-      }
-
-      // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
-      //  - Back faces (mesh CW or back of CCW) have POSITIVE area
-      // So we discard anything non-negative.
-      let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
-      if area >= 0.0 {
-        continue;
-      }
-
-      // Ambient light
-      let amb = scn.ambient_light * mat.diffuse;
-
-      let eye = cam.get_pos();
-
-      // Calc shading & lighting at each world vertex, and set into screen vert
-
-      // Cludge n0 to be a normal for the whole face for flat shading
-      if !instance.smooth {
-        n0 = (wv1 - wv0).cross(wv2 - wv0).normalize_new();
-      }
-
-      // Always shade vert 0
-      let (d0, s0) = shade_vert(&scn.lights, wv0, n0, eye, mat.hardness);
-      sv0.shade = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
-
-      // Only shade vert 1 & 2 when smooth shading
-      if instance.smooth {
-        let (d1, s1) = shade_vert(&scn.lights, wv1, n1, eye, mat.hardness);
-        let (d2, s2) = shade_vert(&scn.lights, wv2, n2, eye, mat.hardness);
-        sv1.shade = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
-        sv2.shade = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
-      }
-
-      // Finally draw the damn triangle based on the screen verts and interpolate
-      fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
     }
   }
 }

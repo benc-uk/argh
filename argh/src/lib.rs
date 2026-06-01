@@ -63,7 +63,7 @@ pub mod prelude {
   pub use crate::app::App;
   pub use crate::camera::Camera;
   pub use crate::colour::*;
-  pub use crate::engine::{Engine, InstanceHandle, LightHandle, MaterialHandle, MeshHandle};
+  pub use crate::engine::{Engine, InstanceHandle, LightHandle, ModelHandle};
   pub use crate::light::Light;
   pub use crate::math::{Mat3, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
   pub use crate::models::{MATERIAL_PLACEHOLDER, Material, Texture};

@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{math::*, models::Mesh};
+use crate::{math::*, models::Material, models::Mesh, models::Model};
 
 /// Create a mesh for a unit cube, two triangles per face.
 ///
@@ -14,8 +14,8 @@ use crate::{math::*, models::Mesh};
 /// own outward-facing normal. This keeps the cube cleanly flat-shaded under
 /// per-vertex (Gouraud) lighting; a shared-vertex cube would smooth across
 /// the edges and look like a wonky sphere.
-pub fn new_cube() -> Mesh {
-  let mut mesh = Mesh::new("cube");
+pub fn new_cube(mat: Material) -> Model {
+  let mut mesh = Mesh::new_with_material(mat);
 
   // 6 faces * 4 verts each = 24 verts. Order per face: bl, br, tr, tl
   // (relative to looking AT the face from outside the cube).
@@ -93,7 +93,7 @@ pub fn new_cube() -> Mesh {
     mesh.indices.extend_from_slice(&[b, b + 1, b + 2, b, b + 2, b + 3]);
   }
 
-  mesh
+  Model::from_mesh(mesh, "cube")
 }
 
 /// Create a UV sphere mesh of unit diameter (radius 0.5) at the origin.
@@ -109,15 +109,14 @@ pub fn new_cube() -> Mesh {
 /// Normals are per-vertex and point radially outward from the origin, ready
 /// for smooth (Gouraud) shading. Seam and pole verts are intentionally
 /// duplicated to keep indexing uniform.
-pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
+pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
   let stacks = stacks.max(2);
   let sectors = sectors.max(3);
   let radius = 0.5;
 
   let pi = std::f64::consts::PI;
 
-  let name = format!("sphere_{}_{}", stacks, sectors);
-  let mut mesh = Mesh::new(&name);
+  let mut mesh = Mesh::new_with_material(mat);
 
   // --- 1. Generate verts + per-vert radial normals.
   // (stacks+1) rings of (sectors+1) verts.
@@ -170,7 +169,7 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
     }
   }
 
-  mesh
+  Model::from_mesh(mesh, format!("sphere_{}_{}", stacks, sectors).as_str())
 }
 
 /// Utah teapot!
@@ -179,10 +178,10 @@ pub fn new_sphere(stacks: usize, sectors: usize) -> Mesh {
 /// terminated by a blank line. We push indices (n-3, n-2, n-1) at the blank line,
 /// where n is the current vert count, so they reference the three verts we just parsed.
 /// A final flush after the loop handles the last triangle if the file has no trailing blank.
-pub fn new_teapot() -> Mesh {
+pub fn new_teapot(mat: Material) -> Model {
   let txt = include_str!("models/teapot.txt");
 
-  let mut out = Mesh::new("teapot");
+  let mut mesh = Mesh::new_with_material(mat);
   let mut lc = 0;
 
   let flush_tri = |out: &mut Mesh| {
@@ -194,7 +193,7 @@ pub fn new_teapot() -> Mesh {
 
   for line in txt.lines() {
     if line.is_empty() && lc == 6 {
-      flush_tri(&mut out);
+      flush_tri(&mut mesh);
 
       lc = 0;
       continue;
@@ -209,10 +208,10 @@ pub fn new_teapot() -> Mesh {
     };
 
     if lc % 2 == 0 {
-      out.verts.push(v);
-      out.uvs.push(Vec2 { x: 0.0, y: 0.0 });
+      mesh.verts.push(v);
+      mesh.uvs.push(Vec2 { x: 0.0, y: 0.0 });
     } else {
-      out.normals.push(v);
+      mesh.normals.push(v);
     }
 
     lc += 1;
@@ -220,8 +219,8 @@ pub fn new_teapot() -> Mesh {
 
   // Flush trailing triangle if the file didn't end with a blank line.
   if lc == 6 {
-    flush_tri(&mut out);
+    flush_tri(&mut mesh);
   }
 
-  out
+  Model::from_mesh(mesh, "teapot")
 }

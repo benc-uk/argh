@@ -11,7 +11,7 @@ use std::io;
 
 use crate::{
   colour::{Colour, INV_255, WHITE},
-  engine::{MaterialHandle, MeshHandle},
+  engine::ModelHandle,
   math::{Mat4, Quat, Vec2, Vec3},
 };
 
@@ -77,7 +77,7 @@ impl Texture {
   }
 }
 
-/// Holds a [DynamicImage] and not much else
+/// Holds a pixels of an image and not much else
 pub struct Texture {
   pixels: Vec<u32>, // packed 0RGB to match buffer format
   w: u32,
@@ -147,8 +147,9 @@ impl Material {
 // Mesh
 // ===================================
 
-/// Triangle based 3D mesh
+/// Triangle based 3D mesh of verts + material
 pub struct Mesh {
+  pub(crate) material: Material,
   pub(crate) verts: Vec<Vec3>,   // Vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
   pub(crate) uvs: Vec<Vec2>,     // Texture coords
@@ -157,15 +158,67 @@ pub struct Mesh {
 }
 
 impl Mesh {
-  // Internal only method for creating an "empty" mesh
-  pub(crate) fn new(name: &str) -> Self {
+  // Internal only method for creating an "empty" mesh with placeholder material
+  pub(crate) fn new() -> Self {
     Self {
+      material: MATERIAL_PLACEHOLDER,
       verts: vec![],
       normals: vec![],
       uvs: vec![],
       indices: vec![],
+      name: "".to_string(),
+    }
+  }
+
+  // Internal only method for creating an "empty" mesh with placeholder material
+  pub(crate) fn new_with_material(mat: Material) -> Self {
+    Self {
+      material: mat,
+      verts: vec![],
+      normals: vec![],
+      uvs: vec![],
+      indices: vec![],
+      name: "".to_string(),
+    }
+  }
+}
+
+// ===================================
+// Model
+// ===================================
+
+/// Model holds multiple meshes
+pub struct Model {
+  pub(super) meshes: Vec<Mesh>,
+  pub(super) name: String,
+}
+
+impl Model {
+  /// Create an empty model with no meshes
+  pub fn new(name: &str) -> Self {
+    Self {
+      meshes: vec![],
       name: name.to_string(),
     }
+  }
+
+  /// Convenience to wrap a single [Mesh] in a [Model]
+  pub fn from_mesh(mesh: Mesh, name: &str) -> Self {
+    let mut model = Self {
+      meshes: vec![],
+      name: name.to_string(),
+    };
+
+    model.add_mesh(mesh);
+    model
+  }
+
+  /// Add a mesh to a model
+  pub fn add_mesh(&mut self, mesh: Mesh) {
+    debug_assert_eq!(mesh.uvs.len(), mesh.verts.len(), "UVs must match vert count");
+    debug_assert_eq!(mesh.normals.len(), mesh.verts.len(), "normals must match vert count");
+
+    self.meshes.push(mesh);
   }
 }
 
@@ -173,27 +226,17 @@ impl Mesh {
 // Instance
 // ===================================
 
-/// Instance of a mesh in the world, with position, scale and rotation
+/// Instance of a model in the world, with position, scale and rotation
 pub struct Instance {
-  pub(crate) material_handle: MaterialHandle, // Surface material, colour etc
-  pub(crate) pos: Vec3,                       // Position
-  pub(crate) rot: Quat,                       // Rotation held as a Quat
-  pub(crate) scale: Vec3,                     // Scaling factors
-  pub(crate) mesh_handle: MeshHandle,         // Reference to mesh via handle
+  pub(crate) pos: Vec3,                 // Position
+  pub(crate) rot: Quat,                 // Rotation held as a Quat
+  pub(crate) scale: Vec3,               // Scaling factors
+  pub(crate) model_handle: ModelHandle, // Reference to mesh via handle
 
   pub smooth: bool, // Gouraud shading enabled
 }
 
 impl Instance {
-  pub fn set_material(&mut self, m: MaterialHandle) -> &mut Self {
-    self.material_handle = m;
-    self
-  }
-
-  pub fn get_material(&self) -> MaterialHandle {
-    self.material_handle
-  }
-
   pub fn set_pos(&mut self, pos: Vec3) -> &mut Self {
     self.pos = pos;
     self

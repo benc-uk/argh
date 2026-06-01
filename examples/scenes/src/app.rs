@@ -47,14 +47,12 @@ pub fn new(e: &mut Engine) -> MyApp {
   scene1.add_light(Light::new(v3(8.0, 7.0, 5.0), 1.0, WHITE));
   scene2.add_light(Light::new(v3(-8.0, 7.0, 5.0), 1.0, WHITE));
 
-  let col_mat1 = e.add_material(Material::new_flat(Colour::rand()));
-  let col_mat2 = e.add_material(Material::new_flat(Colour::rand()));
+  let check_tex = Texture::new("assets/checker_256.png").unwrap();
+  let sphere1 = e.add_model(primitives::new_sphere(Material::new_textured(check_tex), 24, 48));
+  let cube = e.add_model(primitives::new_cube(Material::new_flat(Colour::rand())));
 
-  let sphere1 = e.add_mesh(primitives::new_sphere(24, 48));
-  let cube = e.add_mesh(primitives::new_cube());
-
-  scene1.add_instance(sphere1, col_mat1);
-  scene2.add_instance_trans(cube, col_mat2, V3_ZERO, v3(0.0, 1.9, 0.0), v3(1.0, 1.0, 1.0));
+  scene1.add_instance(sphere1);
+  scene2.add_instance_trans(cube, V3_ZERO, v3(0.0, 1.9, 0.0), v3(1.0, 1.0, 1.0));
 
   let camera = Camera::new_perspective(e.get_aspect(), v3(0.0, 1.0, 3.0), V3_ZERO, 60.0, 0.01, 50.0).unwrap();
 

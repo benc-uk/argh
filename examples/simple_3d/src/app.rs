@@ -5,7 +5,6 @@ pub struct MyApp {
   sphere1_hdl: InstanceHandle,
   sphere2_hdl: InstanceHandle,
   teapot_hdl: InstanceHandle,
-  teapot_mat_hdl: MaterialHandle,
   camera: Camera,
   scene: Scene,
 }
@@ -30,10 +29,10 @@ impl App for MyApp {
 
     if !engine.get_keys_pressed().is_empty() {
       // When space is pressed change the teapot colour, don't ask why
-      if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
-        let mat = engine.material_mut(self.teapot_mat_hdl);
-        mat.diffuse = Colour::rand();
-      }
+      // if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Space) {
+      //   let mat = engine.material_mut(self.teapot_mat_hdl);
+      //   mat.diffuse = Colour::rand();
+      // }
 
       // Quit on escape
       if engine.get_keys_pressed()[0].eq(&argh::engine::Key::Escape) {
@@ -53,20 +52,20 @@ pub fn new(e: &mut Engine) -> MyApp {
   let crate_tex = Texture::new("assets/checker_256.png").unwrap();
   let earth_tex = Texture::new("assets/earth.png").unwrap();
 
-  let crate_mat = e.add_material(Material::new_textured(crate_tex));
-  let earth_mat = e.add_material(Material::new_textured(earth_tex));
-  let col_mat1 = e.add_material(Material::new_flat(Colour::rand()));
-  let col_mat2 = e.add_material(Material::new_flat(Colour::rand()));
+  // let crate_mat = e.add_material();
+  // let earth_mat = e.add_material();
+  // let col_mat1 = e.add_material();
+  // let col_mat2 = e.add_material(Material::new_flat(Colour::rand()));
 
-  let cube = e.add_mesh(primitives::new_cube());
-  let sphere1 = e.add_mesh(primitives::new_sphere(8, 12));
-  let sphere2 = e.add_mesh(primitives::new_sphere(24, 48));
-  let teapot = e.add_mesh(primitives::new_teapot());
+  let cube = e.add_model(primitives::new_cube(Material::new_textured(crate_tex)));
+  let sphere1 = e.add_model(primitives::new_sphere(Material::new_flat(Colour::rand()), 8, 12));
+  let sphere2 = e.add_model(primitives::new_sphere(Material::new_textured(earth_tex), 24, 48));
+  let teapot = e.add_model(primitives::new_teapot(Material::new_flat(Colour::rand())));
 
-  let cube_hdl = scene.add_instance(cube, crate_mat);
-  let sphere1_hdl = scene.add_instance(sphere1, col_mat1);
-  let sphere2_hdl = scene.add_instance(sphere2, earth_mat);
-  let teapot_hdl = scene.add_instance(teapot, col_mat2);
+  let cube_hdl = scene.add_instance(cube);
+  let sphere1_hdl = scene.add_instance(sphere1);
+  let sphere2_hdl = scene.add_instance(sphere2);
+  let teapot_hdl = scene.add_instance(teapot);
   scene.instance_mut(sphere1_hdl).smooth = false;
   scene.instance_mut(teapot_hdl).scale(0.5).set_pos_xyz(0.5, -1.55, -2.0);
 
@@ -77,7 +76,6 @@ pub fn new(e: &mut Engine) -> MyApp {
     sphere1_hdl,
     sphere2_hdl,
     teapot_hdl,
-    teapot_mat_hdl: col_mat2,
     camera,
     scene,
   }

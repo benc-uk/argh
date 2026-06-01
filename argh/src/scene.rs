@@ -10,7 +10,7 @@ use slotmap::SlotMap;
 
 use crate::{
   colour::Colour,
-  engine::{InstanceHandle, LightHandle, MaterialHandle, MeshHandle},
+  engine::{InstanceHandle, LightHandle, ModelHandle},
   light::Light,
   math::{Quat, V3_ONE, V3_ZERO, Vec3},
   models::Instance,
@@ -67,14 +67,13 @@ impl Scene {
   // ===== Instances ======================================================================================================
 
   /// Create an instance of a mesh with given name, using the material
-  pub fn add_instance(&mut self, mesh_handle: MeshHandle, mat_handle: MaterialHandle) -> InstanceHandle {
+  pub fn add_instance(&mut self, model_handle: ModelHandle) -> InstanceHandle {
     let i = Instance {
-      material_handle: mat_handle,
+      model_handle,
       pos: V3_ZERO,
       scale: V3_ONE,
       rot: Quat::ident(),
       smooth: true,
-      mesh_handle,
     };
 
     let h = self.instances.insert(i);
@@ -83,14 +82,13 @@ impl Scene {
   }
 
   /// Create an instance of a mesh with given name, using the material transformed into the world
-  pub fn add_instance_trans(&mut self, mesh_handle: MeshHandle, material_handle: MaterialHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
+  pub fn add_instance_trans(&mut self, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
     let mut i = Instance {
-      material_handle,
+      model_handle,
       pos,
       scale,
       rot: Quat::ident(),
       smooth: true,
-      mesh_handle,
     };
 
     i.rot.rot_x(rot.x);

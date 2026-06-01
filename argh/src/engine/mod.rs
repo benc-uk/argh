@@ -14,7 +14,6 @@ mod draw2d;
 mod input;
 mod parse;
 mod render;
-mod resources;
 
 #[cfg(feature = "desktop")]
 use minifb::{Window, WindowOptions};
@@ -23,13 +22,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::engine::input::Inputs;
-use crate::{
-  app::App,
-  buffer::Buffer,
-  colour::*,
-  models::{MATERIAL_PLACEHOLDER, Material, Mesh},
-  scene::Scene,
-};
+use crate::{app::App, buffer::Buffer, colour::*, models::Model, scene::Scene};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -39,8 +32,8 @@ new_key_type! {
   pub struct InstanceHandle;
   /// A handle to reference materials held by the engine
   pub struct MaterialHandle;
-  /// A handle to reference meshes held by the engine
-  pub struct MeshHandle;
+  /// A handle to reference models held by the engine
+  pub struct ModelHandle;
   /// A handle to reference lights held by the engine
   pub struct LightHandle;
 }
@@ -56,9 +49,7 @@ pub struct Engine {
   exit: bool,
 
   // Things tracked & cached by the engine
-  meshes: SlotMap<MeshHandle, Mesh>,
-  materials: SlotMap<MaterialHandle, Material>,
-  mat_placeholder: MaterialHandle,
+  models: SlotMap<ModelHandle, Model>,
 
   // Inputs - Gated to desktop only not web/wasm
   #[cfg(feature = "desktop")]
@@ -78,8 +69,6 @@ impl Engine {
   /// * `w` - Width of the window in pixels
   /// * `h` - Height of the window in pixels
   pub fn new(w: i32, h: i32) -> Self {
-    let mut mat_slots = SlotMap::with_key();
-
     Self {
       size: (w as usize, h as usize),
       buffer: Buffer::new(w as usize, h as usize),
@@ -88,13 +77,11 @@ impl Engine {
       fps: 0.0,
       target_fps: 60,
       aspect: w as f64 / h as f64,
-      mat_placeholder: mat_slots.insert(MATERIAL_PLACEHOLDER),
 
       exit: false,
       debug: false,
 
-      meshes: SlotMap::with_key(),
-      materials: mat_slots,
+      models: SlotMap::with_key(),
 
       #[cfg(feature = "desktop")]
       inputs: Inputs::new(),
@@ -181,6 +168,13 @@ impl Engine {
     self.last_time = Instant::now();
 
     self.t
+  }
+
+  /// Add a model to the engine cache
+  pub fn add_model(&mut self, model: Model) -> ModelHandle {
+    println!("Adding model '{}' to the engine cache", model.name);
+
+    self.models.insert(model)
   }
 
   /// Draw the debug overlay on top of the current frame. Call AFTER app.update.

@@ -30,17 +30,21 @@ impl App for MyApp {
 pub fn new(e: &mut Engine) -> MyApp {
   let mut scn = Scene::new();
 
-  scn.add_light(Light::new(v3(19.0, 28.0, 19.0), 1.0, WHITE));
-  scn.add_light(Light::new(v3(-18.0, 42.0, -35.0), 1.0, col(0.3, 0.8, 0.3)));
+  scn.add_light(Light::new(v3(89.0, 28.0, 89.0), 1.0, WHITE));
+  scn.add_light(Light::new(v3(-88.0, 42.0, -85.0), 1.0, col(0.3, 0.8, 0.3)));
 
-  let (table, table_mat) = e.load_obj("assets/models/table/table.obj").expect("obj loading failed");
-  scn.add_instance_trans(table, table_mat, V3_ZERO, v3(-PI / 2.0, 0.0, 0.0), v3(0.3, 0.3, 0.6));
+  let table = e.load_obj("assets/models/table/table.obj").expect("obj loading failed");
+  scn.add_instance_trans(table, V3_ZERO, v3(-PI / 2.0, 0.0, 0.0), v3(0.3, 0.3, 0.6));
 
-  let (plant, plant_mat) = e.load_obj("assets/models/house_plant/house_plant.obj").expect("obj loading failed");
-  scn.add_instance_trans(plant, plant_mat, v3(12.0, 21.5, -3.0), v3(0.0, 0.9, 0.0), v3(0.4, 0.4, 0.4));
+  let plant = e.load_obj("assets/models/house_plant/house_plant.obj").expect("obj loading failed");
+  scn.add_instance_trans(plant, v3(12.0, 21.5, -3.0), v3(0.0, 0.9, 0.0), v3(0.6, 0.6, 0.6));
 
-  let (hambrg, hambrg_mat) = e.load_obj("assets/models/cola_can/cola_can.obj").expect("obj loading failed");
-  scn.add_instance_trans(hambrg, hambrg_mat, v3(-12.0, 21.5, -3.0), v3(-PI / 2.0, 0.9, 0.0), v3(0.4, 0.4, 0.4));
+  let hamburger = e.load_obj("assets/models/hamburger/hamburger.obj").expect("obj loading failed");
+  scn.add_instance_trans(hamburger, v3(-12.0, 21.5, 7.0), v3(0.0, 0.0, 0.0), v3(0.4, 0.4, 0.4));
+
+  let can = e.load_obj("assets/models/cola_can/cola_can.obj").expect("obj loading failed");
+  scn.add_instance_trans(can, v3(-4.0, 21.5, 1.0), v3(0.0, 0.9, 0.0), v3(0.8, 0.8, 0.8));
+  scn.add_instance_trans(can, v3(2.0, 21.5, 4.0), v3(0.0, 2.3, 0.0), v3(0.8, 0.8, 0.8));
 
   let camera = Camera::new_perspective(e.get_aspect(), v3(0.0, 40.0, 30.0), v3(0.0, 25.0, 0.0), 60.0, 0.01, 1000.0).unwrap();
 
