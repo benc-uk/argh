@@ -32,21 +32,15 @@ pub fn new(e: &mut Engine) -> WasmApp {
   scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 0.7, RED));
   scene.add_light(Light::new(v3(4.0, 9.0, 10.0), 0.9, WHITE));
 
-  let crate_tex = Texture::from_bytes(CRATE_IMG_BYTES).unwrap();
-  let mut crate_mat = Material::new_textured(crate_tex);
+  let mut crate_mat = Material::new_textured(Texture::from_bytes(CRATE_IMG_BYTES).unwrap());
   crate_mat.specular = BLACK;
 
-  let teapot_mat1 = e.add_material(Material::new_flat(Colour::new(0.7, 0.7, 0.8)));
-  let teapot_mat2 = e.add_material(Material::new_flat(Colour::new(0.6, 0.2, 0.7)));
-  let crate_mat_hdl = e.add_material(crate_mat);
+  let teapot = e.add_model(primitives::new_teapot(Material::new_flat(Colour::new(0.7, 0.7, 0.8))));
+  let cube = e.add_model(primitives::new_cube(crate_mat));
 
-  let teapot = e.add_mesh(primitives::new_teapot());
-  let cube = e.add_mesh(primitives::new_cube());
-
-  scene.add_instance_trans(teapot, teapot_mat1, v3(2.0, 0.0, 2.3), v3(0.0, 3.0, 0.0), v3(1.2, 1.5, 1.2));
-  scene.add_instance_trans(teapot, teapot_mat2, v3(-2.0, 0.0, -2.9), v3(0.0, 2.0, 0.0), v3(1.2, 1.2, 1.2));
-  scene.add_instance_trans(cube, crate_mat_hdl, v3(0.0, -6.0, 0.0), v3(0.0, 0.0, 0.0), v3(12.0, 12.0, 12.0));
-
+  scene.add_instance_trans(teapot, v3(2.0, 0.0, 2.3), v3(0.0, 3.0, 0.0), v3(1.2, 1.5, 1.2));
+  scene.add_instance_trans(teapot, v3(-2.0, 0.0, -2.9), v3(0.0, 2.0, 0.0), v3(1.2, 1.2, 1.2));
+  scene.add_instance_trans(cube, v3(0.0, -6.0, 0.0), v3(0.0, 0.0, 0.0), v3(12.0, 12.0, 12.0));
   let camera = Camera::new_perspective(e.get_aspect(), v3(0.0, 5.0, 14.0), v3(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
 
   WasmApp { camera, scene }
