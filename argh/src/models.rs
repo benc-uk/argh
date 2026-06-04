@@ -181,6 +181,10 @@ impl Mesh {
       name: "".to_string(),
     }
   }
+
+  pub fn set_material(&mut self, mat: Material) {
+    self.material = mat
+  }
 }
 
 // ===================================
@@ -219,6 +223,11 @@ impl Model {
     debug_assert_eq!(mesh.normals.len(), mesh.verts.len(), "normals must match vert count");
 
     self.meshes.push(mesh);
+  }
+
+  /// Get the meshes
+  pub fn get_meshes(&self) -> &Vec<Mesh> {
+    &self.meshes
   }
 }
 

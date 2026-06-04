@@ -6,9 +6,9 @@ struct MyApp {}
 // Minimal implementation of an argh App
 impl App for MyApp {
   // Clear the screen with blue colour then draw some text
-  fn update(&mut self, e: &mut Engine, _: f64, _: f64) {
-    e.clear(colour::BLUE);
-    e.draw_string("Hello World!", 20, 20, colour::WHITE);
+  fn update(&mut self, eng: &mut Engine, _: f64, _: f64) {
+    eng.clear(colour::BLUE);
+    eng.draw_string("Hello World!", 20, 20, colour::WHITE);
   }
 }
 

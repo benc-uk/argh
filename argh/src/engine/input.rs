@@ -13,6 +13,7 @@ pub struct Inputs {
   pub(super) keys: Vec<Key>,
   pub(super) keys_pressed: Vec<Key>,
   pub(super) mouse_buttons: [bool; 3],
+  pub(super) mouse_pos: Option<(f32, f32)>,
 }
 
 impl Inputs {
@@ -21,6 +22,7 @@ impl Inputs {
       keys: vec![],
       keys_pressed: vec![],
       mouse_buttons: [false, false, false],
+      mouse_pos: None,
     }
   }
 }
@@ -59,5 +61,10 @@ impl Engine {
   /// Helper to check if right mouse button is pressed
   pub fn is_mouse_down_right(&self) -> bool {
     self.inputs.mouse_buttons[2]
+  }
+
+  /// Helper to check if right mouse button is pressed
+  pub fn get_mouse_pos(&self) -> Option<(f32, f32)> {
+    self.inputs.mouse_pos
   }
 }

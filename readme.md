@@ -15,15 +15,16 @@ Features:
 - Window and framebuffer backed by [minifb](https://docs.rs/minifb/latest/minifb/)
 - Entirely software (CPU) based rendering loop and buffer operations
 - Core maths libraries for vectors, matrices and quaternions, implemented from scratch
-- Simple scene management
+- Scene & instance management
 - 3D rendering
-  - Matrix operations for affine transforms
   - Rendering pipeline for meshes, with z-buffering and basic clipping (no Sutherland-Hodgman polygon clipping yet)
   - Diffuse illumination and Gouraud shading + texture mapping
-  - Cameras with perspective projection
   - Simple meshes, materials and textures
     - Textures can be image based texture maps or simple solid colours
-  - Generators for cubes and spheres, and teapots (what graphics system would be complete without the classic Newell Teapot!)
+  - OBJ loading & parsing with MTL support
+  - Matrix operations for affine transforms
+  - Cameras with perspective projection
+  - Generators for cubes, spheres and teapots (what graphics system would be complete without the classic Newell Teapot!)
 - Methods for drawing 2D primitives, pixels, lines and text
 
 ## Examples

@@ -4,7 +4,7 @@ use argh::engine::Engine;
 
 fn main() {
   let mut eng = Engine::new(640, 360);
-  let mut app = app::new(&mut eng);
+  let mut app = app::new();
 
   eng.debug = true;
   eng.target_fps = 0;

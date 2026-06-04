@@ -179,7 +179,7 @@ pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
 /// where n is the current vert count, so they reference the three verts we just parsed.
 /// A final flush after the loop handles the last triangle if the file has no trailing blank.
 pub fn new_teapot(mat: Material) -> Model {
-  let txt = include_str!("models/teapot.txt");
+  let txt = include_str!("data/teapot.txt");
 
   let mut mesh = Mesh::new_with_material(mat);
   let mut lc = 0;

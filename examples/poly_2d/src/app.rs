@@ -18,17 +18,17 @@ struct Poly {
 
 impl App for MyApp {
   // You must always implement the update method it will be called once per frame
-  fn update(&mut self, engine: &mut Engine, _: f64, t: f64) {
-    engine.clear(BLACK);
+  fn update(&mut self, eng: &mut Engine, _: f64, t: f64) {
+    eng.clear(BLACK);
 
     for p in &self.polys {
       let trans = Mat3::new_scale_rot_trans(p.scale, p.scale, p.speed * t, p.trans.x, p.trans.y);
-      engine.draw_poly_line(&(trans * &p.points), p.colour);
+      eng.draw_poly_line(&(trans * &p.points), p.colour);
     }
   }
 }
 
-pub fn new(_: &mut Engine) -> MyApp {
+pub fn new() -> MyApp {
   let mut app = MyApp { polys: vec![] };
 
   for _ in 0..200 {

@@ -5,13 +5,14 @@
 - [x] Specular lighting
 - [x] Light handles
 - [x] Monomorphizing the dyn texture
-- [ ] More inputs like mouse
+- [x] More inputs like mouse
 - [x] Scene / engine refactor
 - [x] Make ESC to exit optional
 - [x] Lock window from resizing
 - [x] Instancing redesign Mesh struct
-- [ ] Sub-meshes, complex models
-- [ ] OBJ loader
+- [x] Sub-meshes, complex models
+- [x] OBJ loader
+- [ ] Texture cache
 - [ ] More primitives
 - [ ] Skyboxes
 - [ ] Transparency

@@ -138,6 +138,7 @@ impl Engine {
       self.inputs.mouse_buttons[0] = window.get_mouse_down(minifb::MouseButton::Left);
       self.inputs.mouse_buttons[1] = window.get_mouse_down(minifb::MouseButton::Middle);
       self.inputs.mouse_buttons[2] = window.get_mouse_down(minifb::MouseButton::Right);
+      self.inputs.mouse_pos = window.get_mouse_pos(minifb::MouseMode::Discard);
 
       // Finally actually put the image/framebuffer on the screen
       if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.size.0, self.size.1) {

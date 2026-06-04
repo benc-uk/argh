@@ -9,8 +9,8 @@ pub struct MyApp {
 
 impl App for MyApp {
   // You must always implement the update method it will be called once per frame
-  fn update(&mut self, engine: &mut Engine, dt: f64, t: f64) {
-    engine.clear(BLACK);
+  fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
+    eng.clear(BLACK);
 
     // This makes the animation independent of framerate
     let rot = Quat::new(V3_AXIS_Y, 0.5 * dt);
@@ -20,16 +20,16 @@ impl App for MyApp {
     self.camera.set_pos(p);
 
     // Draw the scene
-    engine.render(&self.camera, &self.scene);
+    eng.render(&self.camera, &self.scene);
 
     // Quit on escape
-    if engine.is_pressed(Key::Escape) {
-      engine.stop();
+    if eng.is_pressed(Key::Escape) {
+      eng.stop();
     }
   }
 }
 
-pub fn new(e: &mut Engine) -> MyApp {
+pub fn new(eng: &mut Engine) -> MyApp {
   let mut scene = Scene::new();
 
   scene.add_light(Light::new(v3(15.0, 2.0, 5.0), 0.6, BLUE));
@@ -39,13 +39,16 @@ pub fn new(e: &mut Engine) -> MyApp {
   let mut crate_mat = Material::new_textured(Texture::new("assets/crate.png").unwrap());
   crate_mat.specular = BLACK;
 
-  let teapot = e.add_model(primitives::new_teapot(Material::new_flat(Colour::new(0.7, 0.7, 0.8))));
-  let cube = e.add_model(primitives::new_cube(crate_mat));
+  let flat_1 = Material::new_flat(Colour::new(0.7, 0.7, 0.8));
+  let flat_2 = Material::new_flat(Colour::new(0.8, 0.7, 0.5));
+  let teapot1 = eng.add_model(primitives::new_teapot(flat_1));
+  let teapot2 = eng.add_model(primitives::new_teapot(flat_2));
+  let cube = eng.add_model(primitives::new_cube(crate_mat));
 
-  scene.add_instance_trans(teapot, v3(2.0, 0.0, 2.3), v3(0.0, 3.0, 0.0), v3(1.2, 1.5, 1.2));
-  scene.add_instance_trans(teapot, v3(-2.0, 0.0, -2.9), v3(0.0, 2.0, 0.0), v3(1.2, 1.2, 1.2));
+  scene.add_instance_trans(teapot1, v3(2.0, 0.0, 2.3), v3(0.0, 3.0, 0.0), v3(1.2, 1.5, 1.2));
+  scene.add_instance_trans(teapot2, v3(-2.0, 0.0, -2.9), v3(0.0, 2.0, 0.0), v3(1.2, 1.2, 1.2));
   scene.add_instance_trans(cube, v3(0.0, -6.0, 0.0), v3(0.0, 0.0, 0.0), v3(12.0, 12.0, 12.0));
-  let camera = Camera::new_perspective(e.get_aspect(), v3(0.0, 5.0, 14.0), v3(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
+  let camera = Camera::new_perspective(eng.get_aspect(), v3(0.0, 5.0, 14.0), v3(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
 
   MyApp { camera, scene }
 }
