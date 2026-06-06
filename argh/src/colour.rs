@@ -19,8 +19,6 @@ pub struct Colour {
 
 pub(crate) const INV_255: f32 = 1.0 / 255.0;
 
-const ENCODE_GAMMA: f32 = 1.0 / 2.2;
-
 /// Lookup table mapping an sRGB-encoded byte (0..=255) to its linear-light value, using a 2.2 gamma curve.
 /// Used by the `from_*` byte-input constructors so per-pixel decode is a single load instead of `f32::powf`.
 #[rustfmt::skip]
@@ -93,13 +91,13 @@ impl Colour {
     Self { r: v[0], g: v[1], b: v[2] }
   }
 
-  /// Return as packed 0rgb u32 representation of the colour for use with the internal `Buffer`. Alpha is always 0 as minifb ignores it
-  /// This encodes back to sRGB with gamma correction
+  /// Return as packed 0rgb u32 representation for use with the internal `Buffer`. Alpha is always 0
+  /// This encodes back to sRGB with cheap sqrt() gamma correction
   #[inline(always)]
   pub fn to_packed_0rgb(self) -> u32 {
-    let r = (f32::powf(self.r.clamp(0.0, 1.0), ENCODE_GAMMA) * 255.0 + 0.5) as u32;
-    let g = (f32::powf(self.g.clamp(0.0, 1.0), ENCODE_GAMMA) * 255.0 + 0.5) as u32;
-    let b = (f32::powf(self.b.clamp(0.0, 1.0), ENCODE_GAMMA) * 255.0 + 0.5) as u32;
+    let r = (f32::sqrt(self.r.clamp(0.0, 1.0)) * 255.0 + 0.5) as u32;
+    let g = (f32::sqrt(self.g.clamp(0.0, 1.0)) * 255.0 + 0.5) as u32;
+    let b = (f32::sqrt(self.b.clamp(0.0, 1.0)) * 255.0 + 0.5) as u32;
     (r << 16) | (g << 8) | b
   }
 

@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   buffer.rs
-// Purpose:         Internal pixel buffer wrapping Vec<u32> for use with minifb
+// Purpose:         Internal pixel & depth buffer
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:
@@ -8,9 +8,9 @@
 
 use crate::colour::Colour;
 
-/// Internal struct wrapping a Vec<u32> to be used with minifb update_with_buffer(), each u32 is a single pixel
-/// The encoding for each pixel is 0RGB: The upper 8-bits are ignored, the next 8-bits are for the red channel, the next 8-bits afterwards for the green channel, and the lower 8-bits for the blue channel.
-/// This includes a f32 depth buffer for z-buffering
+// Internal frame & depth buffer
+// The encoding for each pixel is 32bits 0RGB: The upper 8-bits are ignored, the next 24 bits are 8-bits of RGB each
+// Depth buffer is f32
 pub struct Buffer {
   pub pixels: Vec<u32>,
   pub depth: Vec<f32>,
@@ -49,7 +49,7 @@ impl Buffer {
   #[inline(always)]
   pub fn set_pixel_depth(&mut self, x: usize, y: usize, c: Colour, z: f32) {
     let idx = y * self.w + x;
-    // No bounds check as we don't actually need em
+    // No bounds check as we don't actually need them
     if z < self.depth[idx] {
       self.pixels[idx] = c.to_packed_0rgb();
       self.depth[idx] = z;

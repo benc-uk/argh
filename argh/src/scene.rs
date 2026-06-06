@@ -25,7 +25,7 @@ pub struct Scene {
   pub(super) instance_keys: Vec<InstanceHandle>,
   pub(super) light_keys: Vec<LightHandle>,
 
-  /// Ambient light colour, defaults to [0.1, 0.1, 0.1], beware setting this too high it will look washed out
+  /// Ambient light colour, beware setting this too high it will look washed out
   pub ambient_light: Colour,
 }
 
@@ -56,10 +56,12 @@ impl Scene {
     self.light_keys.retain(|&k| k != h);
   }
 
+  /// Get a mutable light from it's handle
   pub fn light_mut(&mut self, h: LightHandle) -> &mut Light {
     self.lights.get_mut(h).expect("light not found")
   }
 
+  /// Get a mutable light from it's handle
   pub fn light(&self, h: LightHandle) -> &Light {
     self.lights.get(h).expect("light not found")
   }
@@ -100,25 +102,30 @@ impl Scene {
     h
   }
 
+  /// Get an mutable instance from its handle
   pub fn instance_mut(&mut self, h: InstanceHandle) -> &mut Instance {
     debug_assert!(self.instances.contains_key(h));
 
     self.instances.get_mut(h).expect("instance not found")
   }
 
+  /// Get an instance from it's handle
   pub fn instance(&self, h: InstanceHandle) -> &Instance {
     self.instances.get(h).expect("instance not found")
   }
 
+  /// Remove an instance from a scene
   pub fn remove_instance(&mut self, h: InstanceHandle) {
     self.instances.remove(h);
     self.instance_keys.retain(|&k| k != h);
   }
 
+  /// A list of instances in the scene
   pub fn list_instances(&self) -> impl Iterator<Item = &Instance> {
     self.instances.values()
   }
 
+  /// A mutable list of instances in the scene
   pub fn instances_mut(&mut self) -> impl Iterator<Item = &mut Instance> {
     self.instances.values_mut()
   }

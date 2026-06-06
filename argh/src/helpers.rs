@@ -50,6 +50,7 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
 
 // Internal function for calculating the light at a vertex in world space
 // We return light values (as RGB Colours) falling on that vert, NOT the colour of the surface
+#[inline(always)]
 pub fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f64) -> (Colour, Colour) {
   // Shading & lighting over multiple lights
   let mut diff_sum = BLACK;

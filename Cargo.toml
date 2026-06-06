@@ -9,6 +9,7 @@ members = [
   "examples/web_wasm",
   "examples/scenes",
   "examples/obj_files",
+  "examples/benchmark",
 ]
 resolver = "3"
 

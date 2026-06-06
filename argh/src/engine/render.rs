@@ -35,7 +35,7 @@ struct ScreenVert {
   x: f64,        // pixel coordinate, [0, width]
   y: f64,        // pixel coordinate, [0, height], origin top-left
   z: f64,        // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
-  shade: Colour, // Gouraud shading needs lighting per vertex
+  light: Colour, // Lighting per vertex (for Gouraud shading)
   inv_w: f64,    // Inverse of w
   u_w: f64,      // PRE-DIVIDED, not raw u and v.
   v_w: f64,      // PRE-DIVIDED, not raw u and v.
@@ -122,11 +122,12 @@ impl Engine {
         let ndc_x = clip.x * inv_w;
         let ndc_y = clip.y * inv_w;
         let ndc_z = clip.z * inv_w;
+
         // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
         let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
         let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
 
-        // Reach out to the UV array and pre-mult by 1/w
+        // Reach out to the UV array and pre-mult by 1/w, it MUST be the same length
         let uv = mesh.uvs[i];
         let u_w = uv.x * inv_w;
         let v_w = uv.y * inv_w;
@@ -139,7 +140,7 @@ impl Engine {
             y: sy,
             z: ndc_z,
             inv_w,
-            shade: BLACK, // Mutated later
+            light: BLACK, // Mutated later
             u_w,
             v_w,
           },
@@ -203,38 +204,36 @@ impl Engine {
 
         // Always shade vert 0
         let (d0, s0) = shade_vert(&scn.lights, wv0, n0, eye, mat.hardness);
-        sv0.shade = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
+        sv0.light = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
 
         // Only shade vert 1 & 2 when smooth shading
         if instance.smooth {
           let (d1, s1) = shade_vert(&scn.lights, wv1, n1, eye, mat.hardness);
           let (d2, s2) = shade_vert(&scn.lights, wv2, n2, eye, mat.hardness);
-          sv1.shade = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
-          sv2.shade = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
+          sv1.light = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
+          sv2.light = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
         }
 
         // Finally draw the damn triangle based on the screen verts and interpolate
-        fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
+        fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, false);
       }
     }
   }
 }
 
-// Standard edge function
+// Standard edge function, it's basically a cross product
 #[inline(always)]
 fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
   (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
 }
 
-// Fill a 3D triangle between three ScreenVertex points which form a triangle
-// Not public outside the crate
+// Fill a triangle between three ScreenVertex points in screen space interpolating lighting, z-depth and texture samples
 #[inline(always)]
 fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material, smooth: bool) {
   let area = edge_function(v1, v2, v0.x, v0.y);
-  // degenerate triangle, save ourselves a NaN
-  if area.abs() < TRI_AREA_EPS {
+  if area <= TRI_AREA_EPS {
     return;
-  }
+  } // degenerate triangle, save ourselves a NaN
 
   // We need inverse area for Barycentric gubbins later
   let inv_area = 1.0 / area;
@@ -274,36 +273,13 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
   let dy1 = v0.x - v2.x;
   let dy2 = v1.x - v0.x;
 
-  // starting inv_w / u_w / v_w at top-left of bbox
-  let mut inv_w_row = (w0_row * v0.inv_w + w1_row * v1.inv_w + w2_row * v2.inv_w) * inv_area;
-  let mut u_w_row = (w0_row * v0.u_w + w1_row * v1.u_w + w2_row * v2.u_w) * inv_area;
-  let mut v_w_row = (w0_row * v0.v_w + w1_row * v1.v_w + w2_row * v2.v_w) * inv_area;
-
-  // per-x and per-y deltas for inv_w, u_w and v_w (constants for the whole triangle)
-  let inv_w_dx = (dx0 * v0.inv_w + dx1 * v1.inv_w + dx2 * v2.inv_w) * inv_area;
-  let u_w_dx = (dx0 * v0.u_w + dx1 * v1.u_w + dx2 * v2.u_w) * inv_area;
-  let v_w_dx = (dx0 * v0.v_w + dx1 * v1.v_w + dx2 * v2.v_w) * inv_area;
-
-  let inv_w_dy = (dy0 * v0.inv_w + dy1 * v1.inv_w + dy2 * v2.inv_w) * inv_area;
-  let u_w_dy = (dy0 * v0.u_w + dy1 * v1.u_w + dy2 * v2.u_w) * inv_area;
-  let v_w_dy = (dy0 * v0.v_w + dy1 * v1.v_w + dy2 * v2.v_w) * inv_area;
-
-  // Top-left fill rule, not strictly needed, but makes the fill more precise
-  let tl0 = (v2.y - v1.y) < 0.0 || ((v2.y - v1.y) == 0.0 && (v2.x - v1.x) < 0.0);
-  let tl1 = (v0.y - v2.y) < 0.0 || ((v0.y - v2.y) == 0.0 && (v0.x - v2.x) < 0.0);
-  let tl2 = (v1.y - v0.y) < 0.0 || ((v1.y - v0.y) == 0.0 && (v1.x - v0.x) < 0.0);
-
   for y in min_yi..=max_yi {
     let mut w0 = w0_row;
     let mut w1 = w1_row;
     let mut w2 = w2_row;
-    let mut inv_w = inv_w_row;
-    let mut u_w = u_w_row;
-    let mut v_w = v_w_row;
 
     for x in min_xi..=max_xi {
-      // If inside the edges and taking crazy top left stuff into account
-      if (w0 < 0.0 || (tl0 && w0 == 0.0)) && (w1 < 0.0 || (tl1 && w1 == 0.0)) && (w2 < 0.0 || (tl2 && w2 == 0.0)) {
+      if w0 <= 0.0 && w1 <= 0.0 && w2 <= 0.0 {
         // Barycentric weights (positive, sum to 1)
         let b0 = w0 * inv_area;
         let b1 = w1 * inv_area;
@@ -316,20 +292,18 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         let surface_colour = match &mat.texture {
           Some(tex) => {
             // Texture mapping requires voodoo with inv_w
-            let w = 1.0 / inv_w;
-            let u = u_w * w;
-            let v = v_w * w;
+            let inv_w = b0 * v0.inv_w + b1 * v1.inv_w + b2 * v2.inv_w;
+            let w = 1.0 / inv_w; // one divide instead of two
+            let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
+            let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
 
             let (texel, alpha) = tex.sample(u, v);
-
-            // Alpha cutout, discard pixels that are transparent in the texture
             if alpha < 0.5 {
+              // skip this pixel, including depth write
               w0 += dx0;
               w1 += dx1;
               w2 += dx2;
-              inv_w += inv_w_dx;
-              u_w += u_w_dx;
-              v_w += v_w_dx;
+
               continue;
             }
 
@@ -340,11 +314,11 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         };
 
         // Default shading uses on vert 0 only (flat)
-        let mut lighting = v0.shade;
+        let mut lighting = v0.light;
 
         // Gouraud shading interpolates between shade at all 3 verts
         if smooth {
-          lighting = v0.shade * b0 + v1.shade * b1 + v2.shade * b2;
+          lighting = v0.light * b0 + v1.light * b1 + v2.light * b2;
         }
 
         buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z as f32);
@@ -353,16 +327,10 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
       w0 += dx0;
       w1 += dx1;
       w2 += dx2;
-      inv_w += inv_w_dx;
-      u_w += u_w_dx;
-      v_w += v_w_dx;
     }
 
     w0_row += dy0;
     w1_row += dy1;
     w2_row += dy2;
-    inv_w_row += inv_w_dy;
-    u_w_row += u_w_dy;
-    v_w_row += v_w_dy;
   }
 }

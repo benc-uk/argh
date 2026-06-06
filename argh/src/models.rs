@@ -69,9 +69,8 @@ impl Texture {
   }
 
   /// Sample the texture with wrap-around addressing.
-  ///
-  /// Uses `u - u.floor()` to fold any UV into [0, 1) before scaling to texel
-  /// space. Works for any texture size (pow2 or not), no division, no branch.
+  /// Uses floor() to fold any UV into [0, 1] before scaling to texel space.
+  /// Works for any texture size (pow2 or not)
   #[inline(always)]
   pub(crate) fn sample(&self, u: f64, v: f64) -> (Colour, f32) {
     let uf = u - u.floor();
