@@ -11,5 +11,10 @@ argh = { path = "../../argh", default-features = false, features = ["web"] }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"
 
+# getrandom needs the `wasm_js` Cargo feature AND the rustc cfg
+# `getrandom_backend="wasm_js"` (set in .cargo/config.toml) to compile for
+# wasm32-unknown-unknown. Two versions are in the dep graph (0.3 via ahash/tobj,
+# 0.4 via something else) so we enable the feature on both versions here.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }
+getrandom_v03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }

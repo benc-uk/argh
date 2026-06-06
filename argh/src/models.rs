@@ -54,9 +54,17 @@ impl Texture {
   }
 
   pub fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
-    let img = image::load_from_memory(bytes)?.to_rgb8();
+    let img = image::load_from_memory(bytes)?.to_rgba8();
     let (w, h) = img.dimensions();
-    let pixels = img.pixels().map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | (p[2] as u32)).collect();
+    let pixels = img
+      .pixels()
+      .map(|p| {
+        ((p[3] as u32) << 24) |   // alpha in top byte
+        ((p[0] as u32) << 16) |
+        ((p[1] as u32) << 8)  |
+        (p[2] as u32)
+      })
+      .collect();
     Ok(Self { pixels, w, h })
   }
 

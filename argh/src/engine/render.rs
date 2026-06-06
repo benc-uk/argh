@@ -93,7 +93,7 @@ impl Engine {
     // 0. Get the matrices we need, model and inverse transpose
     let m = instance.get_model_mat();
     // Inverse transpose of the model matrix in a Mat3 for normals
-    let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_else(Mat3::new);
+    let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_default();
 
     // 1. Combine MVP (model, view, perspective) matrix
     let mvp = cam.pers_mat * cam.view_mat * m;

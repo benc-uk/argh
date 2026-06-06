@@ -21,8 +21,8 @@ use slotmap::{SlotMap, new_key_type};
 use web_time::Instant;
 
 #[cfg(feature = "desktop")]
-use crate::engine::input::Inputs;
-use crate::{app::App, buffer::Buffer, colour::*, engine::render::ProcessedVert, math::Vec3, models::Model, scene::Scene};
+use crate::{app::App, engine::input::Inputs};
+use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, math::Vec3, models::Model, scene::Scene};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;

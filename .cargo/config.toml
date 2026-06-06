@@ -1,0 +1,7 @@
+# getrandom 0.3 (pulled in transitively via ahash -> tobj for the web_wasm
+# example) needs an explicit rustc cfg flag to enable its JS-based backend on
+# wasm32-unknown-unknown. The Cargo "wasm_js" feature on getrandom 0.4 does
+# NOT apply to 0.3, so we have to set the cfg flag here.
+# See: https://docs.rs/getrandom/0.3/getrandom/#webassembly-support
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
