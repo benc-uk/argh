@@ -57,12 +57,17 @@ pub fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, ey
 
   for light in lights.values() {
     // Vectors to and from the surface and the light
-    let l = (light.pos - world).normalize_new();
+    let l_raw = light.pos - world;
+    let d = l_raw.len();
+    let l = l_raw.normalize_new();
     let li = l.invert();
+
+    // Add attenuation
+    let atten = 1.0 / (1.0 + light.atten_linear * d + light.atten_quad * d * d);
 
     // Diffuse lighting
     let n_dot_l = n.dot(l).max(0.0);
-    let diff_col = light.colour * light.brightness * n_dot_l;
+    let diff_col = light.colour * light.brightness * n_dot_l * atten;
     diff_sum += diff_col;
 
     // Specular
@@ -71,7 +76,7 @@ pub fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, ey
       let r = li.reflect(n);
       let v_dot_r = v.dot(r).max(0.0);
       let spec = v_dot_r.powf(hardness);
-      let spec_col = light.colour * spec * light.brightness;
+      let spec_col = light.colour * spec * light.brightness * atten;
       spec_sum += spec_col;
     }
   }

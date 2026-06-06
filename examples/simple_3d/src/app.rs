@@ -39,9 +39,9 @@ impl App for MyApp {
 pub fn new(eng: &mut Engine) -> MyApp {
   let mut scene = Scene::new();
 
-  scene.add_light(Light::new(v3(3.0, 7.0, 5.0), 1.0, WHITE));
-  scene.add_light(Light::new(v3(-6.0, 7.0, 5.0), 0.8, BLUE));
-  scene.add_light(Light::new(v3(8.0, -2.0, 9.0), 0.5, RED));
+  scene.add_light(Light::new(v3(3.0, 3.0, 4.0), 1.0, WHITE));
+  scene.add_light(Light::new(v3(-5.0, 3.0, 4.0), 1.8, BLUE));
+  scene.add_light(Light::new(v3(2.0, -1.0, 2.0), 1.0, RED));
 
   let crate_tex = Texture::new("assets/checker_256.png").unwrap();
   let earth_tex = Texture::new("assets/earth.png").unwrap();

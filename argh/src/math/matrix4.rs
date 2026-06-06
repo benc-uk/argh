@@ -38,6 +38,12 @@ impl std::fmt::Debug for Mat4Error {
 }
 
 impl Mat4 {
+  /// Internal read-only accessor to the raw storage. Sibling math modules
+  /// only; nobody else needs to see how Mat4 lays out its bytes.
+  pub(super) fn raw(&self) -> &[[f64; 4]; 4] {
+    &self.ele
+  }
+
   /// New identity matrix
   pub fn new() -> Self {
     Self {
@@ -194,6 +200,26 @@ impl Mat4 {
     self.ele[1][1] = sy;
     self.ele[2][2] = sz;
   }
+
+  /// Transform a position. Implicitly w = 1, so translation IS applied.
+  /// Use for vertex positions, light positions, camera positions, anything that is a point in 3D world space
+  pub fn transform_point(self, v: &Vec3) -> Vec3 {
+    Vec3 {
+      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0] * v.z + self.ele[3][0], // implicit * 1 removed
+      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1] * v.z + self.ele[3][1], // implicit * 1 removed
+      z: self.ele[0][2] * v.x + self.ele[1][2] * v.y + self.ele[2][2] * v.z + self.ele[3][2], // implicit * 1 removed
+    }
+  }
+
+  /// Transform a direction. Implicitly w = 0, so translation is IGNORED.
+  /// Use for tangents, view directions, directional-light directions, ray directions etc
+  pub fn transform_dir(self, v: &Vec3) -> Vec3 {
+    Vec3 {
+      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0] * v.z, // implicit w * 0 removed
+      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1] * v.z, // implicit w * 0 removed
+      z: self.ele[0][2] * v.x + self.ele[1][2] * v.y + self.ele[2][2] * v.z, // implicit w * 0 removed
+    }
+  }
 }
 
 impl fmt::Display for Mat4 {
@@ -222,18 +248,18 @@ impl fmt::Display for Mat4 {
   }
 }
 
-impl Mul<&Vec3> for Mat4 {
-  type Output = Vec3;
+// impl Mul<&Vec3> for Mat4 {
+//   type Output = Vec3;
 
-  /// Multiply and transform given Vec3 by this matrix, assumes that w = 1, so will be treated like a point and translated
-  fn mul(self, v: &Vec3) -> Vec3 {
-    Vec3 {
-      x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0] * v.z + self.ele[3][0], // implicit * 1 removed
-      y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1] * v.z + self.ele[3][1], // implicit * 1 removed
-      z: self.ele[0][2] * v.x + self.ele[1][2] * v.y + self.ele[2][2] * v.z + self.ele[3][2], // implicit * 1 removed
-    }
-  }
-}
+//   /// Multiply and transform given Vec3 by this matrix, assumes that w = 1, so will be treated like a point and translated
+//   fn mul(self, v: &Vec3) -> Vec3 {
+//     Vec3 {
+//       x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0] * v.z + self.ele[3][0], // implicit * 1 removed
+//       y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1] * v.z + self.ele[3][1], // implicit * 1 removed
+//       z: self.ele[0][2] * v.x + self.ele[1][2] * v.y + self.ele[2][2] * v.z + self.ele[3][2], // implicit * 1 removed
+//     }
+//   }
+// }
 
 impl Mul<&Vec4> for Mat4 {
   type Output = Vec4;
@@ -265,7 +291,7 @@ impl Mul<Self> for Mat4 {
 }
 
 impl MulAssign<Self> for Mat4 {
-  /// Multiply together two Mat3 to combine or compose them, mutate & store in place
+  /// Multiply together two Mat4 to combine or compose them, mutate & store in place
   fn mul_assign(&mut self, m: Self) {
     *self = *self * m;
   }
@@ -274,12 +300,12 @@ impl MulAssign<Self> for Mat4 {
 impl Mul<&Vec<Vec3>> for Mat4 {
   type Output = Vec<Vec3>;
 
-  /// Multiply a list of points by a matrix
+  /// Multiply a list of [Vec3] points by this matrix, these will be treated as points not directions
   fn mul(self, points: &Vec<Vec3>) -> Vec<Vec3> {
     let mut out = Vec::with_capacity(points.len());
 
     for p in points {
-      out.push(self * p);
+      out.push(self.transform_point(p));
     }
 
     out
@@ -289,7 +315,7 @@ impl Mul<&Vec<Vec3>> for Mat4 {
 impl Mul<&Vec<Vec4>> for Mat4 {
   type Output = Vec<Vec4>;
 
-  /// Multiply a list of points by a matrix
+  /// Multiply a list of [Vec4] points by this matrix
   fn mul(self, points: &Vec<Vec4>) -> Vec<Vec4> {
     let mut out = Vec::with_capacity(points.len());
 

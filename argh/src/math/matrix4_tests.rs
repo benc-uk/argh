@@ -82,14 +82,14 @@ fn test_new_scale_sets_diagonal() {
 #[test]
 fn test_new_scale_with_negative_values() {
   let m = Mat4::new_scale(-1.0, -2.0, -3.0);
-  let v = m * &Vec3::new(1.0, 1.0, 1.0);
+  let v = m.transform_point(&Vec3::new(1.0, 1.0, 1.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(-1.0, -2.0, -3.0)));
 }
 
 #[test]
 fn test_new_scale_zero_collapses() {
   let m = Mat4::new_scale(0.0, 0.0, 0.0);
-  let v = m * &Vec3::new(5.0, 6.0, 7.0);
+  let v = m.transform_point(&Vec3::new(5.0, 6.0, 7.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(0.0, 0.0, 0.0)));
 }
 
@@ -125,7 +125,7 @@ fn test_new_rot_identity_quat_yields_identity_matrix() {
 fn test_new_rot_90_around_z() {
   let q = Quat::new(Vec3::new(0.0, 0.0, 1.0), FRAC_PI_2);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(1.0, 0.0, 0.0);
+  let v = m.transform_point(&Vec3::new(1.0, 0.0, 0.0));
   // +x rotated +90 around +z -> +y
   assert!(vec3_approx_eq(&v, &Vec3::new(0.0, 1.0, 0.0)));
 }
@@ -134,7 +134,7 @@ fn test_new_rot_90_around_z() {
 fn test_new_rot_90_around_x() {
   let q = Quat::new(Vec3::new(1.0, 0.0, 0.0), FRAC_PI_2);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(0.0, 1.0, 0.0);
+  let v = m.transform_point(&Vec3::new(0.0, 1.0, 0.0));
   // +y rotated +90 around +x -> +z
   assert!(vec3_approx_eq(&v, &Vec3::new(0.0, 0.0, 1.0)));
 }
@@ -143,7 +143,7 @@ fn test_new_rot_90_around_x() {
 fn test_new_rot_90_around_y() {
   let q = Quat::new(Vec3::new(0.0, 1.0, 0.0), FRAC_PI_2);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(0.0, 0.0, 1.0);
+  let v = m.transform_point(&Vec3::new(0.0, 0.0, 1.0));
   // +z rotated +90 around +y -> +x
   assert!(vec3_approx_eq(&v, &Vec3::new(1.0, 0.0, 0.0)));
 }
@@ -152,7 +152,7 @@ fn test_new_rot_90_around_y() {
 fn test_new_rot_180_around_z_flips_xy() {
   let q = Quat::new(Vec3::new(0.0, 0.0, 1.0), PI);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(1.0, 2.0, 3.0);
+  let v = m.transform_point(&Vec3::new(1.0, 2.0, 3.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(-1.0, -2.0, 3.0)));
 }
 
@@ -162,7 +162,7 @@ fn test_new_rot_preserves_axis() {
   let axis = Vec3::new(0.0, 0.0, 1.0);
   let q = Quat::new(axis, FRAC_PI_4);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(0.0, 0.0, 5.0);
+  let v = m.transform_point(&Vec3::new(0.0, 0.0, 5.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(0.0, 0.0, 5.0)));
 }
 
@@ -172,7 +172,7 @@ fn test_new_rot_preserves_length() {
   let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), 1.234);
   let m = Mat4::new_rot(q);
   let v = Vec3::new(3.0, -4.0, 5.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   let orig_len_sq = v.x * v.x + v.y * v.y + v.z * v.z;
   let new_len_sq = r.x * r.x + r.y * r.y + r.z * r.z;
   assert!(approx_eq(orig_len_sq, new_len_sq));
@@ -234,14 +234,14 @@ fn test_new_scale_rot_trans_matches_t_r_s() {
 }
 
 // ============================================================================
-// Mat4 * Vec3
+// Mat4::transform_point (Vec3 with implicit w = 1)
 // ============================================================================
 
 #[test]
 fn test_identity_times_vec3_unchanged() {
   let m = Mat4::new();
   let v = Vec3::new(1.5, -2.5, 3.5);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!(vec3_approx_eq(&r, &v));
 }
 
@@ -249,7 +249,7 @@ fn test_identity_times_vec3_unchanged() {
 fn test_identity_times_zero_vec3() {
   let m = Mat4::new();
   let v = Vec3::new(0.0, 0.0, 0.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!(vec3_approx_eq(&r, &Vec3::new(0.0, 0.0, 0.0)));
 }
 
@@ -257,15 +257,15 @@ fn test_identity_times_zero_vec3() {
 fn test_translation_applied_to_vec3() {
   let m = Mat4::new_trans(10.0, 20.0, 30.0);
   let v = Vec3::new(1.0, 2.0, 3.0);
-  let r = m * &v;
-  // Vec3 is treated as a point with implicit w=1
+  let r = m.transform_point(&v);
+  // transform_point uses implicit w=1, so translation is applied
   assert!(vec3_approx_eq(&r, &Vec3::new(11.0, 22.0, 33.0)));
 }
 
 #[test]
 fn test_translation_applied_to_origin() {
   let m = Mat4::new_trans(5.0, -6.0, 7.0);
-  let r = m * &Vec3::new(0.0, 0.0, 0.0);
+  let r = m.transform_point(&Vec3::new(0.0, 0.0, 0.0));
   assert!(vec3_approx_eq(&r, &Vec3::new(5.0, -6.0, 7.0)));
 }
 
@@ -273,7 +273,7 @@ fn test_translation_applied_to_origin() {
 fn test_scale_applied_to_vec3() {
   let m = Mat4::new_scale(2.0, 3.0, 4.0);
   let v = Vec3::new(1.0, 1.0, 1.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!(vec3_approx_eq(&r, &Vec3::new(2.0, 3.0, 4.0)));
 }
 
@@ -281,7 +281,7 @@ fn test_scale_applied_to_vec3() {
 fn test_zero_matrix_collapses_vec3_to_origin() {
   let m = Mat4::zero();
   let v = Vec3::new(99.0, -42.0, 13.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!(vec3_approx_eq(&r, &Vec3::new(0.0, 0.0, 0.0)));
 }
 
@@ -289,7 +289,7 @@ fn test_zero_matrix_collapses_vec3_to_origin() {
 fn test_negative_scale_flips_vec3() {
   let m = Mat4::new_scale(-1.0, 1.0, -1.0);
   let v = Vec3::new(2.0, 3.0, 4.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!(vec3_approx_eq(&r, &Vec3::new(-2.0, 3.0, -4.0)));
 }
 
@@ -334,7 +334,7 @@ fn test_compose_two_translations() {
   let b = Mat4::new_trans(10.0, 20.0, 30.0);
   let c = a * b;
   // Composing two translations should sum them
-  let v = c * &Vec3::new(0.0, 0.0, 0.0);
+  let v = c.transform_point(&Vec3::new(0.0, 0.0, 0.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(11.0, 22.0, 33.0)));
 }
 
@@ -343,7 +343,7 @@ fn test_compose_two_scales() {
   let a = Mat4::new_scale(2.0, 3.0, 4.0);
   let b = Mat4::new_scale(5.0, 6.0, 7.0);
   let c = a * b;
-  let v = c * &Vec3::new(1.0, 1.0, 1.0);
+  let v = c.transform_point(&Vec3::new(1.0, 1.0, 1.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(10.0, 18.0, 28.0)));
 }
 
@@ -354,7 +354,7 @@ fn test_compose_translation_then_scale_associates_correctly() {
   let s = Mat4::new_scale(2.0, 2.0, 2.0);
   let m = s * t;
   let v = Vec3::new(4.0, 5.0, 6.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   let expected = Vec3::new((4.0 + 1.0) * 2.0, (5.0 + 2.0) * 2.0, (6.0 + 3.0) * 2.0);
   assert!(vec3_approx_eq(&r, &expected));
 }
@@ -366,7 +366,7 @@ fn test_compose_scale_then_translation() {
   let t = Mat4::new_trans(1.0, 2.0, 3.0);
   let m = t * s;
   let v = Vec3::new(4.0, 5.0, 6.0);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   let expected = Vec3::new(4.0 * 2.0 + 1.0, 5.0 * 2.0 + 2.0, 6.0 * 2.0 + 3.0);
   assert!(vec3_approx_eq(&r, &expected));
 }
@@ -378,7 +378,7 @@ fn test_compose_two_rotations_equals_combined_angle() {
   let m1 = Mat4::new_rot(q1);
   let m2 = Mat4::new_rot(q2);
   let composed = m2 * m1;
-  let v = composed * &Vec3::new(1.0, 0.0, 0.0);
+  let v = composed.transform_point(&Vec3::new(1.0, 0.0, 0.0));
   // Two pi/4 rotations = pi/2 -> +x becomes +y
   assert!(vec3_approx_eq(&v, &Vec3::new(0.0, 1.0, 0.0)));
 }
@@ -425,7 +425,7 @@ fn test_mul_assign_with_identity_is_noop() {
 }
 
 // ============================================================================
-// Mat4 * &Vec<Vec3>
+// Mat4 * &Vec<Vec3> (batch point transform)
 // ============================================================================
 
 #[test]
@@ -540,8 +540,8 @@ fn test_mul_distributes_over_vec_mul_general() {
   let a = arbitrary_mat4_a();
   let b = arbitrary_mat4_b();
   let v = Vec3::new(1.7, -2.3, 4.1);
-  let lhs = (a * b) * &v;
-  let rhs = a * &(b * &v);
+  let lhs = (a * b).transform_point(&v);
+  let rhs = a.transform_point(&b.transform_point(&v));
   assert!(vec3_approx_eq(&lhs, &rhs));
 }
 
@@ -558,7 +558,7 @@ fn test_mul_associative_general_matrices() {
 fn test_new_rot_180_around_x() {
   let q = Quat::new(Vec3::new(1.0, 0.0, 0.0), PI);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(1.0, 2.0, 3.0);
+  let v = m.transform_point(&Vec3::new(1.0, 2.0, 3.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(1.0, -2.0, -3.0)));
 }
 
@@ -566,7 +566,7 @@ fn test_new_rot_180_around_x() {
 fn test_new_rot_180_around_y() {
   let q = Quat::new(Vec3::new(0.0, 1.0, 0.0), PI);
   let m = Mat4::new_rot(q);
-  let v = m * &Vec3::new(1.0, 2.0, 3.0);
+  let v = m.transform_point(&Vec3::new(1.0, 2.0, 3.0));
   assert!(vec3_approx_eq(&v, &Vec3::new(-1.0, 2.0, -3.0)));
 }
 
@@ -575,8 +575,8 @@ fn test_new_rot_negative_angle_reverses_direction() {
   let pos = Mat4::new_rot(Quat::new(Vec3::new(0.0, 0.0, 1.0), 0.5));
   let neg = Mat4::new_rot(Quat::new(Vec3::new(0.0, 0.0, 1.0), -0.5));
   let v = Vec3::new(1.0, 0.0, 0.0);
-  let rp = pos * &v;
-  let rn = neg * &v;
+  let rp = pos.transform_point(&v);
+  let rn = neg.transform_point(&v);
   // y components should be opposite signs
   assert!(approx_eq(rp.y, -rn.y));
   assert!(approx_eq(rp.x, rn.x));
@@ -646,14 +646,14 @@ fn test_vec_of_points_matches_individual_mul() {
   let batch = m * &pts;
   assert_eq!(batch.len(), pts.len());
   for (i, p) in pts.iter().enumerate() {
-    let single = m * p;
+    let single = m.transform_point(p);
     assert!(vec3_approx_eq(&batch[i], &single), "mismatch at index {}", i);
   }
 }
 
 #[test]
 fn test_mul_general_matrix_vec_hand_computed() {
-  // Hand-built general matrix to catch index mistakes in Mul<&Vec3>
+  // Hand-built general matrix to catch index mistakes in transform_point
   let m = Mat4 {
     ele: [
       [1.0, 2.0, 3.0, 0.0],    // column 0
@@ -665,7 +665,7 @@ fn test_mul_general_matrix_vec_hand_computed() {
   // For v = (1, 1, 1): result.x = 1*1 + 4*1 + 7*1 + 10 = 22
   //                    result.y = 2*1 + 5*1 + 8*1 + 11 = 26
   //                    result.z = 3*1 + 6*1 + 9*1 + 12 = 30
-  let r = m * &Vec3::new(1.0, 1.0, 1.0);
+  let r = m.transform_point(&Vec3::new(1.0, 1.0, 1.0));
   assert!(vec3_approx_eq(&r, &Vec3::new(22.0, 26.0, 30.0)));
 }
 
@@ -827,7 +827,7 @@ fn test_look_at_translates_eye_to_origin() {
   let target = Vec3::new(0.0, 0.0, 0.0);
   let up = Vec3::new(0.0, 1.0, 0.0);
   let m = Mat4::new_look_at(eye, target, up);
-  let r = m * &eye;
+  let r = m.transform_point(&eye);
   assert!(vec3_approx_eq(&r, &Vec3::new(0.0, 0.0, 0.0)));
 }
 
@@ -838,7 +838,7 @@ fn test_look_at_target_lands_in_front_of_camera_minus_z() {
   let eye = Vec3::new(0.0, 0.0, 5.0);
   let target = Vec3::new(0.0, 0.0, 0.0);
   let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
-  let r = m * &target;
+  let r = m.transform_point(&target);
   // x and y should be 0, z should be negative (in front of camera)
   assert!(approx_eq(r.x, 0.0));
   assert!(approx_eq(r.y, 0.0));
@@ -891,8 +891,8 @@ fn test_look_at_preserves_distances() {
   let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
   let p1 = Vec3::new(1.0, 2.0, 3.0);
   let p2 = Vec3::new(-2.0, 1.0, 4.0);
-  let r1 = m * &p1;
-  let r2 = m * &p2;
+  let r1 = m.transform_point(&p1);
+  let r2 = m.transform_point(&p2);
   let dx_world = p2.x - p1.x;
   let dy_world = p2.y - p1.y;
   let dz_world = p2.z - p1.z;
@@ -919,7 +919,7 @@ fn test_look_at_camera_above_looking_down_maps_axes() {
   let m = Mat4::new_look_at(eye, target, up_hint);
   // Verify: world (1, 5, 0) is one unit to the right of the camera in world,
   // which should end up at view x = -1 (because right axis is world -X)
-  let r = m * &Vec3::new(1.0, 5.0, 0.0);
+  let r = m.transform_point(&Vec3::new(1.0, 5.0, 0.0));
   assert!(approx_eq(r.x, -1.0));
   assert!(approx_eq(r.y, 0.0));
   assert!(approx_eq(r.z, 0.0));
@@ -934,7 +934,7 @@ fn test_look_at_point_behind_camera_lands_at_positive_z_view() {
   let target = Vec3::new(0.0, 0.0, 0.0);
   let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
   // World z=10 is on the opposite side of the camera from target (z=0)
-  let r = m * &Vec3::new(0.0, 0.0, 10.0);
+  let r = m.transform_point(&Vec3::new(0.0, 0.0, 10.0));
   assert!(r.z > 0.0, "point behind camera should have view z > 0, got {}", r.z);
 }
 
@@ -945,7 +945,7 @@ fn test_look_at_world_origin_at_view_negative_distance() {
   let eye = Vec3::new(2.0, 3.0, 6.0); // length 7
   let target = Vec3::new(0.0, 0.0, 0.0);
   let m = Mat4::new_look_at(eye, target, Vec3::new(0.0, 1.0, 0.0));
-  let r = m * &target;
+  let r = m.transform_point(&target);
   assert!(approx_eq(r.x, 0.0));
   assert!(approx_eq(r.y, 0.0));
   assert!(approx_eq(r.z, -7.0));

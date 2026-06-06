@@ -3,8 +3,7 @@
 //! # Examples
 //! Minimal usage and getting started
 //! ```no_run
-//! use argh::colour::BLUE;
-//! use argh::engine::{Engine, App};
+//! use argh::prelude::*;
 //!
 //! struct MyApp {}
 //!
@@ -65,7 +64,7 @@ pub mod prelude {
   pub use crate::colour::*;
   pub use crate::engine::{Engine, InstanceHandle, LightHandle, ModelHandle};
   pub use crate::light::Light;
-  pub use crate::math::{Mat3, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
+  pub use crate::math::{Affine2, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
   pub use crate::models::{MATERIAL_PLACEHOLDER, Material, Texture};
   pub use crate::primitives;
   pub use crate::scene::Scene;

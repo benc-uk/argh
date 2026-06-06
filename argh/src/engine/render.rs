@@ -12,15 +12,17 @@ use crate::{
   colour::{BLACK, Colour},
   engine::Scene,
   helpers::{OUT_NEAR, compute_outcode, shade_vert},
-  math::{Vec3, Vec4},
+  math::{Mat3, Vec3, Vec4},
   models::Material,
 };
 
 use super::{Engine, InstanceHandle};
 
+const TRI_AREA_EPS: f64 = 1e-8;
+
 // ProcessedVert collects various data from the processing/transformation of mesh vertex in the rendering pass
 // It holds data ready for rasterization, shading etc
-struct ProcessedVert {
+pub(super) struct ProcessedVert {
   world: Vec3,
   screen: ScreenVert,
   outcode: u8,
@@ -88,93 +90,94 @@ impl Engine {
     // We unwrap here, as model existence is checked when instance is created
     let model = self.models.get(instance.model_handle).unwrap();
 
+    // 0. Get the matrices we need, model and inverse transpose
+    let m = instance.get_model_mat();
+    // Inverse transpose of the model matrix in a Mat3 for normals
+    let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_else(Mat3::new);
+
+    // 1. Combine MVP (model, view, perspective) matrix
+    let mvp = cam.pers_mat * cam.view_mat * m;
+
     // Model is made of meshes, iterate over them
     for mesh in model.meshes.iter() {
-      // 1. Combine MVP (model, view, perspective) matrix
-      let m = instance.get_model_mat();
-      let mvp = cam.pers_mat * cam.view_mat * m;
+      // Clear vert vector cache
+      self.verts.clear();
+      self.normals.clear();
 
       // 2. Process verts, into world space, clip space and screen space
-      let verts: Vec<ProcessedVert> = mesh
-        .verts
-        .iter()
-        .enumerate()
-        .map(|(i, vert)| {
-          // World space: vert transformed by model matrix M
-          let world = m * vert;
+      self.verts.extend(mesh.verts.iter().enumerate().map(|(i, vert)| {
+        // World space: vert transformed by model matrix M
+        let world = m.transform_point(vert);
 
-          // Clip space: vert transformed by MVP
-          let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
+        // Clip space: vert transformed by MVP
+        let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
 
-          // Calc how vertex is clipped or not
-          let outcode = compute_outcode(&clip);
+        // Calc how vertex is clipped or not
+        let outcode = compute_outcode(&clip);
 
-          // 1/w used for perspective and we store it for other reasons too
-          let inv_w = 1.0 / clip.w;
+        // 1/w used for perspective and we store it for other reasons too
+        let inv_w = 1.0 / clip.w;
 
-          // Clip space -> NDCs, which get us towards screen space
-          let ndc_x = clip.x * inv_w;
-          let ndc_y = clip.y * inv_w;
-          let ndc_z = clip.z * inv_w;
-          // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
-          let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
-          let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
+        // Clip space -> NDCs, which get us towards screen space
+        let ndc_x = clip.x * inv_w;
+        let ndc_y = clip.y * inv_w;
+        let ndc_z = clip.z * inv_w;
+        // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
+        let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
 
-          // Reach out to the UV array and pre-mult by 1/w
-          let uv = mesh.uvs[i];
-          let u_w = uv.x * inv_w;
-          let v_w = uv.y * inv_w;
+        // Reach out to the UV array and pre-mult by 1/w
+        let uv = mesh.uvs[i];
+        let u_w = uv.x * inv_w;
+        let v_w = uv.y * inv_w;
 
-          // Bundle up processed data into a single struct
-          ProcessedVert {
-            world,
-            screen: ScreenVert {
-              x: sx,
-              y: sy,
-              z: ndc_z,
-              inv_w,
-              shade: BLACK, // Mutated later
-              u_w,
-              v_w,
-            },
-            outcode,
-          }
-        })
-        .collect();
+        // Bundle up processed data into a single struct
+        ProcessedVert {
+          world,
+          screen: ScreenVert {
+            x: sx,
+            y: sy,
+            z: ndc_z,
+            inv_w,
+            shade: BLACK, // Mutated later
+            u_w,
+            v_w,
+          },
+          outcode,
+        }
+      }));
 
-      // 3. Process normals, we don't do any fancy 3x3 matrix extraction, transpose blah blah
-      // We just rotate them by the model rotation quat for now
-      // TODO: We probably do need to do this the proper way at some point
-      let normals: Vec<Vec3> = mesh.normals.iter().map(|n| instance.rot.rotate_vec3(*n)).collect();
+      // 3. Process normals using the Mat3 inverse transpose of the model matrix
+      self.normals.extend(mesh.normals.iter().map(|n| (m_inv_t * n).normalize_new()));
 
-      // 3. Now to rendering triangles
+      // 4. Now to rendering triangles
       // Walk the index list 3 at a time for triangles, cull, shade & rasterize
       for tri in mesh.indices.chunks(3) {
         let i0 = tri[0] as usize;
         let i1 = tri[1] as usize;
         let i2 = tri[2] as usize;
-        let mut sv0 = verts[i0].screen;
-        let mut sv1 = verts[i1].screen;
-        let mut sv2 = verts[i2].screen;
-        let wv0 = verts[i0].world;
-        let wv1 = verts[i1].world;
-        let wv2 = verts[i2].world;
+        let mut sv0 = self.verts[i0].screen;
+        let mut sv1 = self.verts[i1].screen;
+        let mut sv2 = self.verts[i2].screen;
+        let wv0 = self.verts[i0].world;
+        let wv1 = self.verts[i1].world;
+        let wv2 = self.verts[i2].world;
 
         // It's convention that the normals list is in the same order as the verts list
         // Otherwise we're in impossible mess TBH
-        let mut n0 = normals[i0];
-        let n1 = normals[i1];
-        let n2 = normals[i2];
+        let mut n0 = self.normals[i0];
+        let n1 = self.normals[i1];
+        let n2 = self.normals[i2];
 
         // Trivial reject: all three vertices outside the SAME plane.
-        let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
+        let combined_out = self.verts[i0].outcode & self.verts[i1].outcode & self.verts[i2].outcode;
         if combined_out != 0 {
           continue;
         }
 
         // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
         // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
-        let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & OUT_NEAR;
+        let any_near = (self.verts[i0].outcode | self.verts[i1].outcode | self.verts[i2].outcode) & OUT_NEAR;
         if any_near != 0 {
           continue;
         }
@@ -228,9 +231,10 @@ fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
 #[inline(always)]
 fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material, smooth: bool) {
   let area = edge_function(v1, v2, v0.x, v0.y);
-  if area == 0.0 {
+  // degenerate triangle, save ourselves a NaN
+  if area.abs() < TRI_AREA_EPS {
     return;
-  } // degenerate triangle, save ourselves a NaN
+  }
 
   // We need inverse area for Barycentric gubbins later
   let inv_area = 1.0 / area;
@@ -270,13 +274,36 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
   let dy1 = v0.x - v2.x;
   let dy2 = v1.x - v0.x;
 
+  // starting inv_w / u_w / v_w at top-left of bbox
+  let mut inv_w_row = (w0_row * v0.inv_w + w1_row * v1.inv_w + w2_row * v2.inv_w) * inv_area;
+  let mut u_w_row = (w0_row * v0.u_w + w1_row * v1.u_w + w2_row * v2.u_w) * inv_area;
+  let mut v_w_row = (w0_row * v0.v_w + w1_row * v1.v_w + w2_row * v2.v_w) * inv_area;
+
+  // per-x and per-y deltas for inv_w, u_w and v_w (constants for the whole triangle)
+  let inv_w_dx = (dx0 * v0.inv_w + dx1 * v1.inv_w + dx2 * v2.inv_w) * inv_area;
+  let u_w_dx = (dx0 * v0.u_w + dx1 * v1.u_w + dx2 * v2.u_w) * inv_area;
+  let v_w_dx = (dx0 * v0.v_w + dx1 * v1.v_w + dx2 * v2.v_w) * inv_area;
+
+  let inv_w_dy = (dy0 * v0.inv_w + dy1 * v1.inv_w + dy2 * v2.inv_w) * inv_area;
+  let u_w_dy = (dy0 * v0.u_w + dy1 * v1.u_w + dy2 * v2.u_w) * inv_area;
+  let v_w_dy = (dy0 * v0.v_w + dy1 * v1.v_w + dy2 * v2.v_w) * inv_area;
+
+  // Top-left fill rule, not strictly needed, but makes the fill more precise
+  let tl0 = (v2.y - v1.y) < 0.0 || ((v2.y - v1.y) == 0.0 && (v2.x - v1.x) < 0.0);
+  let tl1 = (v0.y - v2.y) < 0.0 || ((v0.y - v2.y) == 0.0 && (v0.x - v2.x) < 0.0);
+  let tl2 = (v1.y - v0.y) < 0.0 || ((v1.y - v0.y) == 0.0 && (v1.x - v0.x) < 0.0);
+
   for y in min_yi..=max_yi {
     let mut w0 = w0_row;
     let mut w1 = w1_row;
     let mut w2 = w2_row;
+    let mut inv_w = inv_w_row;
+    let mut u_w = u_w_row;
+    let mut v_w = v_w_row;
 
     for x in min_xi..=max_xi {
-      if w0 <= 0.0 && w1 <= 0.0 && w2 <= 0.0 {
+      // If inside the edges and taking crazy top left stuff into account
+      if (w0 < 0.0 || (tl0 && w0 == 0.0)) && (w1 < 0.0 || (tl1 && w1 == 0.0)) && (w2 < 0.0 || (tl2 && w2 == 0.0)) {
         // Barycentric weights (positive, sum to 1)
         let b0 = w0 * inv_area;
         let b1 = w1 * inv_area;
@@ -289,18 +316,20 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         let surface_colour = match &mat.texture {
           Some(tex) => {
             // Texture mapping requires voodoo with inv_w
-            let inv_w = b0 * v0.inv_w + b1 * v1.inv_w + b2 * v2.inv_w;
-            let w = 1.0 / inv_w; // one divide instead of two
-            let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
-            let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
+            let w = 1.0 / inv_w;
+            let u = u_w * w;
+            let v = v_w * w;
 
             let (texel, alpha) = tex.sample(u, v);
+
+            // Alpha cutout, discard pixels that are transparent in the texture
             if alpha < 0.5 {
-              // /* skip this pixel, including depth write */
               w0 += dx0;
               w1 += dx1;
               w2 += dx2;
-
+              inv_w += inv_w_dx;
+              u_w += u_w_dx;
+              v_w += v_w_dx;
               continue;
             }
 
@@ -324,10 +353,16 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
       w0 += dx0;
       w1 += dx1;
       w2 += dx2;
+      inv_w += inv_w_dx;
+      u_w += u_w_dx;
+      v_w += v_w_dx;
     }
 
     w0_row += dy0;
     w1_row += dy1;
     w2_row += dy2;
+    inv_w_row += inv_w_dy;
+    u_w_row += u_w_dy;
+    v_w_row += v_w_dy;
   }
 }

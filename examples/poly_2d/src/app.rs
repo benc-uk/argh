@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 
+use argh::app::App;
 use argh::prelude::*;
 
 use rand::random_range;
@@ -22,7 +23,7 @@ impl App for MyApp {
     eng.clear(BLACK);
 
     for p in &self.polys {
-      let trans = Mat3::new_scale_rot_trans(p.scale, p.scale, p.speed * t, p.trans.x, p.trans.y);
+      let trans = Affine2::new_scale_rot_trans(p.scale, p.scale, p.speed * t, p.trans.x, p.trans.y);
       eng.draw_poly_line(&(trans * &p.points), p.colour);
     }
   }

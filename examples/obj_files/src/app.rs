@@ -30,8 +30,8 @@ impl App for MyApp {
 pub fn new(eng: &mut Engine) -> MyApp {
   let mut scn = Scene::new();
 
-  scn.add_light(Light::new(v3(89.0, 28.0, 89.0), 1.0, WHITE));
-  scn.add_light(Light::new(v3(-88.0, 42.0, -85.0), 1.0, col(0.3, 0.8, 0.3)));
+  scn.add_light(Light::new(v3(5.0, 31.0, 5.0), 2.0, WHITE));
+  scn.add_light(Light::new(v3(-6.0, 25.0, -6.0), 2.5, col(0.1, 0.9, 0.1)));
 
   let table = eng.load_obj("assets/models/table/table.obj").expect("obj loading failed");
   scn.add_instance_trans(table, V3_ZERO, v3(-PI / 2.0, 0.0, 0.0), v3(0.3, 0.3, 0.6));

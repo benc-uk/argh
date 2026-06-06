@@ -43,7 +43,7 @@ impl Vec2 {
     f64::sqrt(self.x * self.x + self.y * self.y)
   }
 
-  /// Rotate by angle and store in place, convenience method to do this without a Mat3
+  /// Rotate by angle and store in place, convenience method to do this without a Affine2
   pub fn rotate(&mut self, angle_rad: f64) {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
@@ -54,7 +54,7 @@ impl Vec2 {
     self.y = new_y;
   }
 
-  /// Rotate by angle, return result in a new vector, convenience method to do this without a Mat3
+  /// Rotate by angle, return result in a new vector, convenience method to do this without a Affine2
   pub fn rotate_new(&mut self, angle_rad: f64) -> Self {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();

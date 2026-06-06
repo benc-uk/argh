@@ -28,9 +28,9 @@ impl App for WasmApp {
 pub fn new(eng: &mut Engine) -> WasmApp {
   let mut scene = Scene::new();
 
-  scene.add_light(Light::new(v3(15.0, 2.0, 5.0), 0.6, BLUE));
-  scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 0.7, RED));
-  scene.add_light(Light::new(v3(4.0, 9.0, 10.0), 0.9, WHITE));
+  scene.add_light(Light::new(v3(3.0, 3.0, 4.0), 1.0, WHITE));
+  scene.add_light(Light::new(v3(-5.0, 3.0, 4.0), 1.8, BLUE));
+  scene.add_light(Light::new(v3(2.0, -1.0, 2.0), 1.0, RED));
 
   let mut crate_mat = Material::new_textured(Texture::from_bytes(CRATE_IMG_BYTES).unwrap());
   crate_mat.specular = BLACK;

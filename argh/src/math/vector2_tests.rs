@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   math / vector2_tests.rs
-// Purpose:         Tests for Vec2 2D vector operations and Mat3 interactions
+// Purpose:         Tests for Vec2 2D vector operations and Affine2 interactions
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:           AI generated
@@ -736,10 +736,10 @@ fn test_display_negative() {
 }
 
 // ============================================================================
-// Mat3 interactions with Vec2
+// Affine2 interactions with Vec2
 // ============================================================================
 
-use crate::math::Mat3;
+use crate::math::Affine2;
 
 const MAT_EPSILON: f64 = 1e-10;
 
@@ -747,82 +747,82 @@ fn approx(a: f64, b: f64) -> bool {
   (a - b).abs() < MAT_EPSILON
 }
 
-// --- Mat3 * &Vec2 (identity) ---
+// --- Affine2 * &Vec2 (identity) ---
 
 #[test]
-fn test_mat3_identity_preserves_vec2() {
-  let m = Mat3::new();
+fn test_affine2_identity_preserves_vec2() {
+  let m = Affine2::new();
   let v = Vec2::new(42.0, 99.0);
   let result = m * &v;
   assert_eq!(result, v);
 }
 
 #[test]
-fn test_mat3_identity_preserves_zero() {
-  let m = Mat3::new();
+fn test_affine2_identity_preserves_zero() {
+  let m = Affine2::new();
   let v = Vec2::zero();
   let result = m * &v;
   assert_eq!(result, Vec2::zero());
 }
 
-// --- Mat3 translation on Vec2 ---
+// --- Affine2 translation on Vec2 ---
 
 #[test]
-fn test_mat3_translate_vec2() {
-  let m = Mat3::new_trans(10.0, 20.0);
+fn test_affine2_translate_vec2() {
+  let m = Affine2::new_trans(10.0, 20.0);
   let v = Vec2::new(1.0, 2.0);
   assert_eq!(m * &v, Vec2::new(11.0, 22.0));
 }
 
 #[test]
-fn test_mat3_translate_zero_vec2() {
-  let m = Mat3::new_trans(5.0, 10.0);
+fn test_affine2_translate_zero_vec2() {
+  let m = Affine2::new_trans(5.0, 10.0);
   let v = Vec2::zero();
   assert_eq!(m * &v, Vec2::new(5.0, 10.0));
 }
 
 #[test]
-fn test_mat3_negative_translate_vec2() {
-  let m = Mat3::new_trans(-3.0, -7.0);
+fn test_affine2_negative_translate_vec2() {
+  let m = Affine2::new_trans(-3.0, -7.0);
   let v = Vec2::new(3.0, 7.0);
   assert_eq!(m * &v, Vec2::zero());
 }
 
-// --- Mat3 scale on Vec2 ---
+// --- Affine2 scale on Vec2 ---
 
 #[test]
-fn test_mat3_scale_vec2() {
-  let m = Mat3::new_scale(2.0, 3.0);
+fn test_affine2_scale_vec2() {
+  let m = Affine2::new_scale(2.0, 3.0);
   let v = Vec2::new(4.0, 5.0);
   assert_eq!(m * &v, Vec2::new(8.0, 15.0));
 }
 
 #[test]
-fn test_mat3_scale_zero_vec2() {
-  let m = Mat3::new_scale(100.0, 100.0);
+fn test_affine2_scale_zero_vec2() {
+  let m = Affine2::new_scale(100.0, 100.0);
   let v = Vec2::zero();
   assert_eq!(m * &v, Vec2::zero());
 }
 
 #[test]
-fn test_mat3_scale_by_zero() {
-  let m = Mat3::new_scale(0.0, 0.0);
+fn test_affine2_scale_by_zero() {
+  let m = Affine2::new_scale(0.0, 0.0);
   let v = Vec2::new(42.0, 99.0);
   assert_eq!(m * &v, Vec2::zero());
 }
 
 #[test]
-fn test_mat3_non_uniform_scale() {
-  let m = Mat3::new_scale(2.0, 0.5);
+fn test_affine2_non_uniform_scale() {
+  let m = Affine2::new_scale(2.0, 0.5);
   let v = Vec2::new(3.0, 10.0);
   assert_eq!(m * &v, Vec2::new(6.0, 5.0));
 }
 
-// --- Mat3 rotation on Vec2 ---
+// --- Affine2 rotation on Vec2 ---
 
 #[test]
-fn test_mat3_rotate_vec2_90() {
-  let m = Mat3::new_rot(std::f64::consts::FRAC_PI_2);
+fn test_affine2_rotate_vec2_90() {
+  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
   let v = Vec2::new(1.0, 0.0);
   let result = m * &v;
   // new_rot uses CW rotation: (1,0) at 90° -> (0, -1)
@@ -831,8 +831,8 @@ fn test_mat3_rotate_vec2_90() {
 }
 
 #[test]
-fn test_mat3_rotate_vec2_180() {
-  let m = Mat3::new_rot(std::f64::consts::PI);
+fn test_affine2_rotate_vec2_180() {
+  let m = Affine2::new_rot(std::f64::consts::PI);
   let v = Vec2::new(5.0, 0.0);
   let result = m * &v;
   assert!(approx(result.x, -5.0));
@@ -840,8 +840,8 @@ fn test_mat3_rotate_vec2_180() {
 }
 
 #[test]
-fn test_mat3_rotate_vec2_360_is_identity() {
-  let m = Mat3::new_rot(std::f64::consts::TAU);
+fn test_affine2_rotate_vec2_360_is_identity() {
+  let m = Affine2::new_rot(std::f64::consts::TAU);
   let v = Vec2::new(3.0, 4.0);
   let result = m * &v;
   assert!(approx(result.x, 3.0));
@@ -849,27 +849,27 @@ fn test_mat3_rotate_vec2_360_is_identity() {
 }
 
 #[test]
-fn test_mat3_rotate_preserves_length() {
-  let m = Mat3::new_rot(1.234);
+fn test_affine2_rotate_preserves_length() {
+  let m = Affine2::new_rot(1.234);
   let v = Vec2::new(3.0, 4.0);
   let result = m * &v;
   assert!(approx(result.len(), v.len()));
 }
 
 #[test]
-fn test_mat3_rotate_zero_vec2() {
-  let m = Mat3::new_rot(std::f64::consts::FRAC_PI_2);
+fn test_affine2_rotate_zero_vec2() {
+  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
   let v = Vec2::zero();
   let result = m * &v;
   assert!(approx(result.x, 0.0));
   assert!(approx(result.y, 0.0));
 }
 
-// --- Mat3 combined transforms on Vec2 ---
+// --- Affine2 combined transforms on Vec2 ---
 
 #[test]
-fn test_mat3_scale_rot_trans_on_vec2() {
-  let m = Mat3::new_scale_rot_trans(2.0, 2.0, 0.0, 10.0, 10.0);
+fn test_affine2_scale_rot_trans_on_vec2() {
+  let m = Affine2::new_scale_rot_trans(2.0, 2.0, 0.0, 10.0, 10.0);
   let v = Vec2::new(1.0, 1.0);
   let result = m * &v;
   assert!(approx(result.x, 12.0));
@@ -877,9 +877,9 @@ fn test_mat3_scale_rot_trans_on_vec2() {
 }
 
 #[test]
-fn test_mat3_composed_transform_on_vec2() {
-  let s = Mat3::new_scale(3.0, 3.0);
-  let t = Mat3::new_trans(10.0, 20.0);
+fn test_affine2_composed_transform_on_vec2() {
+  let s = Affine2::new_scale(3.0, 3.0);
+  let t = Affine2::new_trans(10.0, 20.0);
   // A * B * v means B applied first; to scale first then translate: m = t * s
   let m = t * s;
   let v = Vec2::new(1.0, 1.0);
@@ -890,11 +890,11 @@ fn test_mat3_composed_transform_on_vec2() {
 }
 
 #[test]
-fn test_mat3_rotate_matches_vec2_rotate_negative() {
+fn test_affine2_rotate_matches_vec2_rotate_negative() {
   // new_rot rotates CW, Vec2::rotate rotates CCW
   // So new_rot(a) should match Vec2::rotate(-a)
   let angle = 1.5;
-  let m = Mat3::new_rot(angle);
+  let m = Affine2::new_rot(angle);
   let v = Vec2::new(3.0, 4.0);
   let mat_result = m * &v;
 
@@ -905,11 +905,11 @@ fn test_mat3_rotate_matches_vec2_rotate_negative() {
   assert!(approx(mat_result.y, v2.y));
 }
 
-// --- Mat3 * &Vec<Vec2> (batch transform) ---
+// --- Affine2 * &Vec<Vec2> (batch transform) ---
 
 #[test]
-fn test_mat3_transform_vec_of_points() {
-  let m = Mat3::new_trans(1.0, 1.0);
+fn test_affine2_transform_vec_of_points() {
+  let m = Affine2::new_trans(1.0, 1.0);
   let points = vec![Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0), Vec2::new(0.0, 1.0)];
   let result = m * &points;
   assert_eq!(result[0], Vec2::new(1.0, 1.0));
@@ -918,16 +918,16 @@ fn test_mat3_transform_vec_of_points() {
 }
 
 #[test]
-fn test_mat3_transform_empty_vec() {
-  let m = Mat3::new_scale(2.0, 2.0);
+fn test_affine2_transform_empty_vec() {
+  let m = Affine2::new_scale(2.0, 2.0);
   let points: Vec<Vec2> = vec![];
   let result = m * &points;
   assert!(result.is_empty());
 }
 
 #[test]
-fn test_mat3_transform_single_point_vec() {
-  let m = Mat3::new_scale(3.0, 4.0);
+fn test_affine2_transform_single_point_vec() {
+  let m = Affine2::new_scale(3.0, 4.0);
   let points = vec![Vec2::new(2.0, 5.0)];
   let result = m * &points;
   assert_eq!(result.len(), 1);
@@ -935,8 +935,8 @@ fn test_mat3_transform_single_point_vec() {
 }
 
 #[test]
-fn test_mat3_batch_consistent_with_individual() {
-  let m = Mat3::new_scale_rot_trans(2.0, 0.5, 0.8, -3.0, 7.0);
+fn test_affine2_batch_consistent_with_individual() {
+  let m = Affine2::new_scale_rot_trans(2.0, 0.5, 0.8, -3.0, 7.0);
   let points = vec![Vec2::new(1.0, 2.0), Vec2::new(-3.0, 4.0), Vec2::new(0.0, 0.0), Vec2::new(100.0, -50.0)];
   let batch = m * &points;
   for (i, p) in points.iter().enumerate() {
@@ -946,13 +946,13 @@ fn test_mat3_batch_consistent_with_individual() {
   }
 }
 
-// --- Chained Mat3 transforms on Vec2 ---
+// --- Chained Affine2 transforms on Vec2 ---
 
 #[test]
-fn test_mat3_chained_transforms_on_vec2() {
-  let s = Mat3::new_scale(2.0, 2.0);
-  let r = Mat3::new_rot(std::f64::consts::FRAC_PI_2);
-  let t = Mat3::new_trans(10.0, 10.0);
+fn test_affine2_chained_transforms_on_vec2() {
+  let s = Affine2::new_scale(2.0, 2.0);
+  let r = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let t = Affine2::new_trans(10.0, 10.0);
   // t * r * s * v: scale first, then rotate, then translate
   let m = t * r * s;
   let v = Vec2::new(1.0, 0.0);
@@ -963,10 +963,10 @@ fn test_mat3_chained_transforms_on_vec2() {
 }
 
 #[test]
-fn test_mat3_mul_assign_then_transform_vec2() {
+fn test_affine2_mul_assign_then_transform_vec2() {
   // To scale first then translate: m = t * s
-  let mut m = Mat3::new_trans(5.0, 5.0);
-  m *= Mat3::new_scale(2.0, 2.0);
+  let mut m = Affine2::new_trans(5.0, 5.0);
+  m *= Affine2::new_scale(2.0, 2.0);
   let v = Vec2::new(1.0, 1.0);
   let result = m * &v;
   // scale(1,1)=(2,2), then translate=(7,7)

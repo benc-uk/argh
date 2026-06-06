@@ -385,7 +385,7 @@ fn test_mul_inverse_via_negative_angle_yields_identity_rotation() {
   let q_inv = Quat::new(Vec3::new(0.6, -0.8, 0.0), -1.2);
   let v = Vec3::new(1.0, 2.0, 3.0);
   let m = Mat4::new_rot(q) * Mat4::new_rot(q_inv);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!((r.x - v.x).abs() < EPSILON);
   assert!((r.y - v.y).abs() < EPSILON);
   assert!((r.z - v.z).abs() < EPSILON);
@@ -400,9 +400,9 @@ fn test_mul_composition_order_via_vector_rotation() {
   let qb = Quat::new(AXIS_Z, FRAC_PI_2);
   let v = Vec3::new(1.0, 0.0, 0.0);
 
-  let combined = Mat4::new_rot(qa * qb) * &v;
-  let stepwise_a_then_b = Mat4::new_rot(qb) * &(Mat4::new_rot(qa) * &v);
-  let stepwise_b_then_a = Mat4::new_rot(qa) * &(Mat4::new_rot(qb) * &v);
+  let combined = Mat4::new_rot(qa * qb).transform_point(&v);
+  let stepwise_a_then_b = Mat4::new_rot(qb).transform_point(&Mat4::new_rot(qa).transform_point(&v));
+  let stepwise_b_then_a = Mat4::new_rot(qa).transform_point(&Mat4::new_rot(qb).transform_point(&v));
 
   // Exactly one of the two stepwise orderings should match qa*qb composition
   let matches_a_then_b =
@@ -467,7 +467,7 @@ fn test_ident_as_rotation_matrix_is_identity() {
   // When converted to a rotation matrix it should be the identity transform
   let m = Mat4::new_rot(Quat::ident());
   let v = Vec3::new(1.7, -2.3, 4.1);
-  let r = m * &v;
+  let r = m.transform_point(&v);
   assert!((r.x - v.x).abs() < EPSILON);
   assert!((r.y - v.y).abs() < EPSILON);
   assert!((r.z - v.z).abs() < EPSILON);
@@ -645,8 +645,8 @@ fn test_rot_x_then_rot_x_via_vector_rotation() {
   let m_acc = Mat4::new_rot(q);
   let m_eq = Mat4::new_rot(Quat::new(AXIS_X, 0.7));
   let v = Vec3::new(1.0, 2.0, 3.0);
-  let ra = m_acc * &v;
-  let rb = m_eq * &v;
+  let ra = m_acc.transform_point(&v);
+  let rb = m_eq.transform_point(&v);
   assert!((ra.x - rb.x).abs() < EPSILON);
   assert!((ra.y - rb.y).abs() < EPSILON);
   assert!((ra.z - rb.z).abs() < EPSILON);
@@ -667,8 +667,8 @@ fn test_rot_x_then_rot_z_compose_via_vector() {
   let m_x = Mat4::new_rot(Quat::new(AXIS_X, FRAC_PI_2));
 
   let v = Vec3::new(1.0, 0.0, 0.0);
-  let via_quat = m_via_quat * &v;
-  let manual = m_x * &(m_z * &v); // apply Z first, then X
+  let via_quat = m_via_quat.transform_point(&v);
+  let manual = m_x.transform_point(&m_z.transform_point(&v)); // apply Z first, then X
 
   assert!((via_quat.x - manual.x).abs() < EPSILON);
   assert!((via_quat.y - manual.y).abs() < EPSILON);

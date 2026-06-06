@@ -45,8 +45,7 @@ argh = { git = "https://github.com/benc-uk/argh" }
 Then create a simple application by implementing the `App` trait and `update()` method, and creating & starting the engine (with an instance of your app):
 
 ```rust
-use argh::colour::BLUE;
-use argh::engine::{Engine, App};
+use argh::prelude::*;
 
 struct MyApp {}
 

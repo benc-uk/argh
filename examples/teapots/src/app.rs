@@ -32,9 +32,9 @@ impl App for MyApp {
 pub fn new(eng: &mut Engine) -> MyApp {
   let mut scene = Scene::new();
 
-  scene.add_light(Light::new(v3(15.0, 2.0, 5.0), 0.6, BLUE));
-  scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 0.7, RED));
-  scene.add_light(Light::new(v3(4.0, 9.0, 10.0), 0.9, WHITE));
+  scene.add_light(Light::new(v3(15.0, 2.0, 5.0), 2.6, BLUE));
+  scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 2.7, RED));
+  scene.add_light(Light::new(v3(4.0, 9.0, 10.0), 3.9, WHITE));
 
   let mut crate_mat = Material::new_textured(Texture::new("assets/crate.png").unwrap());
   crate_mat.specular = BLACK;

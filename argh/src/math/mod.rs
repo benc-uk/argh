@@ -8,6 +8,7 @@
 
 //! This module holds structs & methods for working with 2D and 3D vectors plus transformation matrices, in order to support most 3D graphics operations and algorithms
 
+mod affine2;
 mod matrix3;
 mod matrix4;
 mod quat;
@@ -15,6 +16,7 @@ mod vector2;
 mod vector3;
 mod vector4;
 
+pub use affine2::Affine2;
 pub use matrix3::Mat3;
 pub use matrix4::Mat4;
 pub use quat::Quat;

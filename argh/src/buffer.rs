@@ -49,7 +49,8 @@ impl Buffer {
   #[inline(always)]
   pub fn set_pixel_depth(&mut self, x: usize, y: usize, c: Colour, z: f32) {
     let idx = y * self.w + x;
-    if x < self.w && y < self.h && z < self.depth[idx] {
+    // No bounds check as we don't actually need em
+    if z < self.depth[idx] {
       self.pixels[idx] = c.to_packed_0rgb();
       self.depth[idx] = z;
     }

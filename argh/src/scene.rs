@@ -38,7 +38,7 @@ impl Scene {
       instance_keys: vec![],
       light_keys: vec![],
 
-      ambient_light: Colour::new(0.1, 0.1, 0.1),
+      ambient_light: Colour::new(0.008, 0.008, 0.008),
     }
   }
 

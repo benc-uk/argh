@@ -22,7 +22,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::engine::input::Inputs;
-use crate::{app::App, buffer::Buffer, colour::*, models::Model, scene::Scene};
+use crate::{app::App, buffer::Buffer, colour::*, engine::render::ProcessedVert, math::Vec3, models::Model, scene::Scene};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -47,6 +47,10 @@ pub struct Engine {
   last_time: Instant,
   fps: f64,
   exit: bool,
+
+  // Internal rendering perf cache kinda stuff
+  verts: Vec<ProcessedVert>,
+  normals: Vec<Vec3>,
 
   // Things tracked & cached by the engine
   models: SlotMap<ModelHandle, Model>,
@@ -77,6 +81,8 @@ impl Engine {
       fps: 0.0,
       target_fps: 60,
       aspect: w as f64 / h as f64,
+      verts: vec![],
+      normals: vec![],
 
       exit: false,
       debug: false,
