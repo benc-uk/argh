@@ -11,15 +11,17 @@ pub struct MyApp {
 
 impl App for MyApp {
   fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
+    let dt = dt as f32;
+    let t = t as f32;
     eng.clear(BLACK);
     let scn = &mut self.scene; // Just for convenience 
 
     let mut axis = v3(0.6, 0.3, 0.9);
     axis.normalize();
-    let py = f64::cos(t * 1.0);
-    let px = f64::sin(t * 0.7);
-    let pz = -0.5 - (f64::sin(t * 1.4) * 0.9);
-    let pz2 = f64::sin(t * 0.9) * 0.6;
+    let py = f32::cos(t * 1.0);
+    let px = f32::sin(t * 0.7);
+    let pz = -0.5 - (f32::sin(t * 1.4) * 0.9);
+    let pz2 = f32::sin(t * 0.9) * 0.6;
     scn.instance_mut(self.cube_hdl).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(v3(-px, py, pz));
     scn.instance_mut(self.sphere1_hdl).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(v3(px, -py, pz2));
     scn.instance_mut(self.sphere2_hdl).rot_y(0.1 * dt).set_pos(v3(px * 0.7, py * 1.0, 0.0));

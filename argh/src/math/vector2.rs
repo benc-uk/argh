@@ -18,13 +18,13 @@ mod vector2_tests;
 /// Standard 2D vector with a pair of x, y coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec2 {
-  pub x: f64,
-  pub y: f64,
+  pub x: f32,
+  pub y: f32,
 }
 
 impl Vec2 {
   /// Construct a new vector, slightly shorter than writing Vec2 { x: 1.0, y:2.0 }
-  pub fn new(x: f64, y: f64) -> Self {
+  pub fn new(x: f32, y: f32) -> Self {
     Self { x, y }
   }
 
@@ -39,12 +39,12 @@ impl Vec2 {
   }
 
   /// Return the length of this vector
-  pub fn len(self) -> f64 {
-    f64::sqrt(self.x * self.x + self.y * self.y)
+  pub fn len(self) -> f32 {
+    f32::sqrt(self.x * self.x + self.y * self.y)
   }
 
   /// Rotate by angle and store in place, convenience method to do this without a Affine2
-  pub fn rotate(&mut self, angle_rad: f64) {
+  pub fn rotate(&mut self, angle_rad: f32) {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
 
@@ -55,7 +55,7 @@ impl Vec2 {
   }
 
   /// Rotate by angle, return result in a new vector, convenience method to do this without a Affine2
-  pub fn rotate_new(&mut self, angle_rad: f64) -> Self {
+  pub fn rotate_new(&mut self, angle_rad: f32) -> Self {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
 
@@ -71,16 +71,16 @@ impl Vec2 {
   }
 
   /// Calculate the dot product between this Vec2 and another
-  pub fn dot(self, v: Self) -> f64 {
+  pub fn dot(self, v: Self) -> f32 {
     self.x * v.x + self.y * v.y
   }
 
   /// The distance between this Vec2 and another
-  pub fn dist(self, v: Self) -> f64 {
+  pub fn dist(self, v: Self) -> f32 {
     let a = v.x - self.x;
     let b = v.y - self.y;
 
-    f64::sqrt(a * a + b * b)
+    f32::sqrt(a * a + b * b)
   }
 
   /// Normalize this Vec2
@@ -99,10 +99,10 @@ impl Display for Vec2 {
 }
 
 impl Index<usize> for Vec2 {
-  type Output = f64;
+  type Output = f32;
 
   /// Get the value of the element at given index
-  fn index(&self, i: usize) -> &f64 {
+  fn index(&self, i: usize) -> &f32 {
     match i {
       0 => &self.x,
       1 => &self.y,
@@ -128,18 +128,18 @@ impl MulAssign<Self> for Vec2 {
   }
 }
 
-impl Mul<f64> for Vec2 {
+impl Mul<f32> for Vec2 {
   type Output = Self;
 
   /// Multiply by float (scale) and return as new value
-  fn mul(self, s: f64) -> Self {
+  fn mul(self, s: f32) -> Self {
     Self { x: self.x * s, y: self.y * s }
   }
 }
 
-impl MulAssign<f64> for Vec2 {
+impl MulAssign<f32> for Vec2 {
   /// Multiply by float (scale) and mutate in place
-  fn mul_assign(&mut self, s: f64) {
+  fn mul_assign(&mut self, s: f32) {
     self.x *= s;
     self.y *= s;
   }

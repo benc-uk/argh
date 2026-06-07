@@ -19,15 +19,15 @@ mod vector4_tests;
 /// Standard 4D vector with x, y, z & w coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec4 {
-  pub x: f64,
-  pub y: f64,
-  pub z: f64,
-  pub w: f64,
+  pub x: f32,
+  pub y: f32,
+  pub z: f32,
+  pub w: f32,
 }
 
 impl Vec4 {
   /// Construct a new vector, slightly shorter than writing Vec3 { x:5.0, y:2.0, z:3.0, w:1.0 }
-  pub fn new(x: f64, y: f64, z: f64, w: f64) -> Self {
+  pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
     Self { x, y, z, w }
   }
 
@@ -42,23 +42,23 @@ impl Vec4 {
   }
 
   /// Return the length of this vector
-  pub fn len(self) -> f64 {
-    f64::sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
+  pub fn len(self) -> f32 {
+    f32::sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
   }
 
   /// Calculate the dot product between this Vec4 and another
-  pub fn dot(self, v: Self) -> f64 {
+  pub fn dot(self, v: Self) -> f32 {
     self.x * v.x + self.y * v.y + self.z * v.z + self.w * v.w
   }
 
   /// The distance between this Vec4 and another
-  pub fn dist(self, v: Self) -> f64 {
+  pub fn dist(self, v: Self) -> f32 {
     let a = v.x - self.x;
     let b = v.y - self.y;
     let c = v.z - self.z;
     let d = v.w - self.w;
 
-    f64::sqrt(a * a + b * b + c * c + d * d)
+    f32::sqrt(a * a + b * b + c * c + d * d)
   }
 
   /// Normalize this Vec4 in place
@@ -79,10 +79,10 @@ impl fmt::Display for Vec4 {
 }
 
 impl Index<usize> for Vec4 {
-  type Output = f64;
+  type Output = f32;
 
   /// Get the value of the element at given index
-  fn index(&self, i: usize) -> &f64 {
+  fn index(&self, i: usize) -> &f32 {
     match i {
       0 => &self.x,
       1 => &self.y,
@@ -117,11 +117,11 @@ impl MulAssign<Self> for Vec4 {
   }
 }
 
-impl Mul<f64> for Vec4 {
+impl Mul<f32> for Vec4 {
   type Output = Self;
 
   /// Multiply by a float (scale) and return as new value
-  fn mul(self, s: f64) -> Self {
+  fn mul(self, s: f32) -> Self {
     Self {
       x: self.x * s,
       y: self.y * s,
@@ -131,9 +131,9 @@ impl Mul<f64> for Vec4 {
   }
 }
 
-impl MulAssign<f64> for Vec4 {
+impl MulAssign<f32> for Vec4 {
   /// Multiply by a float (scale) and mutate in place
-  fn mul_assign(&mut self, s: f64) {
+  fn mul_assign(&mut self, s: f32) {
     self.x *= s;
     self.y *= s;
     self.z *= s;

@@ -19,7 +19,7 @@ mod affine2_tests;
 /// Rotations are based on Euler angles, which is ok for 2D
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Affine2 {
-  ele: [[f64; 3]; 3],
+  ele: [[f32; 3]; 3],
 }
 
 impl Affine2 {
@@ -31,32 +31,32 @@ impl Affine2 {
   }
 
   /// New matrix with scale transform set
-  pub fn new_scale(sx: f64, sy: f64) -> Self {
+  pub fn new_scale(sx: f32, sy: f32) -> Self {
     Self {
       ele: [[sx, 0.0, 0.0], [0.0, sy, 0.0], [0.0, 0.0, 1.0]],
     }
   }
 
   /// New matrix with rotation transform set
-  pub fn new_rot(a: f64) -> Self {
-    let c = f64::cos(a);
-    let s = f64::sin(a);
+  pub fn new_rot(a: f32) -> Self {
+    let c = f32::cos(a);
+    let s = f32::sin(a);
     Self {
       ele: [[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]],
     }
   }
 
   /// New matrix with translation transform set
-  pub fn new_trans(x: f64, y: f64) -> Self {
+  pub fn new_trans(x: f32, y: f32) -> Self {
     Self {
       ele: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [x, y, 1.0]],
     }
   }
 
   /// Convenience & optimisation method - new matrix with scale, rotate, and translation transform set
-  pub fn new_scale_rot_trans(sx: f64, sy: f64, a: f64, x: f64, y: f64) -> Self {
-    let ca = f64::cos(a);
-    let sa = f64::sin(a);
+  pub fn new_scale_rot_trans(sx: f32, sy: f32, a: f32, x: f32, y: f32) -> Self {
+    let ca = f32::cos(a);
+    let sa = f32::sin(a);
     Self {
       ele: [[ca * sx, -sa * sx, 0.0], [sa * sy, ca * sy, 0.0], [x, y, 1.0]],
     }
@@ -70,15 +70,15 @@ impl Affine2 {
   }
 
   /// Matrix will translate by the given x & y amounts
-  pub fn trans(&mut self, x: f64, y: f64) {
+  pub fn trans(&mut self, x: f32, y: f32) {
     self.ele[2][0] = x;
     self.ele[2][1] = y;
   }
 
   /// Matrix will rotate by the given angle
-  pub fn rot(&mut self, a: f64) {
-    let c = f64::cos(a);
-    let s = f64::sin(a);
+  pub fn rot(&mut self, a: f32) {
+    let c = f32::cos(a);
+    let s = f32::sin(a);
 
     self.ele[0][0] = c;
     self.ele[0][1] = -s;
@@ -87,7 +87,7 @@ impl Affine2 {
   }
 
   /// Matrix will scale by the given x & y scaling factors
-  pub fn scale(&mut self, sx: f64, sy: f64) {
+  pub fn scale(&mut self, sx: f32, sy: f32) {
     self.ele[0][0] = sx;
     self.ele[1][1] = sy;
   }

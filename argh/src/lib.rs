@@ -70,12 +70,12 @@ pub mod prelude {
   pub use crate::scene::Scene;
 
   #[inline]
-  pub fn v3(x: f64, y: f64, z: f64) -> Vec3 {
+  pub fn v3(x: f32, y: f32, z: f32) -> Vec3 {
     Vec3::new(x, y, z)
   }
 
   #[inline]
-  pub fn v2(x: f64, y: f64) -> Vec2 {
+  pub fn v2(x: f32, y: f32) -> Vec2 {
     Vec2::new(x, y)
   }
 

@@ -19,7 +19,7 @@ mod matrix3_tests;
 /// Only really used for transforming normals
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat3 {
-  ele: [[f64; 3]; 3],
+  ele: [[f32; 3]; 3],
 }
 
 impl Mat3 {
@@ -57,7 +57,7 @@ impl Mat3 {
   }
 
   /// Determinant via cofactor expansion along the first row.
-  pub fn determinant(&self) -> f64 {
+  pub fn determinant(&self) -> f32 {
     let a = self.ele[0][0];
     let b = self.ele[1][0];
     let c = self.ele[2][0];

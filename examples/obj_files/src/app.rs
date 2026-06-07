@@ -5,15 +5,15 @@ pub struct MyApp {
   scn: Scene,
 }
 
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 impl App for MyApp {
   fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
     eng.clear(BLACK);
 
-    let rot = Quat::new(V3_AXIS_Y, 0.5 * dt);
+    let rot = Quat::new(V3_AXIS_Y, 0.5 * dt as f32);
     let mut p = rot.rotate_vec3(self.camera.get_pos());
-    p.y = (f64::sin(t * 0.75) * 10.0) + 40.0;
+    p.y = (f32::sin(t as f32 * 0.75) * 10.0) + 40.0;
     self.camera.set_pos(p);
 
     eng.render(&self.camera, &self.scn);

@@ -41,7 +41,7 @@ new_key_type! {
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
   size: (usize, usize),
-  aspect: f64,
+  aspect: f32,
   buffer: Buffer,
   t: f64,
   last_time: Instant,
@@ -83,7 +83,7 @@ impl Engine {
       last_time: Instant::now(),
       fps: FpsAveragerEight::new(),
       target_fps: 60,
-      aspect: w as f64 / h as f64,
+      aspect: w as f32 / h as f32,
       verts: vec![],
       normals: vec![],
       stat_tri_total: 0,
@@ -169,7 +169,7 @@ impl Engine {
   }
 
   /// Get the aspect ratio of the viewport and window
-  pub fn get_aspect(&self) -> f64 {
+  pub fn get_aspect(&self) -> f32 {
     self.aspect
   }
 

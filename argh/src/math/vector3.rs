@@ -19,9 +19,9 @@ mod vector3_tests;
 /// Standard 3D vector with x, y & z coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec3 {
-  pub x: f64,
-  pub y: f64,
-  pub z: f64,
+  pub x: f32,
+  pub y: f32,
+  pub z: f32,
 }
 
 /// A Vec3 pointing along the x axis [1.0, 0.0, 0.0]
@@ -37,12 +37,12 @@ pub static V3_ONE: Vec3 = Vec3 { x: 1.0, y: 1.0, z: 1.0 };
 
 impl Vec3 {
   /// Construct a new vector, slightly shorter than writing Vec3 { x:1.0, y:2.0, z:3.0 }
-  pub fn new(x: f64, y: f64, z: f64) -> Self {
+  pub fn new(x: f32, y: f32, z: f32) -> Self {
     Self { x, y, z }
   }
 
   /// Construct a new normalized vector
-  pub fn new_normalized(x: f64, y: f64, z: f64) -> Self {
+  pub fn new_normalized(x: f32, y: f32, z: f32) -> Self {
     let mut out = Self { x, y, z };
     out.normalize();
     out
@@ -59,12 +59,12 @@ impl Vec3 {
   }
 
   /// Return the length of this vector
-  pub fn len(self) -> f64 {
-    f64::sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+  pub fn len(self) -> f32 {
+    f32::sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
   }
 
   /// Calculate the dot product between this Vec3 and another
-  pub fn dot(self, v: Self) -> f64 {
+  pub fn dot(self, v: Self) -> f32 {
     self.x * v.x + self.y * v.y + self.z * v.z
   }
 
@@ -78,12 +78,12 @@ impl Vec3 {
   }
 
   /// The distance between this Vec3 and another
-  pub fn dist(self, v: Self) -> f64 {
+  pub fn dist(self, v: Self) -> f32 {
     let a = v.x - self.x;
     let b = v.y - self.y;
     let c = v.z - self.z;
 
-    f64::sqrt(a * a + b * b + c * c)
+    f32::sqrt(a * a + b * b + c * c)
   }
 
   /// Normalize this Vec3 in place
@@ -129,10 +129,10 @@ impl fmt::Display for Vec3 {
 }
 
 impl Index<usize> for Vec3 {
-  type Output = f64;
+  type Output = f32;
 
   /// Get the value of the element at given index
-  fn index(&self, i: usize) -> &f64 {
+  fn index(&self, i: usize) -> &f32 {
     match i {
       0 => &self.x,
       1 => &self.y,
@@ -164,11 +164,11 @@ impl MulAssign<Self> for Vec3 {
   }
 }
 
-impl Mul<f64> for Vec3 {
+impl Mul<f32> for Vec3 {
   type Output = Self;
 
   /// Multiply by a float (scale) and return as new value
-  fn mul(self, s: f64) -> Self {
+  fn mul(self, s: f32) -> Self {
     Self {
       x: self.x * s,
       y: self.y * s,
@@ -177,9 +177,9 @@ impl Mul<f64> for Vec3 {
   }
 }
 
-impl MulAssign<f64> for Vec3 {
+impl MulAssign<f32> for Vec3 {
   /// Multiply by a float (scale) and mutate in place
-  fn mul_assign(&mut self, s: f64) {
+  fn mul_assign(&mut self, s: f32) {
     self.x *= s;
     self.y *= s;
     self.z *= s;
@@ -243,11 +243,11 @@ impl Div<Self> for Vec3 {
   }
 }
 
-impl Div<f64> for Vec3 {
+impl Div<f32> for Vec3 {
   type Output = Self;
 
   /// Divide by a scalar and return as new value
-  fn div(self, s: f64) -> Self {
+  fn div(self, s: f32) -> Self {
     Self {
       x: self.x / s,
       y: self.y / s,

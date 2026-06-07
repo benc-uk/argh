@@ -139,44 +139,44 @@ fn test_sub_new_self_gives_zero() {
 fn test_len_3_4_5() {
   // 3² + 4² + 0² = 25, sqrt(25) = 5
   let v = Vec3::new(3.0, 4.0, 0.0);
-  assert!((v.len() - 5.0).abs() < f64::EPSILON);
+  assert!((v.len() - 5.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_zero_vector() {
   let v = Vec3::zero();
-  assert!((v.len() - 0.0).abs() < f64::EPSILON);
+  assert!((v.len() - 0.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_unit_x() {
   let v = Vec3::new(1.0, 0.0, 0.0);
-  assert!((v.len() - 1.0).abs() < f64::EPSILON);
+  assert!((v.len() - 1.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_unit_y() {
   let v = Vec3::new(0.0, 1.0, 0.0);
-  assert!((v.len() - 1.0).abs() < f64::EPSILON);
+  assert!((v.len() - 1.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_unit_z() {
   let v = Vec3::new(0.0, 0.0, 1.0);
-  assert!((v.len() - 1.0).abs() < f64::EPSILON);
+  assert!((v.len() - 1.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_negative_components() {
   let v = Vec3::new(-3.0, -4.0, 0.0);
-  assert!((v.len() - 5.0).abs() < f64::EPSILON);
+  assert!((v.len() - 5.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_all_components() {
   // 1² + 2² + 2² = 9, sqrt(9) = 3
   let v = Vec3::new(1.0, 2.0, 2.0);
-  assert!((v.len() - 3.0).abs() < f64::EPSILON);
+  assert!((v.len() - 3.0).abs() < f32::EPSILON);
 }
 
 // --- mult (mutating) ---
@@ -934,7 +934,7 @@ fn test_dist_with_negatives() {
   let a = Vec3::new(-1.0, -2.0, -2.0);
   let b = Vec3::new(2.0, 2.0, 4.0);
   // diffs: 3, 4, 6 -> sqrt(9 + 16 + 36) = sqrt(61)
-  assert!((a.dist(b) - f64::sqrt(61.0)).abs() < 1e-10);
+  assert!((a.dist(b) - f32::sqrt(61.0)).abs() < 1e-10);
 }
 
 #[test]
@@ -947,7 +947,7 @@ fn test_dist_from_zero_equals_len() {
 // Tightening: asymmetric transposition catchers, cross/dot interactions
 // ============================================================================
 
-const TIGHT_EPSILON: f64 = 1e-10;
+const TIGHT_EPSILON: f32 = 1e-10;
 
 fn vec3_close(a: Vec3, b: Vec3) -> bool {
   (a.x - b.x).abs() < TIGHT_EPSILON && (a.y - b.y).abs() < TIGHT_EPSILON && (a.z - b.z).abs() < TIGHT_EPSILON

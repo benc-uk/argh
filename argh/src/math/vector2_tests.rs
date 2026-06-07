@@ -138,31 +138,31 @@ fn test_sub_new_self_gives_zero() {
 #[test]
 fn test_len_3_4_triangle() {
   let v = Vec2::new(3.0, 4.0);
-  assert!((v.len() - 5.0).abs() < f64::EPSILON);
+  assert!((v.len() - 5.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_zero_vector() {
   let v = Vec2::zero();
-  assert!((v.len() - 0.0).abs() < f64::EPSILON);
+  assert!((v.len() - 0.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_unit_x() {
   let v = Vec2::new(1.0, 0.0);
-  assert!((v.len() - 1.0).abs() < f64::EPSILON);
+  assert!((v.len() - 1.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_unit_y() {
   let v = Vec2::new(0.0, 1.0);
-  assert!((v.len() - 1.0).abs() < f64::EPSILON);
+  assert!((v.len() - 1.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_len_negative_components() {
   let v = Vec2::new(-3.0, -4.0);
-  assert!((v.len() - 5.0).abs() < f64::EPSILON);
+  assert!((v.len() - 5.0).abs() < f32::EPSILON);
 }
 
 // --- mult (mutating) ---
@@ -661,7 +661,7 @@ fn test_div_assign_mutates_original() {
 #[test]
 fn test_rot_self_90() {
   let mut v = Vec2::new(0.0, 3.0);
-  v.rotate(std::f64::consts::FRAC_PI_2);
+  v.rotate(std::f32::consts::FRAC_PI_2);
   assert_eq!(v.x, -3.0); // x = 3.0
   assert!(v.y < 0.00000001); // y = 0.0
 }
@@ -670,14 +670,14 @@ fn test_rot_self_90() {
 fn test_rotate_zero_angle() {
   let mut v = Vec2::new(3.0, 4.0);
   v.rotate(0.0);
-  assert!((v.x - 3.0).abs() < f64::EPSILON);
-  assert!((v.y - 4.0).abs() < f64::EPSILON);
+  assert!((v.x - 3.0).abs() < f32::EPSILON);
+  assert!((v.y - 4.0).abs() < f32::EPSILON);
 }
 
 #[test]
 fn test_rotate_180() {
   let mut v = Vec2::new(1.0, 0.0);
-  v.rotate(std::f64::consts::PI);
+  v.rotate(std::f32::consts::PI);
   assert!((v.x - (-1.0)).abs() < 1e-10);
   assert!(v.y.abs() < 1e-10);
 }
@@ -685,7 +685,7 @@ fn test_rotate_180() {
 #[test]
 fn test_rotate_new_returns_new_vector() {
   let mut v = Vec2::new(1.0, 0.0);
-  let result = v.rotate_new(std::f64::consts::FRAC_PI_2);
+  let result = v.rotate_new(std::f32::consts::FRAC_PI_2);
   assert!((result.x).abs() < 1e-10);
   assert!((result.y - 1.0).abs() < 1e-10);
 }
@@ -694,8 +694,8 @@ fn test_rotate_new_returns_new_vector() {
 fn test_rotate_new_zero_angle() {
   let mut v = Vec2::new(5.0, 7.0);
   let result = v.rotate_new(0.0);
-  assert!((result.x - 5.0).abs() < f64::EPSILON);
-  assert!((result.y - 7.0).abs() < f64::EPSILON);
+  assert!((result.x - 5.0).abs() < f32::EPSILON);
+  assert!((result.y - 7.0).abs() < f32::EPSILON);
 }
 
 // --- Index ---
@@ -741,9 +741,9 @@ fn test_display_negative() {
 
 use crate::math::Affine2;
 
-const MAT_EPSILON: f64 = 1e-10;
+const MAT_EPSILON: f32 = 1e-10;
 
-fn approx(a: f64, b: f64) -> bool {
+fn approx(a: f32, b: f32) -> bool {
   (a - b).abs() < MAT_EPSILON
 }
 
@@ -822,7 +822,7 @@ fn test_affine2_non_uniform_scale() {
 
 #[test]
 fn test_affine2_rotate_vec2_90() {
-  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let m = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   let v = Vec2::new(1.0, 0.0);
   let result = m * &v;
   // new_rot uses CW rotation: (1,0) at 90° -> (0, -1)
@@ -832,7 +832,7 @@ fn test_affine2_rotate_vec2_90() {
 
 #[test]
 fn test_affine2_rotate_vec2_180() {
-  let m = Affine2::new_rot(std::f64::consts::PI);
+  let m = Affine2::new_rot(std::f32::consts::PI);
   let v = Vec2::new(5.0, 0.0);
   let result = m * &v;
   assert!(approx(result.x, -5.0));
@@ -841,7 +841,7 @@ fn test_affine2_rotate_vec2_180() {
 
 #[test]
 fn test_affine2_rotate_vec2_360_is_identity() {
-  let m = Affine2::new_rot(std::f64::consts::TAU);
+  let m = Affine2::new_rot(std::f32::consts::TAU);
   let v = Vec2::new(3.0, 4.0);
   let result = m * &v;
   assert!(approx(result.x, 3.0));
@@ -858,7 +858,7 @@ fn test_affine2_rotate_preserves_length() {
 
 #[test]
 fn test_affine2_rotate_zero_vec2() {
-  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let m = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   let v = Vec2::zero();
   let result = m * &v;
   assert!(approx(result.x, 0.0));
@@ -951,7 +951,7 @@ fn test_affine2_batch_consistent_with_individual() {
 #[test]
 fn test_affine2_chained_transforms_on_vec2() {
   let s = Affine2::new_scale(2.0, 2.0);
-  let r = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let r = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   let t = Affine2::new_trans(10.0, 10.0);
   // t * r * s * v: scale first, then rotate, then translate
   let m = t * r * s;
@@ -1027,14 +1027,14 @@ fn test_dot_commutative() {
 #[test]
 fn test_dot_self_equals_len_squared() {
   let v = Vec2::new(3.0, 4.0);
-  assert!((v.dot(v) - v.len() * v.len()).abs() < f64::EPSILON);
+  assert!((v.dot(v) - v.len() * v.len()).abs() < f32::EPSILON);
 }
 
 // ============================================================================
 // Tightening: dist, asymmetric transposition checks, non-mutation
 // ============================================================================
 
-const TIGHT_EPSILON: f64 = 1e-10;
+const TIGHT_EPSILON: f32 = 1e-10;
 
 fn vec2_close(a: Vec2, b: Vec2) -> bool {
   (a.x - b.x).abs() < TIGHT_EPSILON && (a.y - b.y).abs() < TIGHT_EPSILON
@@ -1080,7 +1080,7 @@ fn test_dist_equals_len_of_difference() {
 fn test_rotate_new_does_not_mutate_self() {
   let original = Vec2::new(3.0, 4.0);
   let mut v = original;
-  let _ = v.rotate_new(std::f64::consts::FRAC_PI_2);
+  let _ = v.rotate_new(std::f32::consts::FRAC_PI_2);
   assert_eq!(v, original);
 }
 
@@ -1088,7 +1088,7 @@ fn test_rotate_new_does_not_mutate_self() {
 fn test_rotate_full_turn_returns_to_origin() {
   let mut v = Vec2::new(2.0, 5.0);
   let original = v;
-  v.rotate(2.0 * std::f64::consts::PI);
+  v.rotate(2.0 * std::f32::consts::PI);
   assert!(vec2_close(v, original));
 }
 
@@ -1105,7 +1105,7 @@ fn test_rotate_negative_is_inverse() {
 fn test_rotate_asymmetric_90() {
   // Catches x/y swap: (3, 4) rotated +90 -> (-4, 3)
   let mut v = Vec2::new(3.0, 4.0);
-  v.rotate(std::f64::consts::FRAC_PI_2);
+  v.rotate(std::f32::consts::FRAC_PI_2);
   assert!(vec2_close(v, Vec2::new(-4.0, 3.0)));
 }
 

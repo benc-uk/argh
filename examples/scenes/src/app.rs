@@ -15,7 +15,11 @@ impl App for MyApp {
     let cube = self.scn2.instances_mut().next().expect("exists");
     cube.rot_y(0.02);
     let sphere = self.scn1.instances_mut().next().expect("exists");
-    sphere.set_pos(Vec3 { x: 0.0, y: f64::sin(t), z: 0.0 });
+    sphere.set_pos(Vec3 {
+      x: 0.0,
+      y: f32::sin(t as f32),
+      z: 0.0,
+    });
 
     match self.active_scn {
       1 => eng.render(&self.camera, &self.scn1),

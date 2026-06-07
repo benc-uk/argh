@@ -16,10 +16,10 @@ mod quat_tests;
 /// A minimal implementation of of a 4-tuple Quaternion (x, y, z, w) used for rotations
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Quat {
-  pub x: f64, // imaginary i
-  pub y: f64, // imaginary j
-  pub z: f64, // imaginary k
-  pub w: f64, // scalar (real) part
+  pub x: f32, // imaginary i
+  pub y: f32, // imaginary j
+  pub z: f32, // imaginary k
+  pub w: f32, // scalar (real) part
 }
 
 impl Quat {
@@ -27,7 +27,7 @@ impl Quat {
   /// # Arguments
   /// * `axis` - Vector representing the axis, should be normalized
   /// * `a` - Angle in radians
-  pub fn new(axis: Vec3, a: f64) -> Self {
+  pub fn new(axis: Vec3, a: f32) -> Self {
     let half = a * 0.5;
     let s = half.sin();
     Self {
@@ -65,42 +65,42 @@ impl Quat {
   }
 
   /// Rotate around the local X axis by given angle (post-multiplies)
-  pub fn rot_x(&mut self, a: f64) {
+  pub fn rot_x(&mut self, a: f32) {
     self.rotate_local(V3_AXIS_X, a);
   }
 
   /// Rotate around the local Y axis by given angle (post-multiplies)
-  pub fn rot_y(&mut self, a: f64) {
+  pub fn rot_y(&mut self, a: f32) {
     self.rotate_local(V3_AXIS_Y, a);
   }
 
   /// Rotate around the local Z axis by given angle (post-multiplies)
-  pub fn rot_z(&mut self, a: f64) {
+  pub fn rot_z(&mut self, a: f32) {
     self.rotate_local(V3_AXIS_Z, a);
   }
 
   /// Rotate around the world X axis by given angle (pre-multiplies)
-  pub fn rot_x_world(&mut self, a: f64) {
+  pub fn rot_x_world(&mut self, a: f32) {
     self.rotate_world(V3_AXIS_X, a);
   }
 
   /// Rotate around the world Y axis by given angle (pre-multiplies)
-  pub fn rot_y_world(&mut self, a: f64) {
+  pub fn rot_y_world(&mut self, a: f32) {
     self.rotate_world(V3_AXIS_Y, a);
   }
 
   /// Rotate around the world Z axis by given angle (pre-multiplies)
-  pub fn rot_z_world(&mut self, a: f64) {
+  pub fn rot_z_world(&mut self, a: f32) {
     self.rotate_world(V3_AXIS_Z, a);
   }
 
   /// Rotate around an axis in world space
-  pub fn rotate_world(&mut self, axis: Vec3, a: f64) {
+  pub fn rotate_world(&mut self, axis: Vec3, a: f32) {
     *self = Self::new(axis, a) * *self; // pre-multiply
   }
 
   /// Rotate around an axis in local object space
-  pub fn rotate_local(&mut self, axis: Vec3, a: f64) {
+  pub fn rotate_local(&mut self, axis: Vec3, a: f32) {
     *self = *self * Self::new(axis, a); // post-multiply
   }
 }

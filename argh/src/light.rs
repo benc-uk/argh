@@ -15,10 +15,10 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub struct Light {
   pub pos: Vec3,
-  pub brightness: f64,
+  pub brightness: f32,
   pub colour: Colour,
-  pub atten_linear: f64,
-  pub atten_quad: f64,
+  pub atten_linear: f32,
+  pub atten_quad: f32,
 }
 
 impl Light {
@@ -27,7 +27,7 @@ impl Light {
   /// * `pos` - Position in world space of the light
   /// * `brightness` - Scales the brightness of the the light 0-1
   /// * `colour` - Light colour
-  pub fn new(pos: Vec3, brightness: f64, colour: Colour) -> Self {
+  pub fn new(pos: Vec3, brightness: f32, colour: Colour) -> Self {
     Self {
       pos,
       brightness,

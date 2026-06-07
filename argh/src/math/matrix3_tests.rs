@@ -9,9 +9,9 @@
 use super::*;
 use crate::math::Vec3;
 
-const EPSILON: f64 = 1e-10;
+const EPSILON: f32 = 1e-10;
 
-fn approx_eq(a: f64, b: f64) -> bool {
+fn approx_eq(a: f32, b: f32) -> bool {
   (a - b).abs() < EPSILON
 }
 
@@ -32,7 +32,7 @@ fn vec3_approx_eq(a: &Vec3, b: &Vec3) -> bool {
 
 // Helper: build a Mat3 from explicit rows for readability in test setups.
 // Caller passes maths-style rows (row, col); we store column-major (ele[col][row]).
-fn from_rows(r0: [f64; 3], r1: [f64; 3], r2: [f64; 3]) -> Mat3 {
+fn from_rows(r0: [f32; 3], r1: [f32; 3], r2: [f32; 3]) -> Mat3 {
   Mat3 {
     ele: [[r0[0], r1[0], r2[0]], [r0[1], r1[1], r2[1]], [r0[2], r1[2], r2[2]]],
   }

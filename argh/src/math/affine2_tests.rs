@@ -8,9 +8,9 @@
 
 use super::*;
 
-const EPSILON: f64 = 1e-10;
+const EPSILON: f32 = 1e-10;
 
-fn approx_eq(a: f64, b: f64) -> bool {
+fn approx_eq(a: f32, b: f32) -> bool {
   (a - b).abs() < EPSILON
 }
 
@@ -101,7 +101,7 @@ fn test_new_rot_zero() {
 
 #[test]
 fn test_new_rot_90() {
-  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let m = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   // ele layout: ele[col][row], new_rot stores [[c, -s, 0], [s, c, 0], ...]
   assert!(approx_eq(m.ele[0][0], 0.0)); // cos(90)
   assert!(approx_eq(m.ele[0][1], -1.0)); // -sin(90)
@@ -111,7 +111,7 @@ fn test_new_rot_90() {
 
 #[test]
 fn test_new_rot_180() {
-  let m = Affine2::new_rot(std::f64::consts::PI);
+  let m = Affine2::new_rot(std::f32::consts::PI);
   assert!(approx_eq(m.ele[0][0], -1.0));
   assert!(approx_eq(m.ele[1][1], -1.0));
   assert!(approx_eq(m.ele[1][0], 0.0));
@@ -120,14 +120,14 @@ fn test_new_rot_180() {
 
 #[test]
 fn test_new_rot_360_is_identity() {
-  let m = Affine2::new_rot(std::f64::consts::TAU);
+  let m = Affine2::new_rot(std::f32::consts::TAU);
   assert!(affine2_approx_eq(&m, &Affine2::new()));
 }
 
 #[test]
 fn test_new_rot_negative() {
-  let m_pos = Affine2::new_rot(std::f64::consts::FRAC_PI_4);
-  let m_neg = Affine2::new_rot(-std::f64::consts::FRAC_PI_4);
+  let m_pos = Affine2::new_rot(std::f32::consts::FRAC_PI_4);
+  let m_neg = Affine2::new_rot(-std::f32::consts::FRAC_PI_4);
   // cos is even, sin is odd, so [0][0] should match, [0][1] should negate
   assert!(approx_eq(m_pos.ele[0][0], m_neg.ele[0][0]));
   assert!(approx_eq(m_pos.ele[0][1], -m_neg.ele[0][1]));
@@ -175,7 +175,7 @@ fn test_new_scale_rot_trans_identity_values() {
 
 #[test]
 fn test_new_scale_rot_trans_rotation_only() {
-  let a = std::f64::consts::FRAC_PI_2;
+  let a = std::f32::consts::FRAC_PI_2;
   let m = Affine2::new_scale_rot_trans(1.0, 1.0, a, 0.0, 0.0);
   let expected = Affine2::new_rot(a);
   assert!(affine2_approx_eq(&m, &expected));
@@ -207,7 +207,7 @@ fn test_trans_overwrites_previous() {
 #[test]
 fn test_rot_sets_rotation() {
   let mut m = Affine2::new();
-  m.rot(std::f64::consts::FRAC_PI_2);
+  m.rot(std::f32::consts::FRAC_PI_2);
   assert!(approx_eq(m.ele[0][0], 0.0));
   assert!(approx_eq(m.ele[0][1], -1.0));
   assert!(approx_eq(m.ele[1][0], 1.0));
@@ -216,7 +216,7 @@ fn test_rot_sets_rotation() {
 
 #[test]
 fn test_rot_matches_new_rot() {
-  let a = std::f64::consts::FRAC_PI_3; // any non-trivial angle
+  let a = std::f32::consts::FRAC_PI_3; // any non-trivial angle
   let m1 = Affine2::new_rot(a);
   let mut m2 = Affine2::new();
   m2.rot(a);
@@ -323,7 +323,7 @@ fn test_mul_vec2_scale() {
 
 #[test]
 fn test_mul_vec2_rotation_90() {
-  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let m = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   let v = Vec2::new(1.0, 0.0);
   let result = m * &v;
   // new_rot uses clockwise rotation: (1,0) at 90° CW -> (0, -1)
@@ -333,7 +333,7 @@ fn test_mul_vec2_rotation_90() {
 
 #[test]
 fn test_mul_vec2_rotation_180() {
-  let m = Affine2::new_rot(std::f64::consts::PI);
+  let m = Affine2::new_rot(std::f32::consts::PI);
   let v = Vec2::new(1.0, 0.0);
   let result = m * &v;
   assert!(approx_eq(result.x, -1.0));
@@ -439,10 +439,10 @@ fn test_mul_affine2_two_scales() {
 
 #[test]
 fn test_mul_affine2_two_rotations() {
-  let a = Affine2::new_rot(std::f64::consts::FRAC_PI_4);
-  let b = Affine2::new_rot(std::f64::consts::FRAC_PI_4);
+  let a = Affine2::new_rot(std::f32::consts::FRAC_PI_4);
+  let b = Affine2::new_rot(std::f32::consts::FRAC_PI_4);
   let result = a * b;
-  let expected = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let expected = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   assert!(affine2_approx_eq(&result, &expected));
 }
 
@@ -497,7 +497,7 @@ fn test_mul_assign_equivalent_to_mul() {
 #[test]
 fn test_mul_assign_chained() {
   let s = Affine2::new_scale(2.0, 2.0);
-  let r = Affine2::new_rot(std::f64::consts::FRAC_PI_4);
+  let r = Affine2::new_rot(std::f32::consts::FRAC_PI_4);
   let t = Affine2::new_trans(10.0, 20.0);
 
   let mut m = s;
@@ -581,7 +581,7 @@ fn test_mul_vec_of_vec2_consistent_with_single() {
 fn test_scale_rot_trans_convenience_matches_manual() {
   let sx = 2.0;
   let sy = 3.0;
-  let angle = std::f64::consts::FRAC_PI_6;
+  let angle = std::f32::consts::FRAC_PI_6;
   let tx = 10.0;
   let ty = 20.0;
 
@@ -598,8 +598,8 @@ fn test_scale_rot_trans_convenience_matches_manual() {
   assert!(approx_eq(result.y, expected_y));
 
   // Also verify the ele values are as documented
-  let ca = f64::cos(angle);
-  let sa = f64::sin(angle);
+  let ca = f32::cos(angle);
+  let sa = f32::sin(angle);
   assert!(approx_eq(combined.ele[0][0], ca * sx));
   assert!(approx_eq(combined.ele[0][1], -sa * sx));
   assert!(approx_eq(combined.ele[1][0], sa * sy));
@@ -611,7 +611,7 @@ fn test_scale_rot_trans_convenience_matches_manual() {
 #[test]
 fn test_rotate_point_around_origin() {
   // new_rot does CW rotation: (1, 0) by 90° CW -> (0, -1)
-  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_2);
+  let m = Affine2::new_rot(std::f32::consts::FRAC_PI_2);
   let v = Vec2::new(1.0, 0.0);
   let result = m * &v;
   assert!(vec2_approx_eq(&result, &Vec2::new(0.0, -1.0)));
@@ -644,7 +644,7 @@ fn test_scale_then_translate() {
 
 #[test]
 fn test_double_rotation() {
-  let m = Affine2::new_rot(std::f64::consts::FRAC_PI_4);
+  let m = Affine2::new_rot(std::f32::consts::FRAC_PI_4);
   let composed = m * m;
   let v = Vec2::new(1.0, 0.0);
   let result = composed * &v;
@@ -679,7 +679,7 @@ fn test_debug_trait() {
 // Tightening: storage convention, off-axis rotation, orthogonality
 // ============================================================================
 
-const FRAC_PI_2_LOCAL: f64 = std::f64::consts::FRAC_PI_2;
+const FRAC_PI_2_LOCAL: f32 = std::f32::consts::FRAC_PI_2;
 
 fn arbitrary_affine2_a() -> Affine2 {
   // A general non-symmetric matrix used to expose row/column index bugs.

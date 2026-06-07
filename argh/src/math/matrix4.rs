@@ -19,7 +19,7 @@ mod matrix4_tests;
 /// Rotations are based on quaternions, see [Quat]
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Mat4 {
-  ele: [[f64; 4]; 4],
+  ele: [[f32; 4]; 4],
 }
 
 #[derive(thiserror::Error)]
@@ -40,7 +40,7 @@ impl std::fmt::Debug for Mat4Error {
 impl Mat4 {
   /// Internal read-only accessor to the raw storage. Sibling math modules
   /// only; nobody else needs to see how Mat4 lays out its bytes.
-  pub(super) fn raw(&self) -> &[[f64; 4]; 4] {
+  pub(super) fn raw(&self) -> &[[f32; 4]; 4] {
     &self.ele
   }
 
@@ -52,7 +52,7 @@ impl Mat4 {
   }
 
   /// New matrix with scale transform set
-  pub fn new_scale(sx: f64, sy: f64, sz: f64) -> Self {
+  pub fn new_scale(sx: f32, sy: f32, sz: f32) -> Self {
     Self {
       ele: [[sx, 0.0, 0.0, 0.0], [0.0, sy, 0.0, 0.0], [0.0, 0.0, sz, 0.0], [0.0, 0.0, 0.0, 1.0]],
     }
@@ -86,14 +86,14 @@ impl Mat4 {
   }
 
   /// New matrix with translation transform set
-  pub fn new_trans(x: f64, y: f64, z: f64) -> Self {
+  pub fn new_trans(x: f32, y: f32, z: f32) -> Self {
     Self {
       ele: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [x, y, z, 1.0]],
     }
   }
 
   /// Convenience & optimisation method - new matrix with scale, rotate, and translation transform set
-  pub fn new_scale_rot_trans(sx: f64, sy: f64, sz: f64, r: Quat, tx: f64, ty: f64, tz: f64) -> Self {
+  pub fn new_scale_rot_trans(sx: f32, sy: f32, sz: f32, r: Quat, tx: f32, ty: f32, tz: f32) -> Self {
     let x = r.x;
     let y = r.y;
     let z = r.z;
@@ -127,7 +127,7 @@ impl Mat4 {
   /// * `far`    - Far clipping plane
   ///
   /// Clip space is (-w, -w, 0) to (w, w, w) on all three axis
-  pub fn new_perspective(fovy: f64, aspect: f64, near: f64, far: f64) -> Result<Self, Mat4Error> {
+  pub fn new_perspective(fovy: f32, aspect: f32, near: f32, far: f32) -> Result<Self, Mat4Error> {
     if near == 0.0 {
       return Err(Mat4Error::NearPlaneZero);
     }
@@ -188,14 +188,14 @@ impl Mat4 {
   }
 
   /// Matrix will translate by the given x & y amounts
-  pub fn trans(&mut self, x: f64, y: f64, z: f64) {
+  pub fn trans(&mut self, x: f32, y: f32, z: f32) {
     self.ele[3][0] = x;
     self.ele[3][1] = y;
     self.ele[3][2] = z;
   }
 
   /// Matrix will scale by the given x & y scaling factors
-  pub fn scale(&mut self, sx: f64, sy: f64, sz: f64) {
+  pub fn scale(&mut self, sx: f32, sy: f32, sz: f32) {
     self.ele[0][0] = sx;
     self.ele[1][1] = sy;
     self.ele[2][2] = sz;

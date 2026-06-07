@@ -7,15 +7,15 @@
 // ==============================================================================================
 
 use super::*;
-use std::f64::consts::{FRAC_1_SQRT_2, PI};
+use std::f32::consts::{FRAC_1_SQRT_2, PI};
 
-const EPSILON: f64 = 1e-10;
+const EPSILON: f32 = 1e-10;
 
 const AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
 const AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
 const AXIS_Z: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
 
-fn approx_eq(a: f64, b: f64) -> bool {
+fn approx_eq(a: f32, b: f32) -> bool {
   (a - b).abs() < EPSILON
 }
 
@@ -158,7 +158,7 @@ fn test_normalise_preserves_direction() {
   let q = Quat { w: 2.0, x: 4.0, y: 6.0, z: 8.0 };
   let n = q.normalise();
   // All components scaled by the same factor, so ratios are preserved.
-  let len = (2.0_f64 * 2.0 + 4.0 * 4.0 + 6.0 * 6.0 + 8.0 * 8.0).sqrt();
+  let len = (2.0_f32 * 2.0 + 4.0 * 4.0 + 6.0 * 6.0 + 8.0 * 8.0).sqrt();
   let expected = Quat {
     w: 2.0 / len,
     x: 4.0 / len,
@@ -320,7 +320,7 @@ fn test_clone() {
 // ============================================================================
 
 use crate::math::Mat4;
-use std::f64::consts::FRAC_PI_2;
+use std::f32::consts::FRAC_PI_2;
 
 #[test]
 fn test_new_full_turn_is_negative_identity() {
@@ -341,7 +341,7 @@ fn test_new_zero_axis_yields_identity() {
   assert_eq!(q.x, 0.0);
   assert_eq!(q.y, 0.0);
   assert_eq!(q.z, 0.0);
-  assert!(approx_eq(q.w, (1.234_f64 * 0.5).cos()));
+  assert!(approx_eq(q.w, (1.234_f32 * 0.5).cos()));
 }
 
 #[test]

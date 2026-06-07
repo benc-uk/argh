@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 use argh::app::App;
 use argh::prelude::*;
@@ -12,8 +12,8 @@ pub struct MyApp {
 struct Poly {
   colour: Colour,
   trans: Vec2,
-  scale: f64,
-  speed: f64,
+  scale: f32,
+  speed: f32,
   points: Vec<Vec2>,
 }
 
@@ -23,7 +23,7 @@ impl App for MyApp {
     eng.clear(BLACK);
 
     for p in &self.polys {
-      let trans = Affine2::new_scale_rot_trans(p.scale, p.scale, p.speed * t, p.trans.x, p.trans.y);
+      let trans = Affine2::new_scale_rot_trans(p.scale, p.scale, p.speed * t as f32, p.trans.x, p.trans.y);
       eng.draw_poly_line(&(trans * &p.points), p.colour);
     }
   }
@@ -51,7 +51,7 @@ pub fn new() -> MyApp {
 }
 
 /// Construct a basic regular polygon, triangle, square, pentagon, hexagon etc
-fn simple_poly(count: u32, size: f64) -> Vec<Vec2> {
+fn simple_poly(count: u32, size: f32) -> Vec<Vec2> {
   let mut out = vec![];
   if count < 3 {
     return out;
@@ -59,7 +59,7 @@ fn simple_poly(count: u32, size: f64) -> Vec<Vec2> {
 
   for i in 0..count {
     let mut p = Vec2::new(size, 0.0);
-    p.rotate(((2.0 * PI) / count as f64) * i as f64);
+    p.rotate(((2.0 * PI) / count as f32) * i as f32);
     out.push(p);
   }
   out.push(Vec2::new(size, 0.0));

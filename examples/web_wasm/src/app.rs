@@ -12,11 +12,11 @@ impl App for WasmApp {
     eng.clear(BLACK);
 
     // This makes the animation independent of framerate
-    let rot = Quat::new(V3_AXIS_Y, 0.5 * dt);
+    let rot = Quat::new(V3_AXIS_Y, 0.5 * dt as f32);
 
     // Rotate & move the camera
     let mut p = rot.rotate_vec3(self.camera.get_pos());
-    p.y = (f64::sin(t * 0.75) * 2.6) + 6.0;
+    p.y = (f32::sin(t as f32 * 0.75) * 2.6) + 6.0;
     self.camera.set_pos(p);
 
     // Draw the scene

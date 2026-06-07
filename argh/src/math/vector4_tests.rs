@@ -333,7 +333,7 @@ fn test_div_new_with_negatives() {
   );
 }
 
-// --- scale (mul by f64) ---
+// --- scale (mul by f32) ---
 
 #[test]
 fn test_scale_up() {
@@ -1050,7 +1050,7 @@ fn test_dist_with_negatives() {
   let a = Vec4::new(-1.0, -2.0, -2.0, -1.0);
   let b = Vec4::new(2.0, 2.0, 4.0, 1.0);
   // diffs: 3, 4, 6, 2 -> sqrt(9 + 16 + 36 + 4) = sqrt(65)
-  assert!((a.dist(b) - f64::sqrt(65.0)).abs() < 1e-10);
+  assert!((a.dist(b) - f32::sqrt(65.0)).abs() < 1e-10);
 }
 
 #[test]
@@ -1063,7 +1063,7 @@ fn test_dist_from_zero_equals_len() {
 // Tightening: asymmetric transposition catchers, w-specific behaviour
 // ============================================================================
 
-const TIGHT_EPSILON: f64 = 1e-10;
+const TIGHT_EPSILON: f32 = 1e-10;
 
 #[test]
 fn test_new_field_order_asymmetric() {

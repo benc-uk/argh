@@ -82,11 +82,11 @@ impl Texture {
   /// Uses floor() to fold any UV into [0, 1] before scaling to texel space.
   /// Works for any texture size (pow2 or not)
   #[inline(always)]
-  pub(crate) fn sample(&self, u: f64, v: f64) -> (Colour, f32) {
+  pub(crate) fn sample(&self, u: f32, v: f32) -> (Colour, f32) {
     let uf = u - u.floor();
     let vf = v - v.floor();
-    let x = (uf * self.w as f64) as u32;
-    let y = (vf * self.h as f64) as u32;
+    let x = (uf * self.w as f32) as u32;
+    let y = (vf * self.h as f32) as u32;
     let p = unsafe { *self.pixels.get_unchecked((y * self.w + x) as usize) };
     let a = ((p >> 24) & 0xFF) as f32 * INV_255;
 
@@ -107,7 +107,7 @@ pub struct Material {
   pub specular: Colour,
 
   /// Size of specular highlights, higher > smaller
-  pub hardness: f64,
+  pub hardness: f32,
 
   // Internal texture, might be None
   pub(crate) texture: Option<Texture>,
@@ -261,57 +261,57 @@ impl Instance {
     self
   }
 
-  pub fn set_pos_xyz(&mut self, x: f64, y: f64, z: f64) -> &mut Self {
+  pub fn set_pos_xyz(&mut self, x: f32, y: f32, z: f32) -> &mut Self {
     self.pos = Vec3 { x, y, z };
     self
   }
 
-  pub fn rot_x(&mut self, a: f64) -> &mut Self {
+  pub fn rot_x(&mut self, a: f32) -> &mut Self {
     self.rot.rot_x(a);
     self
   }
 
-  pub fn rot_y(&mut self, a: f64) -> &mut Self {
+  pub fn rot_y(&mut self, a: f32) -> &mut Self {
     self.rot.rot_y(a);
     self
   }
 
-  pub fn rot_z(&mut self, a: f64) -> &mut Self {
+  pub fn rot_z(&mut self, a: f32) -> &mut Self {
     self.rot.rot_z(a);
     self
   }
 
-  pub fn rot_x_world(&mut self, a: f64) -> &mut Self {
+  pub fn rot_x_world(&mut self, a: f32) -> &mut Self {
     self.rot.rot_x_world(a);
     self
   }
 
-  pub fn rot_y_world(&mut self, a: f64) -> &mut Self {
+  pub fn rot_y_world(&mut self, a: f32) -> &mut Self {
     self.rot.rot_y_world(a);
     self
   }
 
-  pub fn rot_z_world(&mut self, a: f64) -> &mut Self {
+  pub fn rot_z_world(&mut self, a: f32) -> &mut Self {
     self.rot.rot_z_world(a);
     self
   }
 
-  pub fn scale(&mut self, s: f64) -> &mut Self {
+  pub fn scale(&mut self, s: f32) -> &mut Self {
     self.scale = Vec3 { x: s, y: s, z: s };
     self
   }
 
-  pub fn scale_x(&mut self, s: f64) -> &mut Self {
+  pub fn scale_x(&mut self, s: f32) -> &mut Self {
     self.scale.x = s;
     self
   }
 
-  pub fn scale_y(&mut self, s: f64) -> &mut Self {
+  pub fn scale_y(&mut self, s: f32) -> &mut Self {
     self.scale.y = s;
     self
   }
 
-  pub fn scale_z(&mut self, s: f64) -> &mut Self {
+  pub fn scale_z(&mut self, s: f32) -> &mut Self {
     self.scale.z = s;
     self
   }

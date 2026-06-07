@@ -112,9 +112,9 @@ pub fn new_cube(mat: Material) -> Model {
 pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
   let stacks = stacks.max(2);
   let sectors = sectors.max(3);
-  let radius = 0.5;
+  let radius: f32 = 0.5;
 
-  let pi = std::f64::consts::PI;
+  let pi = std::f32::consts::PI;
 
   let mut mesh = Mesh::new_with_material(mat);
 
@@ -126,17 +126,17 @@ pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
   mesh.uvs = Vec::with_capacity(vert_count);
 
   for i in 0..=stacks {
-    let phi = pi * (i as f64) / (stacks as f64); // 0 at +Y pole, pi at -Y pole
+    let phi = pi * (i as f32) / (stacks as f32); // 0 at +Y pole, pi at -Y pole
     let sin_phi = phi.sin();
     let cos_phi = phi.cos();
-    let v = i as f64 / stacks as f64; // 0 at top pole, 1 at bottom pole
+    let v = i as f32 / stacks as f32; // 0 at top pole, 1 at bottom pole
 
     for j in 0..=sectors {
-      let theta = 2.0 * pi * (j as f64) / (sectors as f64);
+      let theta = 2.0 * pi * (j as f32) / (sectors as f32);
       let x = sin_phi * theta.cos();
       let y = cos_phi;
       let z = sin_phi * theta.sin();
-      let u = j as f64 / sectors as f64; // 0..1 around the sphere, seam at the back
+      let u = j as f32 / sectors as f32; // 0..1 around the sphere, seam at the back
 
       // (x, y, z) is already a unit vector on the sphere, so it doubles as the
       // outward normal. Position is just that scaled by the radius.
@@ -199,7 +199,7 @@ pub fn new_teapot(mat: Material) -> Model {
       continue;
     }
 
-    let eles: Vec<f64> = line.split_whitespace().filter_map(|word| word.parse::<f64>().ok()).collect();
+    let eles: Vec<f32> = line.split_whitespace().filter_map(|word| word.parse::<f32>().ok()).collect();
 
     let v = Vec3 {
       x: eles[0],

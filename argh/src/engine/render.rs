@@ -18,7 +18,7 @@ use crate::{
 
 use super::{Engine, InstanceHandle};
 
-const TRI_AREA_EPS: f64 = 1e-8;
+const TRI_AREA_EPS: f32 = 1e-8;
 
 // ProcessedVert collects various data from the processing/transformation of mesh vertex in the rendering pass
 // It holds data ready for rasterization, shading etc
@@ -32,13 +32,13 @@ pub(super) struct ProcessedVert {
 // It's a hybrid of x & Y being screen pixel values, and z being a float representing depth in 0-1 range
 #[derive(Copy, Clone)]
 struct ScreenVert {
-  x: f64,        // pixel coordinate, [0, width]
-  y: f64,        // pixel coordinate, [0, height], origin top-left
-  z: f64,        // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
+  x: f32,        // pixel coordinate, [0, width]
+  y: f32,        // pixel coordinate, [0, height], origin top-left
+  z: f32,        // NDC depth [0, +1] (D3D/Vulkan/WebGPU convention, near=0, far=+1)
   light: Colour, // Lighting per vertex (for Gouraud shading)
-  inv_w: f64,    // Inverse of w
-  u_w: f64,      // PRE-DIVIDED, not raw u and v.
-  v_w: f64,      // PRE-DIVIDED, not raw u and v.
+  inv_w: f32,    // Inverse of w
+  u_w: f32,      // PRE-DIVIDED, not raw u and v.
+  v_w: f32,      // PRE-DIVIDED, not raw u and v.
 }
 
 impl Engine {
@@ -124,8 +124,8 @@ impl Engine {
         let ndc_z = clip.z * inv_w;
 
         // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f64;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f64; // Flip Y here
+        let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f32;
+        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32; // Flip Y here
 
         // Reach out to the UV array and pre-mult by 1/w, it MUST be the same length
         let uv = mesh.uvs[i];
@@ -224,7 +224,7 @@ impl Engine {
 
 // Standard edge function, it's basically a cross product
 #[inline(always)]
-fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
+fn edge_function(a: ScreenVert, b: ScreenVert, px: f32, py: f32) -> f32 {
   (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
 }
 
@@ -243,16 +243,16 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
 
   let min_x = v1.x.min(v0.x).min(v2.x).max(0.0);
   let min_y = v1.y.min(v0.y).min(v2.y).max(0.0);
-  let max_x = v1.x.max(v0.x).max(v2.x).min(buff.w as f64 - 1.0);
-  let max_y = v1.y.max(v0.y).max(v2.y).min(buff.h as f64 - 1.0);
+  let max_x = v1.x.max(v0.x).max(v2.x).min(buff.w as f32 - 1.0);
+  let max_y = v1.y.max(v0.y).max(v2.y).min(buff.h as f32 - 1.0);
   let min_xi = min_x.floor() as i32;
   let max_xi = max_x.ceil() as i32;
   let min_yi = min_y.floor() as i32;
   let max_yi = max_y.ceil() as i32;
 
   // Sample at the centre of the first pixel in the loop range
-  let start_x = min_xi as f64 + 0.5;
-  let start_y = min_yi as f64 + 0.5;
+  let start_x = min_xi as f32 + 0.5;
+  let start_y = min_yi as f32 + 0.5;
 
   // CONVENTION: triangles arrive here AFTER back-face cull, in screen space (Y-down).
   // We use the textbook CCW edge setup. Because our triangles are CW on screen,

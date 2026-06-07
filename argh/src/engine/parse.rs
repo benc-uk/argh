@@ -73,7 +73,7 @@ impl Engine {
 
       // Positions: flat [x,y,z, x,y,z, ...] so walk in non-overlapping chunks of 3
       for chunk in in_mesh.positions.chunks_exact(3) {
-        out_mesh.verts.push(v3(chunk[0] as f64, chunk[1] as f64, chunk[2] as f64));
+        out_mesh.verts.push(v3(chunk[0] as f32, chunk[1] as f32, chunk[2] as f32));
       }
       println!("    pos verts: {}", out_mesh.verts.len());
 
@@ -81,7 +81,7 @@ impl Engine {
         // Texture coords (UVs): flat [u,v, u,v, ...]
         for chunk in in_mesh.texcoords.chunks_exact(2) {
           // We flip Y or V texture coord, super important
-          out_mesh.uvs.push(v2(chunk[0] as f64, 1.0 - chunk[1] as f64));
+          out_mesh.uvs.push(v2(chunk[0] as f32, 1.0 - chunk[1] as f32));
         }
         println!("    tex uvs: {}", out_mesh.uvs.len());
       } else {
@@ -91,7 +91,7 @@ impl Engine {
 
       // Normals: flat [x,y,z, x,y,z, ...]
       for chunk in in_mesh.normals.chunks_exact(3) {
-        out_mesh.normals.push(v3(chunk[0] as f64, chunk[1] as f64, chunk[2] as f64));
+        out_mesh.normals.push(v3(chunk[0] as f32, chunk[1] as f32, chunk[2] as f32));
       }
       println!("    normals: {}", out_mesh.normals.len());
 
@@ -134,6 +134,6 @@ pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, Obj
     mat.diffuse = Colour::from_slice(diff_col);
   }
 
-  mat.hardness = in_material.shininess.unwrap_or(20.0) as f64;
+  mat.hardness = in_material.shininess.unwrap_or(20.0) as f32;
   Ok(mat)
 }

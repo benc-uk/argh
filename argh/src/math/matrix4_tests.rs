@@ -7,11 +7,11 @@
 // ==============================================================================================
 
 use super::*;
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
-const EPSILON: f64 = 1e-10;
+const EPSILON: f32 = 1e-10;
 
-fn approx_eq(a: f64, b: f64) -> bool {
+fn approx_eq(a: f32, b: f32) -> bool {
   (a - b).abs() < EPSILON
 }
 
@@ -168,7 +168,7 @@ fn test_new_rot_preserves_axis() {
 
 #[test]
 fn test_new_rot_preserves_length() {
-  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
+  let inv_sqrt3 = 1.0 / (3.0_f32).sqrt();
   let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), 1.234);
   let m = Mat4::new_rot(q);
   let v = Vec3::new(3.0, -4.0, 5.0);
@@ -529,7 +529,7 @@ fn arbitrary_mat4_a() -> Mat4 {
 }
 
 fn arbitrary_mat4_b() -> Mat4 {
-  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
+  let inv_sqrt3 = 1.0 / (3.0_f32).sqrt();
   let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), -0.4);
   Mat4::new_trans(-2.0, 5.0, 1.0) * Mat4::new_rot(q) * Mat4::new_scale(0.5, -1.5, 2.0)
 }
@@ -584,7 +584,7 @@ fn test_new_rot_negative_angle_reverses_direction() {
 
 #[test]
 fn test_new_rot_off_axis_preserves_length_and_orthonormal_columns() {
-  let inv_sqrt3 = 1.0 / (3.0_f64).sqrt();
+  let inv_sqrt3 = 1.0 / (3.0_f32).sqrt();
   let q = Quat::new(Vec3::new(inv_sqrt3, inv_sqrt3, inv_sqrt3), 1.234);
   let m = Mat4::new_rot(q);
   // Upper-left 3x3 columns must be orthonormal
