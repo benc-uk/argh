@@ -3,7 +3,7 @@
 // Purpose:         Parser for OBJ and MTL
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
-// Notes:           There's a naming confusion between
+// Notes:           There's a naming confusion between Mesh and Model
 // ==============================================================================================
 
 use std::path::Path;

@@ -17,3 +17,9 @@ resolver = "3"
 opt-level = 0      # No optimizations (fastest compile time)
 debug = true       # Keep debug symbols
 incremental = true # Enable incremental compilation
+
+# Changes what 'cargo build --release' does
+[profile.release]
+opt-level = 3 # This is already the default, but explicitly stating it guarantees it
+lto = true    # Optional: Link-Time Optimization makes it even faster
+

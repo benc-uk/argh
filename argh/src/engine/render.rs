@@ -215,7 +215,7 @@ impl Engine {
         }
 
         // Finally draw the damn triangle based on the screen verts and interpolate
-        fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, false);
+        fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
       }
     }
   }
@@ -231,9 +231,11 @@ fn edge_function(a: ScreenVert, b: ScreenVert, px: f64, py: f64) -> f64 {
 #[inline(always)]
 fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material, smooth: bool) {
   let area = edge_function(v1, v2, v0.x, v0.y);
-  if area <= TRI_AREA_EPS {
+
+  // Degenerate triangle, save ourselves a NaN panic
+  if area.abs() < TRI_AREA_EPS {
     return;
-  } // degenerate triangle, save ourselves a NaN
+  }
 
   // We need inverse area for Barycentric gubbins later
   let inv_area = 1.0 / area;
@@ -251,13 +253,9 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
   let start_x = min_xi as f64 + 0.5;
   let start_y = min_yi as f64 + 0.5;
 
-  // CONVENTION: triangles arrive here AFTER back-face cull, in screen space
-  // (Y-down). Our cull keeps triangles with NEGATIVE screen-space signed area
-  // (CW on screen, from CCW-in-world meshes after the viewport Y-flip).
-  //
+  // CONVENTION: triangles arrive here AFTER back-face cull, in screen space (Y-down).
   // We use the textbook CCW edge setup. Because our triangles are CW on screen,
-  // inside points produce NEGATIVE edge values, so the inside test is `w <= 0`.
-  // If the cull/Y convention ever changes, flip all three test signs back to >=.
+  // inside points produce NEGATIVE edge values, so the inside test is `w <= 0`
 
   // Edge values at the centre of the first pixel
   let mut w0_row = edge_function(v1, v2, start_x, start_y);
@@ -272,6 +270,8 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
   let dy0 = v2.x - v1.x;
   let dy1 = v0.x - v2.x;
   let dy2 = v1.x - v0.x;
+
+  // Core pixel loop starts here
 
   for y in min_yi..=max_yi {
     let mut w0 = w0_row;
@@ -288,7 +288,7 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         // Linear depth interpolation (correct in screen space, no /w needed)
         let z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
 
-        // Get diffuse colour from texture or from material
+        // Get diffuse colour from texture or from material basic diffuse
         let surface_colour = match &mat.texture {
           Some(tex) => {
             // Texture mapping requires voodoo with inv_w
@@ -298,8 +298,9 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
             let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
 
             let (texel, alpha) = tex.sample(u, v);
-            if alpha < 0.5 {
-              // skip this pixel, including depth write
+
+            // When alpha cutting, skip this pixel entirely if alpha is low
+            if alpha < 0.5 && tex.alpha_cutout {
               w0 += dx0;
               w1 += dx1;
               w2 += dx2;

@@ -33,6 +33,16 @@ impl std::fmt::Debug for TextureError {
   }
 }
 
+/// Holds a pixels of an image and not much else
+pub struct Texture {
+  pixels: Vec<u32>, // packed 0RGB to match buffer format
+  w: u32,
+  h: u32,
+
+  /// Treat alpha transparent pixels as invisible (cut them out). Defaults to true
+  pub alpha_cutout: bool,
+}
+
 // In Rust enums can have methods and an implementation, which is kinda wild
 impl Texture {
   // Private only called vis Texture enum methods
@@ -50,7 +60,7 @@ impl Texture {
         (p[2] as u32)
       })
       .collect();
-    Ok(Self { pixels, w, h })
+    Ok(Self { pixels, w, h, alpha_cutout: true })
   }
 
   pub fn from_bytes(bytes: &[u8]) -> Result<Self, TextureError> {
@@ -65,7 +75,7 @@ impl Texture {
         (p[2] as u32)
       })
       .collect();
-    Ok(Self { pixels, w, h })
+    Ok(Self { pixels, w, h, alpha_cutout: true })
   }
 
   /// Sample the texture with wrap-around addressing.
@@ -84,13 +94,6 @@ impl Texture {
   }
 }
 
-/// Holds a pixels of an image and not much else
-pub struct Texture {
-  pixels: Vec<u32>, // packed 0RGB to match buffer format
-  w: u32,
-  h: u32,
-}
-
 // ===================================
 // Material
 // ===================================
@@ -106,7 +109,7 @@ pub struct Material {
   /// Size of specular highlights, higher > smaller
   pub hardness: f64,
 
-  // Intern
+  // Internal texture, might be None
   pub(crate) texture: Option<Texture>,
 }
 

@@ -7,7 +7,6 @@ fn main() {
   let mut app = app::new(&mut eng);
 
   eng.debug = true;
-  eng.target_fps = 0;
 
   eng.start_window(&mut app, "Argh: scenes", 2);
 }

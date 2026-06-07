@@ -5,3 +5,6 @@
 # See: https://docs.rs/getrandom/0.3/getrandom/#webassembly-support
 [target.wasm32-unknown-unknown]
 rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
+
+[build]
+rustflags = ["-C", "target-cpu=native"]

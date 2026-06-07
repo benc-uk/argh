@@ -22,7 +22,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::{app::App, engine::input::Inputs};
-use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, math::Vec3, models::Model, scene::Scene};
+use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3, models::Model, scene::Scene};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -45,7 +45,7 @@ pub struct Engine {
   buffer: Buffer,
   t: f64,
   last_time: Instant,
-  fps: f64,
+  fps: FpsAveragerEight,
   exit: bool,
 
   // Internal rendering perf cache kinda stuff
@@ -78,7 +78,7 @@ impl Engine {
       buffer: Buffer::new(w as usize, h as usize),
       t: 0.0,
       last_time: Instant::now(),
-      fps: 0.0,
+      fps: FpsAveragerEight::new(),
       target_fps: 60,
       aspect: w as f64 / h as f64,
       verts: vec![],
@@ -171,7 +171,8 @@ impl Engine {
   /// Advance engine bookkeeping for one frame, returns the accumulated time `t`.
   pub fn tick(&mut self, dt: f64) -> f64 {
     self.t += dt;
-    self.fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
+    let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
+    self.fps.add_fps(fps as f32);
     self.last_time = Instant::now();
 
     self.t
@@ -186,7 +187,7 @@ impl Engine {
 
   /// Draw the debug overlay on top of the current frame. Call AFTER app.update.
   pub fn draw_debug(&mut self) {
-    self.draw_string(&format!("FPS: {:.2}", self.fps), 2, 2, BLACK);
-    self.draw_string(&format!("FPS: {:.2}", self.fps), 1, 1, WHITE);
+    self.draw_string(&format!("FPS: {:.2}", self.fps.avg_fps()), 2, 2, BLACK);
+    self.draw_string(&format!("FPS: {:.2}", self.fps.avg_fps()), 1, 1, WHITE);
   }
 }
