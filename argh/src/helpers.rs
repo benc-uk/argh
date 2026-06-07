@@ -40,10 +40,10 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
     code |= OUT_TOP;
   }
   if v.z < 0.0 {
-    code |= OUT_NEAR;
+    code |= OUT_FAR;
   }
   if v.w - v.z < 0.0 {
-    code |= OUT_FAR;
+    code |= OUT_NEAR;
   }
   code
 }

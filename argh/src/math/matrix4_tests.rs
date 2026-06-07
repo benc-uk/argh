@@ -672,8 +672,10 @@ fn test_mul_general_matrix_vec_hand_computed() {
 // ============================================================================
 // new_perspective
 //
-// Right-handed perspective with camera looking down -Z. Maps view-space z in
-// [-near, -far] to NDC z in [-1, +1] after the perspective divide by clip.w.
+// Right-handed perspective with camera looking down -Z. Reversed-Z mapping:
+// view-space z = -near -> NDC z = 1, view-space z = -far -> NDC z = 0
+// (chosen so f32's high precision near zero pairs with the far plane, giving
+// usable depth precision across the whole frustum).
 // Top two rows project x/y; near/far only affect depth and clip.w.
 // ============================================================================
 
@@ -706,8 +708,8 @@ fn test_new_perspective_aspect_scales_x_only() {
 }
 
 #[test]
-fn test_new_perspective_z_near_maps_to_zero_in_ndc() {
-  // A point at view-space z = -near should land on the near plane (NDC z = 0)
+fn test_new_perspective_z_near_maps_to_one_in_ndc() {
+  // Reversed Z: a point at view-space z = -near should land on the near plane (NDC z = 1)
   let near = 0.5;
   let far = 100.0;
   let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far).unwrap();
@@ -716,18 +718,19 @@ fn test_new_perspective_z_near_maps_to_zero_in_ndc() {
   let clip = p * &v_view;
   // After perspective divide
   let ndc_z = clip.z / clip.w;
-  assert!(approx_eq(ndc_z, 0.0));
+  assert!(approx_eq(ndc_z, 1.0));
 }
 
 #[test]
-fn test_new_perspective_z_far_maps_to_plus_one_in_ndc() {
+fn test_new_perspective_z_far_maps_to_zero_in_ndc() {
+  // Reversed Z: a point at view-space z = -far should land on the far plane (NDC z = 0)
   let near = 0.5;
   let far = 100.0;
   let p = Mat4::new_perspective(FRAC_PI_2, 1.0, near, far).unwrap();
   let v_view = Vec4::new(0.0, 0.0, -far, 1.0);
   let clip = p * &v_view;
   let ndc_z = clip.z / clip.w;
-  assert!(approx_eq(ndc_z, 1.0));
+  assert!(approx_eq(ndc_z, 0.0));
 }
 
 #[test]

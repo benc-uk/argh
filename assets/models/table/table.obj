@@ -852,7 +852,7 @@ vt 0.2793 0.9686 0.0000
 # 440 texture coords
 
 g coffee_table__coffee_table_001
-usemtl _HSM0015_CoffeeTable_V4Material__70
+usemtl CoffeeTable_Material
 s 32
 f 1/1/1 2/2/1 3/3/1 4/4/1 
 s 64

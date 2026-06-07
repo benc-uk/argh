@@ -28,6 +28,8 @@ impl Camera {
   /// * `near` - Near clipping plane, normally want this near zero, but NOT zero!
   /// * `far` - Far clipping plane, should be as far as your scene extends
   pub fn new_perspective(aspect: f32, pos: Vec3, look_at: Vec3, fov: f32, near: f32, far: f32) -> Result<Self, Box<dyn Error>> {
+    println!("Creating camera at {} looking at {}, resoultion of far/near: {}", pos, look_at, far / near);
+
     Ok(Self {
       pos,
       look_at,

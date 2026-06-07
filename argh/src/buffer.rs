@@ -24,7 +24,7 @@ impl Buffer {
       pixels: vec![0; w * h],
       w,
       h,
-      depth: vec![f32::INFINITY; w * h],
+      depth: vec![0.0; w * h],
     }
   }
 
@@ -36,7 +36,8 @@ impl Buffer {
 
   #[inline(always)]
   pub fn clear_depth(&mut self) {
-    self.depth.fill(f32::INFINITY);
+    // As we reverse our depth buffer a cleared "all far" buffer is filled with zeros
+    self.depth.fill(0.0);
   }
 
   #[inline(always)]
@@ -50,7 +51,7 @@ impl Buffer {
   pub fn set_pixel_depth(&mut self, x: usize, y: usize, c: Colour, z: f32) {
     let idx = y * self.w + x;
     // No bounds check as we don't actually need them
-    if z < self.depth[idx] {
+    if z > self.depth[idx] {
       self.pixels[idx] = c.to_packed_0rgb();
       self.depth[idx] = z;
     }

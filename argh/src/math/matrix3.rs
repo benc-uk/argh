@@ -94,7 +94,7 @@ impl Mat3 {
     let c22 = a * e - b * d;
 
     let det = a * c00 + b * c01 + c * c02;
-    if det.abs() < 1e-12 {
+    if det.abs() < 1e-6 {
       return None;
     }
     let inv_det = 1.0 / det;

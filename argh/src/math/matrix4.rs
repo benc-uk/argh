@@ -126,7 +126,9 @@ impl Mat4 {
   /// * `near`   - Near clipping plane
   /// * `far`    - Far clipping plane
   ///
-  /// Clip space is (-w, -w, 0) to (w, w, w) on all three axis
+  /// Clip frustum bounds: -w â¤ x,y â¤ w and 0 â¤ z â¤ w.
+  /// Reversed Z mapping: near plane -> ndc.z = 1, far plane -> ndc.z = 0
+  /// (chosen so f32's high precision near zero pairs with the near plane).
   pub fn new_perspective(fovy: f32, aspect: f32, near: f32, far: f32) -> Result<Self, Mat4Error> {
     if near == 0.0 {
       return Err(Mat4Error::NearPlaneZero);
@@ -137,12 +139,12 @@ impl Mat4 {
     }
 
     let f = 1.0 / (fovy * 0.5).tan(); // cotangent of half-FOV
-    let nf = 1.0 / (near - far);
+    let nf = 1.0 / (far - near); // Reverse Z
 
     let mut m = Self::zero();
     m.ele[0][0] = f / aspect; // x scale
     m.ele[1][1] = f; // y scale
-    m.ele[2][2] = far * nf; // z remap
+    m.ele[2][2] = near * nf; // z remap. 
     m.ele[2][3] = -1.0; // copies -z_view into clip.w (this is the "perspective" bit)
     m.ele[3][2] = far * near * nf; // z offset
 
@@ -247,19 +249,6 @@ impl fmt::Display for Mat4 {
     )
   }
 }
-
-// impl Mul<&Vec3> for Mat4 {
-//   type Output = Vec3;
-
-//   /// Multiply and transform given Vec3 by this matrix, assumes that w = 1, so will be treated like a point and translated
-//   fn mul(self, v: &Vec3) -> Vec3 {
-//     Vec3 {
-//       x: self.ele[0][0] * v.x + self.ele[1][0] * v.y + self.ele[2][0] * v.z + self.ele[3][0], // implicit * 1 removed
-//       y: self.ele[0][1] * v.x + self.ele[1][1] * v.y + self.ele[2][1] * v.z + self.ele[3][1], // implicit * 1 removed
-//       z: self.ele[0][2] * v.x + self.ele[1][2] * v.y + self.ele[2][2] * v.z + self.ele[3][2], // implicit * 1 removed
-//     }
-//   }
-// }
 
 impl Mul<&Vec4> for Mat4 {
   type Output = Vec4;

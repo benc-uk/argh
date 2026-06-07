@@ -30,8 +30,8 @@ impl App for MyApp {
 pub fn new(eng: &mut Engine) -> MyApp {
   let mut scn = Scene::new();
 
-  scn.add_light(Light::new(v3(5.0, 31.0, 5.0), 2.0, WHITE));
-  scn.add_light(Light::new(v3(-6.0, 25.0, -6.0), 2.5, col(0.1, 0.9, 0.1)));
+  scn.add_light(Light::new(v3(5.0, 31.0, 5.0), 4.0, WHITE));
+  scn.add_light(Light::new(v3(-6.0, 25.0, -6.0), 4.5, col(0.1, 0.9, 0.1)));
 
   let table = eng.load_obj("assets/models/table/table.obj").expect("obj loading failed");
   scn.add_instance_trans(table, V3_ZERO, v3(-PI / 2.0, 0.0, 0.0), v3(0.3, 0.3, 0.6));
@@ -46,7 +46,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
   scn.add_instance_trans(can, v3(-4.0, 21.5, 1.0), v3(0.0, 0.9, 0.0), v3(0.8, 0.8, 0.8));
   scn.add_instance_trans(can, v3(2.0, 21.5, 4.0), v3(0.0, 2.3, 0.0), v3(0.8, 0.8, 0.8));
 
-  let camera = Camera::new_perspective(eng.get_aspect(), v3(0.0, 40.0, 30.0), v3(0.0, 25.0, 0.0), 60.0, 0.01, 1000.0).unwrap();
+  let camera = Camera::new_perspective(eng.get_aspect(), v3(0.0, 40.0, 30.0), v3(0.0, 25.0, 0.0), 60.0, 0.1, 100.0).unwrap();
 
   MyApp { camera, scn }
 }

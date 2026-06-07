@@ -91,6 +91,8 @@ Graphics & 3D conventions followed internally by this engine are mostly the same
   - Camera will be looking down the negative Z-axis; -Z is further away, +Z closer (or behind)
 - CCW for vertices in triangle meshes
 - Clip space z range is [0, +w] (NDC z is [0, +1] after perspective divide), unlike OpenGL's [-w, +w] / [-1, +1]
+- We use a **reversed Z** depth mapping: the near plane maps to NDC z = 1 and the far plane to NDC z = 0. The depth buffer is cleared to 0 and the test is "greater wins".
+  - This pairs f32's high precision near zero with the far end of the frustum and avoids the precision collapse you get with conventional 0..1 depth at small near planes
 
 ## Building and Running Locally
 
