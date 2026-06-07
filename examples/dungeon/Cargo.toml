@@ -1,10 +1,10 @@
 [package]
-name = "obj_files"
+name = "dungeon"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "obj_files"
+name = "dungeon"
 path = "src/main.rs"
 doc = false
 

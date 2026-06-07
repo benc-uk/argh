@@ -6,6 +6,8 @@
 // Notes:
 // ==============================================================================================
 
+use minifb::Window;
+
 use super::Engine;
 use super::Key;
 
@@ -24,6 +26,17 @@ impl Inputs {
       mouse_buttons: [false, false, false],
       mouse_pos: None,
     }
+  }
+
+  #[cfg(feature = "desktop")]
+  pub fn scrape(&mut self, window: &Window) {
+    self.keys = window.get_keys();
+    self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
+    self.mouse_buttons[0] = window.get_mouse_down(minifb::MouseButton::Left);
+    self.mouse_buttons[1] = window.get_mouse_down(minifb::MouseButton::Middle);
+    self.mouse_buttons[2] = window.get_mouse_down(minifb::MouseButton::Right);
+    self.mouse_pos = None;
+    self.mouse_pos = window.get_mouse_pos(minifb::MouseMode::Discard);
   }
 }
 

@@ -16,7 +16,7 @@ impl App for WasmApp {
 
     // Rotate & move the camera
     let mut p = rot.rotate_vec3(self.camera.get_pos());
-    p.y = (f32::sin(t as f32 * 0.75) * 2.6) + 6.0;
+    p.y = ((f64::sin(t * 0.75) * 2.6) + 6.0) as f32;
     self.camera.set_pos(p);
 
     // Draw the scene

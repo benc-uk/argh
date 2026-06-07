@@ -8,7 +8,7 @@ members = [
   "examples/teapots",
   "examples/web_wasm",
   "examples/scenes",
-  "examples/obj_files",
+  "examples/dungeon",
   "examples/benchmark",
 ]
 resolver = "3"

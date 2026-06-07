@@ -11,8 +11,10 @@ pub struct MyApp {
 
 impl App for MyApp {
   fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
+    // saves us loads of casting !
     let dt = dt as f32;
     let t = t as f32;
+
     eng.clear(BLACK);
     let scn = &mut self.scene; // Just for convenience 
 

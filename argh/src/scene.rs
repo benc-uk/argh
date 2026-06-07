@@ -45,9 +45,10 @@ impl Scene {
   // ===== Lights ======================================================================================================
 
   /// Add a light to the scene
-  pub fn add_light(&mut self, light: Light) {
+  pub fn add_light(&mut self, light: Light) -> LightHandle {
     let h = self.lights.insert(light);
     self.light_keys.push(h);
+    h
   }
 
   /// Remove a light from the scene
