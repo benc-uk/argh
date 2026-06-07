@@ -8,7 +8,7 @@
 
 use super::*;
 
-const EPSILON: f32 = 1e-10;
+const EPSILON: f32 = 1e-5;
 
 fn approx_eq(a: f32, b: f32) -> bool {
   (a - b).abs() < EPSILON

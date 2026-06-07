@@ -9,7 +9,7 @@
 use super::*;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
-const EPSILON: f32 = 1e-10;
+const EPSILON: f32 = 1e-5;
 
 fn approx_eq(a: f32, b: f32) -> bool {
   (a - b).abs() < EPSILON

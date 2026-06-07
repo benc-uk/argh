@@ -991,7 +991,7 @@ fn test_dot_commutative() {
 #[test]
 fn test_dot_self_equals_len_squared() {
   let v = Vec4::new(3.0, 4.0, 5.0, 6.0);
-  assert!((v.dot(v) - v.len() * v.len()).abs() < 1e-10);
+  assert!((v.dot(v) - v.len() * v.len()).abs() < 1e-5);
 }
 
 // --- Distance ---
@@ -1050,20 +1050,20 @@ fn test_dist_with_negatives() {
   let a = Vec4::new(-1.0, -2.0, -2.0, -1.0);
   let b = Vec4::new(2.0, 2.0, 4.0, 1.0);
   // diffs: 3, 4, 6, 2 -> sqrt(9 + 16 + 36 + 4) = sqrt(65)
-  assert!((a.dist(b) - f32::sqrt(65.0)).abs() < 1e-10);
+  assert!((a.dist(b) - f32::sqrt(65.0)).abs() < 1e-5);
 }
 
 #[test]
 fn test_dist_from_zero_equals_len() {
   let v = Vec4::new(2.0, 3.0, 6.0, 0.0);
-  assert!((Vec4::zero().dist(v) - v.len()).abs() < 1e-10);
+  assert!((Vec4::zero().dist(v) - v.len()).abs() < 1e-5);
 }
 
 // ============================================================================
 // Tightening: asymmetric transposition catchers, w-specific behaviour
 // ============================================================================
 
-const TIGHT_EPSILON: f32 = 1e-10;
+const TIGHT_EPSILON: f32 = 1e-5;
 
 #[test]
 fn test_new_field_order_asymmetric() {

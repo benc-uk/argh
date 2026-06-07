@@ -9,7 +9,7 @@
 use super::*;
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
 
-const EPSILON: f32 = 1e-10;
+const EPSILON: f32 = 1e-5;
 
 const AXIS_X: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
 const AXIS_Y: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };

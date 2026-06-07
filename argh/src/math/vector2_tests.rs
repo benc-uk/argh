@@ -678,16 +678,16 @@ fn test_rotate_zero_angle() {
 fn test_rotate_180() {
   let mut v = Vec2::new(1.0, 0.0);
   v.rotate(std::f32::consts::PI);
-  assert!((v.x - (-1.0)).abs() < 1e-10);
-  assert!(v.y.abs() < 1e-10);
+  assert!((v.x - (-1.0)).abs() < 1e-5);
+  assert!(v.y.abs() < 1e-5);
 }
 
 #[test]
 fn test_rotate_new_returns_new_vector() {
   let mut v = Vec2::new(1.0, 0.0);
   let result = v.rotate_new(std::f32::consts::FRAC_PI_2);
-  assert!((result.x).abs() < 1e-10);
-  assert!((result.y - 1.0).abs() < 1e-10);
+  assert!((result.x).abs() < 1e-5);
+  assert!((result.y - 1.0).abs() < 1e-5);
 }
 
 #[test]
@@ -741,7 +741,7 @@ fn test_display_negative() {
 
 use crate::math::Affine2;
 
-const MAT_EPSILON: f32 = 1e-10;
+const MAT_EPSILON: f32 = 1e-5;
 
 fn approx(a: f32, b: f32) -> bool {
   (a - b).abs() < MAT_EPSILON
@@ -1034,7 +1034,7 @@ fn test_dot_self_equals_len_squared() {
 // Tightening: dist, asymmetric transposition checks, non-mutation
 // ============================================================================
 
-const TIGHT_EPSILON: f32 = 1e-10;
+const TIGHT_EPSILON: f32 = 1e-5;
 
 fn vec2_close(a: Vec2, b: Vec2) -> bool {
   (a.x - b.x).abs() < TIGHT_EPSILON && (a.y - b.y).abs() < TIGHT_EPSILON

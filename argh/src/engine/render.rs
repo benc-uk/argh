@@ -323,7 +323,7 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
           lighting = v0.light * b0 + v1.light * b1 + v2.light * b2;
         }
 
-        buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z as f32);
+        buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z);
       }
 
       w0 += dx0;

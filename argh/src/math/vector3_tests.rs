@@ -807,7 +807,7 @@ fn test_dot_commutative() {
 #[test]
 fn test_dot_self_equals_len_squared() {
   let v = Vec3::new(3.0, 4.0, 5.0);
-  assert!((v.dot(v) - v.len() * v.len()).abs() < 1e-10);
+  assert!((v.dot(v) - v.len() * v.len()).abs() < 1e-5);
 }
 
 // --- Cross product ---
@@ -882,8 +882,8 @@ fn test_cross_perpendicular_to_inputs() {
   let a = Vec3::new(2.0, 3.0, 4.0);
   let b = Vec3::new(5.0, 6.0, 7.0);
   let c = a.cross(b);
-  assert!(c.dot(a).abs() < 1e-10);
-  assert!(c.dot(b).abs() < 1e-10);
+  assert!(c.dot(a).abs() < 1e-5);
+  assert!(c.dot(b).abs() < 1e-5);
 }
 
 // --- Distance ---
@@ -934,20 +934,20 @@ fn test_dist_with_negatives() {
   let a = Vec3::new(-1.0, -2.0, -2.0);
   let b = Vec3::new(2.0, 2.0, 4.0);
   // diffs: 3, 4, 6 -> sqrt(9 + 16 + 36) = sqrt(61)
-  assert!((a.dist(b) - f32::sqrt(61.0)).abs() < 1e-10);
+  assert!((a.dist(b) - f32::sqrt(61.0)).abs() < 1e-5);
 }
 
 #[test]
 fn test_dist_from_zero_equals_len() {
   let v = Vec3::new(2.0, 3.0, 6.0);
-  assert!((Vec3::zero().dist(v) - v.len()).abs() < 1e-10);
+  assert!((Vec3::zero().dist(v) - v.len()).abs() < 1e-5);
 }
 
 // ============================================================================
 // Tightening: asymmetric transposition catchers, cross/dot interactions
 // ============================================================================
 
-const TIGHT_EPSILON: f32 = 1e-10;
+const TIGHT_EPSILON: f32 = 1e-5;
 
 fn vec3_close(a: Vec3, b: Vec3) -> bool {
   (a.x - b.x).abs() < TIGHT_EPSILON && (a.y - b.y).abs() < TIGHT_EPSILON && (a.z - b.z).abs() < TIGHT_EPSILON
