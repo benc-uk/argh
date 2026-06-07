@@ -216,6 +216,7 @@ impl Engine {
 
         // Finally draw the damn triangle based on the screen verts and interpolate
         fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
+        self.stat_tri_rend += 1;
       }
     }
   }

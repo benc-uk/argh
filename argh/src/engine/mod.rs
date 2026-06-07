@@ -48,6 +48,9 @@ pub struct Engine {
   fps: FpsAveragerEight,
   exit: bool,
 
+  stat_tri_total: u32,
+  stat_tri_rend: u32,
+
   // Internal rendering perf cache kinda stuff
   verts: Vec<ProcessedVert>,
   normals: Vec<Vec3>,
@@ -83,6 +86,8 @@ impl Engine {
       aspect: w as f64 / h as f64,
       verts: vec![],
       normals: vec![],
+      stat_tri_total: 0,
+      stat_tri_rend: 0,
 
       exit: false,
       debug: false,
@@ -174,6 +179,7 @@ impl Engine {
     let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
     self.fps.add_fps(fps as f32);
     self.last_time = Instant::now();
+    self.stat_tri_rend = 0;
 
     self.t
   }
@@ -182,12 +188,19 @@ impl Engine {
   pub fn add_model(&mut self, model: Model) -> ModelHandle {
     println!("Adding model '{}' to the engine cache", model.name);
 
+    let mut tris: u32 = 0;
+    for mesh in &model.meshes {
+      tris += mesh.indices.len() as u32 / 3;
+    }
+    self.stat_tri_total += tris;
+
     self.models.insert(model)
   }
 
   /// Draw the debug overlay on top of the current frame. Call AFTER app.update.
   pub fn draw_debug(&mut self) {
-    self.draw_string(&format!("FPS: {:.2}", self.fps.avg_fps()), 2, 2, BLACK);
     self.draw_string(&format!("FPS: {:.2}", self.fps.avg_fps()), 1, 1, WHITE);
+    self.draw_string(&format!("TRI_TOT: {:.2}", self.stat_tri_total), 1, 11, WHITE);
+    self.draw_string(&format!("TRI_REND: {:.2}", self.stat_tri_rend), 1, 21, WHITE);
   }
 }
