@@ -10,10 +10,10 @@ use crate::{
   buffer::Buffer,
   camera::Camera,
   colour::{BLACK, Colour},
+  core::Material,
   engine::Scene,
   helpers::{OUT_NEAR, compute_outcode, shade_vert},
   math::{Mat3, Vec3, Vec4},
-  models::Material,
 };
 
 use super::{Engine, InstanceHandle};

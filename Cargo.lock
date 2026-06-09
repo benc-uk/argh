@@ -311,6 +311,7 @@ name = "dungeon"
 version = "0.1.0"
 dependencies = [
  "argh",
+ "rand 0.10.1",
 ]
 
 [[package]]

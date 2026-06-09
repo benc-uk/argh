@@ -6,8 +6,8 @@
 // Notes:
 // ==============================================================================================
 
-//! The engine is the core construct of argh, used to hold everything being rendered (meshes, instances, textures),
-//! the window & frame buffer, and to carry out rendering
+//! The engine is the core construct of argh, used to carry out rendering via a [Scene] & [Camera],
+//! Holds the internal framebuffer and other constructs for rendering
 
 mod draw2d;
 #[cfg(feature = "desktop")]
@@ -22,7 +22,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::{app::App, engine::input::Inputs};
-use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3, models::Model, scene::Scene};
+use crate::{buffer::Buffer, colour::*, core::Model, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3, scene::Scene};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -38,16 +38,26 @@ new_key_type! {
   pub struct LightHandle;
 }
 
+// Convenience to group all desktop only fields and state in one place
+#[cfg(feature = "desktop")]
+pub struct DesktopState {
+  inputs: input::Inputs, // Inputs, keyboard & mouse
+  exit: bool,            // Flag for quit/exit
+}
+
 /// This is the heart of argh, create an instance of the Engine to use the library
 pub struct Engine {
-  size: (usize, usize),
-  aspect: f32,
-  buffer: Buffer,
-  t: f64,
-  last_time: Instant,
-  fps: FpsAveragerEight,
-  exit: bool,
+  size: (usize, usize),  // Framebuffer size: width & height
+  aspect: f32,           // Easy access to the aspect ratio (w/h)
+  buffer: Buffer,        // The framebuffer
+  t: f64,                // Elapsed time
+  last_time: Instant,    // For delta time calculation
+  fps: FpsAveragerEight, // Holds an FPS average
+  // log_level: usize,
+  #[cfg(feature = "desktop")]
+  desktop: DesktopState,
 
+  // Stats
   stat_tri_total: u32,
   stat_tri_rend: u32,
 
@@ -58,14 +68,7 @@ pub struct Engine {
   // Things tracked & cached by the engine
   models: SlotMap<ModelHandle, Model>,
 
-  // Inputs - Gated to desktop only not web/wasm
-  #[cfg(feature = "desktop")]
-  inputs: input::Inputs,
-
   // Public fields...
-  /// Rate to try to update the buffer, used at engine start only
-  pub target_fps: usize,
-
   /// Output debug info like FPS onto the top right of the screen
   pub debug: bool,
 }
@@ -78,24 +81,25 @@ impl Engine {
   pub fn new(w: i32, h: i32) -> Self {
     Self {
       size: (w as usize, h as usize),
+      aspect: w as f32 / h as f32,
       buffer: Buffer::new(w as usize, h as usize),
       t: 0.0,
       last_time: Instant::now(),
       fps: FpsAveragerEight::new(),
-      target_fps: 60,
-      aspect: w as f32 / h as f32,
+      debug: false,
+      // log_level: 1,
       verts: vec![],
       normals: vec![],
       stat_tri_total: 0,
       stat_tri_rend: 0,
 
-      exit: false,
-      debug: false,
+      #[cfg(feature = "desktop")]
+      desktop: DesktopState {
+        exit: false,
+        inputs: Inputs::new(),
+      },
 
       models: SlotMap::with_key(),
-
-      #[cfg(feature = "desktop")]
-      inputs: Inputs::new(),
     }
   }
 
@@ -106,7 +110,7 @@ impl Engine {
   /// * `title` - Title of the window
   /// * `scale` - Scale up the viewport; Values: 0,1,2,4,8
   #[cfg(feature = "desktop")]
-  pub fn start_window<A: App>(&mut self, app: &mut A, title: &str, scale: u8) {
+  pub fn start_window<A: App>(&mut self, app: &mut A, title: &str, scale: u8, target_fps: usize) {
     let scl = match scale {
       0 => minifb::Scale::FitScreen,
       1 => minifb::Scale::X1,
@@ -125,37 +129,38 @@ impl Engine {
 
     let mut window = Window::new(title, self.size.0, self.size.1, opt).expect("failed to create window");
 
-    if self.target_fps > 0 {
-      window.set_target_fps(self.target_fps);
+    if target_fps > 0 {
+      window.set_target_fps(target_fps);
     }
 
     while window.is_open() {
-      if self.exit {
+      if self.desktop.exit {
         break;
       }
 
       let dt = Instant::now().duration_since(self.last_time).as_secs_f64();
       let t = self.tick(dt); // time bookkeeping
-      app.update(self, dt, t); // app paints the world
+      app.update(self, dt, t); // call app update hook (normally renders everything)
 
-      // Render debug info like FPS
+      // Draw debug info, FPS and other stats
       if self.debug {
         self.draw_debug();
       }
 
-      // Scrape the inputs
-      self.inputs.scrape(&window);
+      // Scrape the inputs from the minifb window
+      self.desktop.inputs.scrape(&window);
 
-      // Finally actually put the image/framebuffer on the screen
+      // Finally put the image/framebuffer into the window
       if let Err(e) = window.update_with_buffer(&self.buffer.pixels, self.size.0, self.size.1) {
         println!("Error updating buffer: {}", e);
       }
     }
   }
 
-  /// Stop running and exit the running process
+  /// Stop running and exit, only used in window/desktop mode
+  #[cfg(feature = "desktop")]
   pub fn stop(&mut self) {
-    self.exit = true;
+    self.desktop.exit = true;
   }
 
   /// Return the width & height of the window

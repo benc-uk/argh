@@ -49,6 +49,11 @@ impl Camera {
     self.pos
   }
 
+  /// Get the position of where the camera is looking
+  pub fn get_look_at(&self) -> Vec3 {
+    self.look_at
+  }
+
   /// Change where the Camera is pointing
   pub fn set_look_at(&mut self, look_at: Vec3) {
     self.look_at = look_at;

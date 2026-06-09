@@ -8,5 +8,5 @@ fn main() {
 
   eng.debug = true;
 
-  eng.start_window(&mut app, "Argh: scenes", 2);
+  eng.start_window(&mut app, "Argh: scenes", 2, 0);
 }

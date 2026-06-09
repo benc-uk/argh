@@ -1,9 +1,9 @@
 // ==============================================================================================
 // Module & file:   models.rs
-// Purpose:         Module for 3D meshes, materials and textures
+// Purpose:         Holds common structures like Models, Textures, Meshes, Materials, Instances
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
-// Notes:
+// Notes:           Split this up once it makes sense
 // ==============================================================================================
 
 use image::{ImageError, ImageReader};
@@ -321,3 +321,26 @@ impl Instance {
     Mat4::new_scale_rot_trans(self.scale.x, self.scale.y, self.scale.z, self.rot, self.pos.x, self.pos.y, self.pos.z)
   }
 }
+
+// ===================================
+// Static Mesh
+// ===================================
+
+// pub struct StaticMesh {
+//   pub(crate) material: Material, // owned by value, same as Mesh today
+//   pub(crate) verts: Vec<Vec3>,   // already in WORLD space
+//   pub(crate) normals: Vec<Vec3>, // already in WORLD space, normalised
+//   pub(crate) uvs: Vec<Vec2>,
+//   pub(crate) indices: Vec<i32>,
+//   // pub(crate) bounds: Aabb, // for frustum culling
+//   pub(crate) baked_lighting: Vec<Colour>, // Baked lighting happening later
+// }
+
+// // ===================================
+// // Chunk
+// // ===================================
+
+// pub struct Chunk {
+//   bounds: Aabb,
+//   meshes: Vec<StaticMesh>, // one per source mesh that landed in this chunk
+// }

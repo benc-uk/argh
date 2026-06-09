@@ -10,10 +10,10 @@ use slotmap::SlotMap;
 
 use crate::{
   colour::Colour,
+  core::Instance,
   engine::{InstanceHandle, LightHandle, ModelHandle},
   light::Light,
   math::{Quat, V3_ONE, V3_ZERO, Vec3},
-  models::Instance,
 };
 
 /// Scene holds instances, lights etc to be rendered on demand
@@ -25,6 +25,8 @@ pub struct Scene {
   pub(super) instance_keys: Vec<InstanceHandle>,
   pub(super) light_keys: Vec<LightHandle>,
 
+  // Static geometry held in chunks
+  // pub(super) chunks: Vec<Chunk>,
   /// Ambient light colour, beware setting this too high it will look washed out
   pub ambient_light: Colour,
 }
@@ -37,7 +39,7 @@ impl Scene {
       instances: SlotMap::with_key(),
       instance_keys: vec![],
       light_keys: vec![],
-
+      //chunks: vec![],
       ambient_light: Colour::new(0.008, 0.008, 0.008),
     }
   }

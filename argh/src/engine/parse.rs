@@ -11,8 +11,8 @@ use tobj::Material;
 
 use crate::{
   colour::Colour,
+  core::{Material as ArghMaterial, Mesh as ArghMesh, Model as ArghModel, Texture, TextureError},
   engine::ModelHandle,
-  models::{Material as ArghMaterial, Mesh as ArghMesh, Model as ArghModel, Texture, TextureError},
   prelude::{v2, v3},
 };
 

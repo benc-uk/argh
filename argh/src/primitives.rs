@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use crate::{math::*, models::Material, models::Mesh, models::Model};
+use crate::{core::Material, core::Mesh, core::Model, math::*};
 
 /// Create a mesh for a unit cube, two triangles per face.
 ///

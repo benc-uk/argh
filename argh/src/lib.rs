@@ -40,7 +40,7 @@ pub mod colour;
 pub mod engine; // This has it's own docs in engine/mod.rs
 
 /// Models, meshes, textures, materials and 3D objects
-pub mod models;
+pub mod core;
 
 /// Static methods for creating meshes of simple primatives
 pub mod primitives;
@@ -62,10 +62,10 @@ pub mod prelude {
   pub use crate::app::App;
   pub use crate::camera::Camera;
   pub use crate::colour::*;
+  pub use crate::core::{MATERIAL_PLACEHOLDER, Material, Texture};
   pub use crate::engine::{Engine, InstanceHandle, LightHandle, ModelHandle};
   pub use crate::light::Light;
   pub use crate::math::{Affine2, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
-  pub use crate::models::{MATERIAL_PLACEHOLDER, Material, Texture};
   pub use crate::primitives;
   pub use crate::scene::Scene;
 

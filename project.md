@@ -12,10 +12,11 @@
 - [x] Instancing redesign Mesh struct
 - [x] Sub-meshes, complex models
 - [x] OBJ loader
-- [ ] Texture cache
+- [ ] Static geometry
 - [ ] More primitives
 - [ ] Skyboxes
 - [ ] Transparency
+- [ ] Texture cache
 
 # PS1 Info
 

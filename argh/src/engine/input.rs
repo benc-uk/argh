@@ -28,10 +28,9 @@ impl Inputs {
     }
   }
 
-  #[cfg(feature = "desktop")]
   pub fn scrape(&mut self, window: &Window) {
     self.keys = window.get_keys();
-    self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::No);
+    self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::Yes);
     self.mouse_buttons[0] = window.get_mouse_down(minifb::MouseButton::Left);
     self.mouse_buttons[1] = window.get_mouse_down(minifb::MouseButton::Middle);
     self.mouse_buttons[2] = window.get_mouse_down(minifb::MouseButton::Right);
@@ -43,41 +42,41 @@ impl Inputs {
 impl Engine {
   /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
   pub fn get_keys(&self) -> &[Key] {
-    &self.inputs.keys
+    &self.desktop.inputs.keys
   }
 
   /// Returns the keys recently pressed. Snapshot taken once per frame before scene.update().
   pub fn get_keys_pressed(&self) -> &[Key] {
-    &self.inputs.keys_pressed
+    &self.desktop.inputs.keys_pressed
   }
 
   /// Returns the mouse buttons
   pub fn get_mouse_buttons(&self) -> [bool; 3] {
-    self.inputs.mouse_buttons
+    self.desktop.inputs.mouse_buttons
   }
 
   /// Helper to check if a key is pressed
   pub fn is_pressed(&self, k: Key) -> bool {
-    self.inputs.keys.contains(&k)
+    self.desktop.inputs.keys.contains(&k)
   }
 
   /// Helper to check if left mouse button is pressed
   pub fn is_mouse_down_left(&self) -> bool {
-    self.inputs.mouse_buttons[0]
+    self.desktop.inputs.mouse_buttons[0]
   }
 
   /// Helper to check if middle mouse button is pressed
   pub fn is_mouse_down_middle(&self) -> bool {
-    self.inputs.mouse_buttons[1]
+    self.desktop.inputs.mouse_buttons[1]
   }
 
   /// Helper to check if right mouse button is pressed
   pub fn is_mouse_down_right(&self) -> bool {
-    self.inputs.mouse_buttons[2]
+    self.desktop.inputs.mouse_buttons[2]
   }
 
   /// Helper to check if right mouse button is pressed
   pub fn get_mouse_pos(&self) -> Option<(f32, f32)> {
-    self.inputs.mouse_pos
+    self.desktop.inputs.mouse_pos
   }
 }

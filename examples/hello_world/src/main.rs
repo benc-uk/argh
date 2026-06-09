@@ -17,5 +17,5 @@ fn main() {
 
   let mut e = Engine::new(320, 240);
 
-  e.start_window(&mut app, "Argh: Hello World", 2);
+  e.start_window(&mut app, "Argh: Hello World", 2, 0);
 }

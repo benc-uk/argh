@@ -23,6 +23,11 @@ pub const OUT_TOP: u8 = 1 << 3;
 pub const OUT_NEAR: u8 = 1 << 4;
 pub const OUT_FAR: u8 = 1 << 5;
 
+// pub struct Aabb {
+//   pub min: Vec3,
+//   pub max: Vec3,
+// }
+
 /// Don't ask me to explain this one!
 #[inline(always)]
 pub fn compute_outcode(v: &Vec4) -> u8 {
