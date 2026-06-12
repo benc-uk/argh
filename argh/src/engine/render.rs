@@ -10,10 +10,10 @@ use crate::{
   buffer::Buffer,
   camera::Camera,
   colour::{BLACK, Colour},
-  core::Material,
-  engine::Scene,
+  core::{BakedMesh, Material},
   helpers::{OUT_NEAR, compute_outcode, shade_vert},
-  math::{Mat3, Vec3, Vec4},
+  math::{Mat3, Mat4, Vec3, Vec4},
+  scene::Scene,
 };
 
 use super::{Engine, InstanceHandle};
@@ -71,16 +71,22 @@ impl Engine {
     }
   }
 
-  /// Render a scene from given camera
+  /// Render a [Scene] from given [Camera], this is the most common thing to call inside your [App] update
   pub fn render(&mut self, cam: &Camera, scn: &Scene) {
-    for i in 0..scn.instance_keys.len() {
-      let hdl = scn.instance_keys[i];
+    // render all static stuff
+    for mesh in &scn.baked_meshes {
+      self.render_static(mesh, cam.pers_mat * cam.view_mat);
+    }
+
+    // render all dynamic instances
+    for handle in 0..scn.instance_keys.len() {
+      let hdl = scn.instance_keys[handle];
       self.render_instance(hdl, cam, scn);
     }
   }
 
-  /// Renders a 3D mesh onto the screen from given camera position
-  /// This triggers a rendering pipeline
+  /// Renders a 3D [Instance] (ref by [InstanceHandle]) onto the screen from given camera position
+  /// This triggers the full rendering pipeline
   pub fn render_instance(&mut self, hdl: InstanceHandle, cam: &Camera, scn: &Scene) {
     // Shorthand for finding the instance
     let Some(instance) = scn.instances.get(hdl) else {
@@ -216,8 +222,88 @@ impl Engine {
 
         // Finally draw the damn triangle based on the screen verts and interpolate
         fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
-        self.stat_tri_rend += 1;
+        self.stat_rend_tri_frame += 1;
       }
+    }
+  }
+
+  /// Renders a 3D mesh onto the screen from given camera position
+  /// This triggers a rendering pipeline
+  fn render_static(&mut self, baked_mesh: &BakedMesh, vp: Mat4) {
+    self.verts.clear();
+    self.normals.clear();
+
+    // Prevents a panic but very likely result in absolutely nothing being rendered
+    if baked_mesh.baked_lighting.is_empty() {
+      return;
+    }
+
+    // Similar but different code from processing the verts in a dynamic instance
+    self.verts.extend(baked_mesh.verts.iter().enumerate().map(|(i, world)| {
+      let clip = vp * &Vec4::new(world.x, world.y, world.z, 1.0);
+      let outcode = compute_outcode(&clip);
+      let inv_w = 1.0 / clip.w;
+      let ndc_x = clip.x * inv_w;
+      let ndc_y = clip.y * inv_w;
+      let ndc_z = clip.z * inv_w;
+      let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f32;
+      let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32;
+      let uv = baked_mesh.uvs[i];
+
+      ProcessedVert {
+        world: *world, // no transform!
+        screen: ScreenVert {
+          x: sx,
+          y: sy,
+          z: ndc_z,
+          inv_w,
+          light: baked_mesh.baked_lighting[i],
+          u_w: uv.x * inv_w,
+          v_w: uv.y * inv_w,
+        },
+        outcode,
+      }
+    }));
+
+    // This is also similar but different!
+    for tri in baked_mesh.indices.chunks(3) {
+      let i0 = tri[0] as usize;
+      let i1 = tri[1] as usize;
+      let i2 = tri[2] as usize;
+      let mut sv0 = self.verts[i0].screen;
+      let mut sv1 = self.verts[i1].screen;
+      let mut sv2 = self.verts[i2].screen;
+
+      // Trivial reject: all three vertices outside the SAME plane.
+      let combined_out = self.verts[i0].outcode & self.verts[i1].outcode & self.verts[i2].outcode;
+      if combined_out != 0 {
+        continue;
+      }
+
+      // Strict near-plane discard (any vertex behind near). This will back objects "pop" in/out near camera
+      // TODO: Sutherland-Hodgman near-plane clipping which is complex as hell
+      let any_near = (self.verts[i0].outcode | self.verts[i1].outcode | self.verts[i2].outcode) & OUT_NEAR;
+      if any_near != 0 {
+        continue;
+      }
+
+      // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
+      //  - Back faces (mesh CW or back of CCW) have POSITIVE area
+      // So we discard anything non-negative.
+      let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
+      if area >= 0.0 {
+        continue;
+      }
+
+      // No lighting calc, just grab the baked values, wow so speedy
+      sv0.light = baked_mesh.baked_lighting[i0];
+      sv1.light = baked_mesh.baked_lighting[i1];
+      sv2.light = baked_mesh.baked_lighting[i2];
+
+      // Finally draw the damn triangle based on the screen verts and interpolate/fill between them
+      // Note we force smooth to true
+      fill_triangle(&mut self.buffer, sv0, sv1, sv2, &baked_mesh.material, true);
+      self.stat_rend_tri_frame += 1;
     }
   }
 }

@@ -19,6 +19,8 @@ pub struct Light {
   pub colour: Colour,
   pub atten_linear: f32,
   pub atten_quad: f32,
+  pub is_static: bool,  // baked into static geometry
+  pub is_dynamic: bool, // applied per-frame even to static geometry
 }
 
 impl Light {
@@ -27,13 +29,15 @@ impl Light {
   /// * `pos` - Position in world space of the light
   /// * `brightness` - Scales the brightness of the the light 0-1
   /// * `colour` - Light colour
-  pub fn new(pos: Vec3, brightness: f32, colour: Colour) -> Self {
+  pub fn new(pos: Vec3, brightness: f32, colour: Colour, atten_linear: f32, atten_quad: f32, is_static: bool, is_dynamic: bool) -> Self {
     Self {
       pos,
       brightness,
       colour,
-      atten_linear: 0.09,
-      atten_quad: 0.032,
+      atten_linear,
+      atten_quad,
+      is_static,
+      is_dynamic,
     }
   }
 
@@ -46,6 +50,8 @@ impl Light {
       colour: WHITE,
       atten_linear: 0.09,
       atten_quad: 0.032,
+      is_static: false,
+      is_dynamic: false,
     }
   }
 }

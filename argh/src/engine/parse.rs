@@ -100,6 +100,9 @@ impl Engine {
         out_mesh.indices.push(*i as i32);
       }
 
+      out_mesh.tri_count = out_mesh.indices.len() as u32 / 3;
+      println!("    tris: {}", out_mesh.tri_count);
+
       // Add matching material to this mesh
       if let Some(mat_id) = in_mesh.material_id {
         let in_material = materials.get(mat_id).unwrap();
@@ -108,6 +111,7 @@ impl Engine {
       }
 
       out_mesh.name = format!("{}_{}", in_model.name, i);
+
       out_model.add_mesh(out_mesh);
     }
 

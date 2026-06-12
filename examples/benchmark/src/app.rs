@@ -1,54 +1,175 @@
-use argh::engine::Key;
-use argh::math::V3_AXIS_Y;
-use argh::prelude::*;
+use std::f32::consts::PI;
+
+use argh::{engine::Key, prelude::*};
 
 pub struct MyApp {
   camera: Camera,
-  scene: Scene,
+  scn: Scene,
+  px: usize,
+  py: usize,
+  lx: usize,
+  ly: usize,
+  frame: u32,
+}
+
+const CAM_HEIGHT: f32 = 12.5;
+
+impl MyApp {
+  fn move_cam(&mut self, px: usize, py: usize) {
+    self.px = px;
+    self.py = py;
+    println!("Moving camera to: {},{}", self.px, self.py);
+    self.camera.set_pos(cell_pos(self.px, self.py, CAM_HEIGHT));
+    self.camera.set_look_at(cell_pos(self.px + self.lx, self.py + self.ly, 2.5));
+  }
 }
 
 impl App for MyApp {
-  // You must always implement the update method it will be called once per frame
-  fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
+  fn update(&mut self, eng: &mut Engine, _dt: f64, _t: f64) {
     eng.clear(BLACK);
 
-    // This makes the animation independent of framerate
-    let rot = Quat::new(V3_AXIS_Y, 0.5 * dt as f32);
-    // Rotate & move the camera
-    let mut p = rot.rotate_vec3(self.camera.get_pos());
-    p.y = (f32::sin(t as f32 * 0.75) * 2.6) + 6.0;
-    self.camera.set_pos(p);
+    eng.render(&self.camera, &self.scn);
 
-    // Draw the scene
-    eng.render(&self.camera, &self.scene);
-
-    // Quit on escape
-    if eng.is_pressed(Key::Escape) {
-      eng.stop();
+    // Move camera to difference places
+    if self.frame == 200 {
+      self.move_cam(3, 2)
     }
+    if self.frame == 400 {
+      self.move_cam(6, 6)
+    }
+    if self.frame == 600 {
+      self.move_cam(7, 1)
+    }
+    if self.frame == 800 {
+      self.move_cam(2, 7)
+    }
+
+    if !eng.get_keys_pressed().is_empty() {
+      // Quit on escape
+      if eng.is_pressed(Key::Escape) {
+        eng.stop();
+      }
+
+      // Quit on escape
+      if eng.is_pressed(Key::Up) {
+        self.move_cam(self.px, usize::clamp(self.py + 1, 0, 10));
+      }
+      if eng.is_pressed(Key::Down) {
+        self.move_cam(self.px, usize::clamp(self.py - 1, 0, 10));
+      }
+      if eng.is_pressed(Key::Left) {
+        self.move_cam(usize::clamp(self.px + 1, 0, 10), self.py);
+      }
+      if eng.is_pressed(Key::Right) {
+        self.move_cam(usize::clamp(self.px - 1, 0, 10), self.py);
+      }
+    }
+    self.frame += 1;
   }
 }
 
 pub fn new(eng: &mut Engine) -> MyApp {
-  let mut scene = Scene::new();
+  let mut scn = Scene::new();
+  scn.ambient_light = BLACK;
 
-  scene.add_light(Light::new(v3(15.0, 2.0, 5.0), 2.6, BLUE));
-  scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 2.7, RED));
-  scene.add_light(Light::new(v3(4.0, 9.0, 10.0), 3.9, WHITE));
+  let floor = eng.load_obj("assets/models/dungeon/floor_tile_large.obj").expect("obj loading failed");
+  // let grate = eng.load_obj("assets/models/dungeon/floor_tile_big_grate.obj").expect("obj loading failed");
+  // let floor_rocks = eng.load_obj("assets/models/dungeon/floor_tile_large_rocks.obj").expect("obj loading failed");
 
-  let mut crate_mat = Material::new_textured(Texture::new("assets/crate.png").unwrap());
-  crate_mat.specular = BLACK;
+  let wall = eng.load_obj("assets/models/dungeon/wall.obj").expect("obj loading failed");
 
-  let flat_1 = Material::new_flat(Colour::new(0.7, 0.7, 0.8));
-  let flat_2 = Material::new_flat(Colour::new(0.8, 0.7, 0.5));
-  let teapot1 = eng.add_model(primitives::new_teapot(flat_1));
-  let teapot2 = eng.add_model(primitives::new_teapot(flat_2));
-  let cube = eng.add_model(primitives::new_cube(crate_mat));
+  let barrel_small = eng.load_obj("assets/models/dungeon/barrel_large.obj").expect("obj loading failed");
+  let trunk = eng.load_obj("assets/models/dungeon/trunk_large_C.obj").expect("obj loading failed");
+  let boxobj = eng.load_obj("assets/models/dungeon/box_small_decorated.obj").expect("obj loading failed");
 
-  scene.add_instance_trans(teapot1, v3(2.0, 0.0, 2.3), v3(0.0, 3.0, 0.0), v3(1.2, 1.5, 1.2));
-  scene.add_instance_trans(teapot2, v3(-2.0, 0.0, -2.9), v3(0.0, 2.0, 0.0), v3(1.2, 1.2, 1.2));
-  scene.add_instance_trans(cube, v3(0.0, -6.0, 0.0), v3(0.0, 0.0, 0.0), v3(12.0, 12.0, 12.0));
-  let camera = Camera::new_perspective(eng.get_aspect(), v3(0.0, 5.0, 14.0), v3(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
+  let grid: Vec<Vec<char>> = DUNGEON_MAP.lines().map(|line| line.chars().collect()).collect();
 
-  MyApp { camera, scene }
+  for y in 0..grid.len() {
+    for x in 0..grid.len() {
+      let cell = grid[y][x];
+      let xf = x as f32;
+      let yf = y as f32;
+      if cell != '.' {
+        // let floor_mesh = match random_range(1..=6) {
+        //   1 => grate,
+        //   2 => floor_rocks,
+        //   _ => floor,
+        // };
+        scn.add_static(eng, floor, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+
+        match cell {
+          'o' => {
+            scn.add_static(eng, barrel_small, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+          }
+          't' => {
+            scn.add_static(eng, trunk, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+          }
+          'b' => {
+            scn.add_static(eng, boxobj, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+          }
+          'L' => {
+            let l = Light::new(cell_pos(x, y, 3.0), 9.0, col8(255, 250, 200), 0.0, 2.0, true, false);
+            scn.add_light(l);
+          }
+          _ => {}
+        };
+
+        let west = grid[y][x - 1];
+        let east = grid[y][x + 1];
+        let north = grid[y - 1][x];
+        let south = grid[y + 1][x];
+        if north == '.' {
+          scn.add_static(eng, wall, v3(xf * CELL_SIZE, 0.0, yf * CELL_SIZE - 2.25), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+        }
+        if south == '.' {
+          scn.add_static(eng, wall, v3(xf * CELL_SIZE, 0.0, yf * CELL_SIZE + 2.25), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+        }
+        if east == '.' {
+          scn.add_static(eng, wall, v3(xf * CELL_SIZE + 2.25, 0.0, yf * CELL_SIZE), v3(0.0, PI / 2.0, 0.0), v3(1.0, 1.0, 1.0));
+        }
+        if west == '.' {
+          scn.add_static(eng, wall, v3(xf * CELL_SIZE - 2.25, 0.0, yf * CELL_SIZE), v3(0.0, PI / 2.0, 0.0), v3(1.0, 1.0, 1.0));
+        }
+      }
+    }
+  }
+
+  let px = 1;
+  let py = 1;
+  let lx = 0;
+  let ly = 1;
+  let camera = Camera::new_perspective(eng.get_aspect(), cell_pos(px, py, CAM_HEIGHT), cell_pos(px + lx, py + ly, 2.5), 70.0, 0.01, 300.0).unwrap();
+
+  scn.bake_static_lighting();
+
+  println!("=== DUNGEON SCENE ===");
+  println!("Static meshes: {}", scn.get_stats(eng).1);
+  println!("Lights: {}", scn.get_stats(eng).2);
+  println!("Total Tris: {}\n", scn.get_stats(eng).3);
+
+  MyApp {
+    camera,
+    scn,
+    px,
+    py,
+    lx,
+    ly,
+    frame: 0,
+  }
 }
+
+fn cell_pos(x: usize, y: usize, z: f32) -> Vec3 {
+  v3(x as f32 * CELL_SIZE, z, y as f32 * CELL_SIZE)
+}
+
+const CELL_SIZE: f32 = 4.0_f32;
+const DUNGEON_MAP: &str = "..........
+.......#..
+..L#t..L..
+..#Lb.L#o.
+..o##..#..
+....L..#L.
+....#..#o.
+.L#bL##L..
+.#o....bL.
+..........";

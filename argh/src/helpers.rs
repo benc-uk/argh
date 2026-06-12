@@ -16,21 +16,16 @@ use crate::{
 };
 
 // One bit per frustum plane
-pub const OUT_LEFT: u8 = 1 << 0;
-pub const OUT_RIGHT: u8 = 1 << 1;
-pub const OUT_BOTTOM: u8 = 1 << 2;
-pub const OUT_TOP: u8 = 1 << 3;
-pub const OUT_NEAR: u8 = 1 << 4;
-pub const OUT_FAR: u8 = 1 << 5;
-
-// pub struct Aabb {
-//   pub min: Vec3,
-//   pub max: Vec3,
-// }
+pub(crate) const OUT_LEFT: u8 = 1 << 0;
+pub(crate) const OUT_RIGHT: u8 = 1 << 1;
+pub(crate) const OUT_BOTTOM: u8 = 1 << 2;
+pub(crate) const OUT_TOP: u8 = 1 << 3;
+pub(crate) const OUT_NEAR: u8 = 1 << 4;
+pub(crate) const OUT_FAR: u8 = 1 << 5;
 
 /// Don't ask me to explain this one!
 #[inline(always)]
-pub fn compute_outcode(v: &Vec4) -> u8 {
+pub(crate) fn compute_outcode(v: &Vec4) -> u8 {
   let mut code = 0u8;
   if v.x + v.w < 0.0 {
     code |= OUT_LEFT;
@@ -56,7 +51,7 @@ pub fn compute_outcode(v: &Vec4) -> u8 {
 // Internal function for calculating the light at a vertex in world space
 // We return light values (as RGB Colours) falling on that vert, NOT the colour of the surface
 #[inline(always)]
-pub fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f32) -> (Colour, Colour) {
+pub(crate) fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f32) -> (Colour, Colour) {
   // Shading & lighting over multiple lights
   let mut diff_sum = BLACK;
   let mut spec_sum = BLACK;
@@ -90,7 +85,7 @@ pub fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, ey
   (diff_sum, spec_sum)
 }
 
-pub struct FpsAveragerEight {
+pub(crate) struct FpsAveragerEight {
   samples: [f32; 8],
   index: usize,
   count: usize,
@@ -98,7 +93,7 @@ pub struct FpsAveragerEight {
 }
 
 impl FpsAveragerEight {
-  pub const fn new() -> Self {
+  pub(crate) const fn new() -> Self {
     Self {
       samples: [0.0; 8],
       index: 0,
@@ -107,7 +102,7 @@ impl FpsAveragerEight {
     }
   }
 
-  pub fn add_fps(&mut self, fps: f32) {
+  pub(crate) fn add_fps(&mut self, fps: f32) {
     if self.count == 8 {
       self.sum -= self.samples[self.index];
     } else {
@@ -122,7 +117,7 @@ impl FpsAveragerEight {
   }
 
   #[inline]
-  pub fn avg_fps(&self) -> f32 {
+  pub(crate) fn avg_fps(&self) -> f32 {
     if self.count == 8 {
       // Highly optimized by the compiler into a fast multiplication (* 0.125)
       self.sum / 8.0

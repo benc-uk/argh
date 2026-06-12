@@ -22,7 +22,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::{app::App, engine::input::Inputs};
-use crate::{buffer::Buffer, colour::*, core::Model, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3, scene::Scene};
+use crate::{buffer::Buffer, colour::*, core::Model, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -30,8 +30,6 @@ pub use minifb::Key;
 new_key_type! {
   /// A handle to reference instances held by the engine
   pub struct InstanceHandle;
-  /// A handle to reference materials held by the engine
-  pub struct MaterialHandle;
   /// A handle to reference models held by the engine
   pub struct ModelHandle;
   /// A handle to reference lights held by the engine
@@ -40,7 +38,7 @@ new_key_type! {
 
 // Convenience to group all desktop only fields and state in one place
 #[cfg(feature = "desktop")]
-pub struct DesktopState {
+struct DesktopState {
   inputs: input::Inputs, // Inputs, keyboard & mouse
   exit: bool,            // Flag for quit/exit
 }
@@ -58,8 +56,7 @@ pub struct Engine {
   desktop: DesktopState,
 
   // Stats
-  stat_tri_total: u32,
-  stat_tri_rend: u32,
+  stat_rend_tri_frame: u32,
 
   // Internal rendering perf cache kinda stuff
   verts: Vec<ProcessedVert>,
@@ -87,11 +84,9 @@ impl Engine {
       last_time: Instant::now(),
       fps: FpsAveragerEight::new(),
       debug: false,
-      // log_level: 1,
       verts: vec![],
       normals: vec![],
-      stat_tri_total: 0,
-      stat_tri_rend: 0,
+      stat_rend_tri_frame: 0,
 
       #[cfg(feature = "desktop")]
       desktop: DesktopState {
@@ -179,8 +174,13 @@ impl Engine {
     let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
     self.fps.add_fps(fps as f32);
     self.last_time = Instant::now();
-    self.stat_tri_rend = 0;
+    self.stat_rend_tri_frame = 0;
 
+    self.t
+  }
+
+  /// Getter for elapsed time
+  pub fn get_time(&self) -> f64 {
     self.t
   }
 
@@ -188,19 +188,22 @@ impl Engine {
   pub fn add_model(&mut self, model: Model) -> ModelHandle {
     println!("Adding model '{}' to the engine cache", model.name);
 
-    let mut tris: u32 = 0;
-    for mesh in &model.meshes {
-      tris += mesh.indices.len() as u32 / 3;
-    }
-    self.stat_tri_total += tris;
-
     self.models.insert(model)
+  }
+
+  /// Get Model from it's handle
+  pub(crate) fn get_model(&self, model_h: ModelHandle) -> &Model {
+    self.models.get(model_h).unwrap()
   }
 
   /// Draw the debug overlay on top of the current frame. Call AFTER app.update.
   pub fn draw_debug(&mut self) {
     self.draw_string(&format!("FPS: {:.2}", self.fps.avg_fps()), 1, 1, WHITE);
-    self.draw_string(&format!("TRI_TOT: {:.2}", self.stat_tri_total), 1, 11, WHITE);
-    self.draw_string(&format!("TRI_REND: {:.2}", self.stat_tri_rend), 1, 21, WHITE);
+    self.draw_string(&format!("TRI_REND: {:.2}", self.stat_rend_tri_frame), 1, 21, WHITE);
+  }
+
+  /// Get engine stats
+  pub fn get_stats(&self) -> u32 {
+    self.stat_rend_tri_frame
   }
 }

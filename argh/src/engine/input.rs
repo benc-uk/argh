@@ -11,7 +11,7 @@ use minifb::Window;
 use super::Engine;
 use super::Key;
 
-pub struct Inputs {
+pub(super) struct Inputs {
   pub(super) keys: Vec<Key>,
   pub(super) keys_pressed: Vec<Key>,
   pub(super) mouse_buttons: [bool; 3],
@@ -19,7 +19,7 @@ pub struct Inputs {
 }
 
 impl Inputs {
-  pub fn new() -> Self {
+  pub(super) fn new() -> Self {
     Self {
       keys: vec![],
       keys_pressed: vec![],
@@ -28,7 +28,7 @@ impl Inputs {
     }
   }
 
-  pub fn scrape(&mut self, window: &Window) {
+  pub(super) fn scrape(&mut self, window: &Window) {
     self.keys = window.get_keys();
     self.keys_pressed = window.get_keys_pressed(minifb::KeyRepeat::Yes);
     self.mouse_buttons[0] = window.get_mouse_down(minifb::MouseButton::Left);

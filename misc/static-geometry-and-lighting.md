@@ -1,14 +1,19 @@
 # Static geometry and baked vertex lighting
 
 A design proposal for two complementary optimisations that together transform
-the renderer's handling of non-moving world geometry (walls, floors,
-scenery, props). Inspired by the Quake-era software rasteriser pipeline.
+the renderer's handling of non-moving world geometry (walls, floors, scenery,
+props). Inspired by the Quake-era software rasteriser pipeline.
 
 The two changes stack: static geometry baking eliminates the per-frame model
 transform work, baked vertex lighting eliminates the per-frame shading work.
 Combined, a static vertex per frame costs a single `VP·v` matmul + screen
 mapping + one array lookup. No matrix builds, no inverse-transpose, no
 per-vertex transforms, no sqrt, no powf, no light loop.
+
+Scope note: this doc covers only what's needed for the first cut. Spatial
+chunking, AABBs, and frustum culling are deliberately out of scope. The data
+layout is just `Vec<StaticMesh>` on `Scene`. Those optimisations are a
+natural next step once this is working (see the very end).
 
 ## Why this is worth doing
 
@@ -78,31 +83,19 @@ pub struct StaticMesh {
     pub(crate) normals: Vec<Vec3>,      // already in WORLD space, normalised
     pub(crate) uvs: Vec<Vec2>,
     pub(crate) indices: Vec<i32>,
-    pub(crate) bounds: Aabb,            // for frustum culling
 
     pub(crate) baked_lighting: Vec<Colour>,  // see part two
 }
-
-pub struct Aabb {
-    pub min: Vec3,
-    pub max: Vec3,
-}
 ```
 
-On `Scene`, a flat list of chunks (see chunking section below):
+On `Scene`, just a flat list:
 
 ```rust
-pub(super) chunks: Vec<Chunk>,
-
-pub struct Chunk {
-    bounds: Aabb,
-    meshes: Vec<StaticMesh>,    // one per source mesh that landed in this chunk
-}
+pub(super) static_meshes: Vec<StaticMesh>,
 ```
 
 One `StaticMesh` per source mesh, mirroring the current `Mesh` -> `Material`
-ownership model. No cross-source merging by material in this design; that's
-a later optimisation (see "Things deliberately not in scope").
+ownership model. No cross-source merging by material in this design.
 
 ### Bake API
 
@@ -124,7 +117,6 @@ impl Scene {
             let normals: Vec<Vec3> = mesh.normals.iter()
                 .map(|n| (m_inv_t * n).normalize_new())
                 .collect();
-            let bounds = Aabb::from_points(&verts);
 
             // Take ownership of the material clone for this static mesh
             let sm = StaticMesh {
@@ -132,10 +124,9 @@ impl Scene {
                 verts, normals,
                 uvs: mesh.uvs.clone(),
                 indices: mesh.indices.clone(),
-                bounds,
                 baked_lighting: vec![],   // populated in second pass
             };
-            self.insert_into_chunk(sm);
+            self.static_meshes.push(sm);
         }
     }
 }
@@ -152,24 +143,20 @@ Pick the simpler one for now; both are local changes inside `models.rs`.
 
 ### Per-frame render path
 
-A second function alongside `render_instance`:
+A second function alongside `render_instance`, walking the flat list of
+static meshes:
 
 ```rust
 pub fn render_static(&mut self, cam: &Camera, scn: &Scene) {
-    let vp = cam.pers_mat * cam.view_mat;      // ONE matmul for the entire static world
-    let planes = extract_frustum_planes(&vp);
+    let vp = cam.pers_mat * cam.view_mat;   // ONE matmul for the entire static world
 
-    for chunk in &scn.chunks {
-        match cull_aabb(&chunk.bounds, &planes) {
-            CullResult::Outside => continue,
-            CullResult::Inside => self.render_chunk_no_clip(chunk, &vp, scn),
-            CullResult::Intersect => self.render_chunk(chunk, &vp, scn),
-        }
+    for sm in &scn.static_meshes {
+        self.render_static_mesh(sm, &vp, scn);
     }
 }
 ```
 
-Inside the per-batch loop the vertex stage becomes:
+Inside `render_static_mesh`, the vertex stage becomes:
 
 ```rust
 self.verts.extend(sm.verts.iter().enumerate().map(|(i, world)| {
@@ -267,13 +254,14 @@ flagged both static and dynamic want the overlay to filter on
 
 Runs once after the scene is populated. Per-vertex, per-static-light, no eye
 vector (specular is intentionally view-dependent, see trade-offs below).
+`material` is read directly from `self`, so the method takes no extra
+parameter for it (this also avoids a borrow conflict at the call site).
 
 ```rust
 impl StaticMesh {
     pub fn bake_lighting(&mut self,
                          lights: &SlotMap<LightHandle, Light>,
-                         ambient: Colour,
-                         material: &Material) {
+                         ambient: Colour) {
         self.baked_lighting.clear();
         self.baked_lighting.reserve(self.verts.len());
 
@@ -292,8 +280,8 @@ impl StaticMesh {
                 diffuse += light.colour * light.brightness * n_dot_l * atten;
             }
 
-            let amb = ambient * material.diffuse;
-            self.baked_lighting.push(diffuse * material.diffuse + amb);
+            let amb = ambient * self.material.diffuse;
+            self.baked_lighting.push(diffuse * self.material.diffuse + amb);
         }
     }
 }
@@ -308,11 +296,8 @@ Driver pass at scene-load time:
 ```rust
 impl Scene {
     pub fn bake_static_lighting(&mut self) {
-        for chunk in &mut self.chunks {
-            for sm in &mut chunk.meshes {
-                let mat = &sm.material;
-                sm.bake_lighting(&self.lights, self.ambient_light, mat);
-            }
+        for sm in &mut self.static_meshes {
+            sm.bake_lighting(&self.lights, self.ambient_light);
         }
     }
 }
@@ -322,8 +307,8 @@ User flow:
 
 ```rust
 let static_lights = /* set up sun, sconces, etc with is_static = true */;
-let walls = scene.add_static(engine, wall_model, ...);
-let floor = scene.add_static(engine, floor_model, ...);
+scene.add_static(engine, wall_model, ...);
+scene.add_static(engine, floor_model, ...);
 scene.bake_static_lighting();  // call ONCE after all static lights + geometry added
 ```
 
@@ -378,134 +363,22 @@ sv0.light = sm.baked_lighting[i0]
 
 ---
 
-## Chunking for cullable batches
-
-The third leg of the design, which makes the geometry baking actually pay
-off at scale. Without chunks, every static vertex still gets transformed
-every frame even when the camera is looking the other way.
-
-### Concept
-
-Group static geometry into spatial chunks, each with an enclosing AABB.
-Each frame, test each chunk's AABB against the camera frustum. Outside
-chunks skip transform and rasterisation entirely.
-
-### Partitioning strategy
-
-**Start with a flat `Vec<Chunk>`.** Until profiling shows iterating ~2000
-AABB tests is a bottleneck, no hierarchy is needed. A `Vec<Chunk>` with
-linear iteration is cache-friendly and the AABB test is ~30 flops per
-chunk per frame. Five hundred chunks is ~15,000 flops per frame, nothing.
-
-Upgrade path if the flat list ever becomes a problem:
-
-1. `Vec<Chunk>` (good for hundreds, up to ~2000 chunks)
-2. Uniform 2D or 3D grid index (good for tens of thousands)
-3. BVH (only needed for genuinely huge worlds, you will know when)
-
-BSP is interesting because it gives back-to-front ordering for free, but
-it's a heavy implementation and not necessary with a z-buffer.
-
-### Assignment of triangles to chunks at bake time
-
-Centroid binning is the pragmatic 90 percent solution:
-
-```rust
-for tri in mesh.indices.chunks(3) {
-    let v0 = world_verts[tri[0] as usize];
-    let v1 = world_verts[tri[1] as usize];
-    let v2 = world_verts[tri[2] as usize];
-    let centroid = (v0 + v1 + v2) * (1.0 / 3.0);
-    let chunk_id = pick_chunk(centroid);
-
-    // Add triangle to the chunk and grow the chunk's AABB to enclose actual verts
-    chunks[chunk_id].add_triangle(tri, &mesh.material, [v0, v1, v2]);
-    chunks[chunk_id].bounds.expand_to(v0);
-    chunks[chunk_id].bounds.expand_to(v1);
-    chunks[chunk_id].bounds.expand_to(v2);
-}
-```
-
-A triangle straddling a chunk boundary lives in one chunk only, but the
-chunk's AABB is grown so frustum culling remains correct. Chunk AABBs
-overlap slightly, costing maybe 5 to 10 percent of culling potential.
-Acceptable.
-
-### Frustum-vs-AABB test
-
-Pull six planes out of the VP matrix once per frame (Gribb & Hartmann),
-normalise, then for each chunk do the p-vertex / n-vertex trick to test
-all 8 corners in 6 plane equations:
-
-```rust
-pub enum CullResult { Outside, Inside, Intersect }
-
-pub fn cull_aabb(aabb: &Aabb, planes: &[Plane; 6]) -> CullResult {
-    let mut intersect = false;
-    for p in planes {
-        // p-vertex: corner of AABB furthest along plane normal
-        let px = if p.n.x >= 0.0 { aabb.max.x } else { aabb.min.x };
-        let py = if p.n.y >= 0.0 { aabb.max.y } else { aabb.min.y };
-        let pz = if p.n.z >= 0.0 { aabb.max.z } else { aabb.min.z };
-        if p.n.x * px + p.n.y * py + p.n.z * pz + p.d < 0.0 {
-            return CullResult::Outside;
-        }
-        // n-vertex: opposite corner
-        let nx = if p.n.x >= 0.0 { aabb.min.x } else { aabb.max.x };
-        let ny = if p.n.y >= 0.0 { aabb.min.y } else { aabb.max.y };
-        let nz = if p.n.z >= 0.0 { aabb.min.z } else { aabb.max.z };
-        if p.n.x * nx + p.n.y * ny + p.n.z * nz + p.d < 0.0 {
-            intersect = true;
-        }
-    }
-    if intersect { CullResult::Intersect } else { CullResult::Inside }
-}
-```
-
-About 30 flops per chunk per frame.
-
-### Inside / Intersect split
-
-When a chunk is fully inside the frustum, the per-vertex `compute_outcode`
-work and the per-triangle trivial-reject test can be skipped, because the
-cull has already proved nothing escapes. Worth a separate
-`render_chunk_no_clip` path for the dense interior of the view.
-
-### Sizing chunks
-
-Empirical, but rules of thumb:
-
-- Cell side roughly the width of your near-field view (camera fits in 1 to 3 cells at a time)
-- Target a few hundred to a few thousand triangles per chunk
-- For a 256m world with 30m view radius: 16m cells gives a 16x16 grid, ~256 chunks total, camera typically sees 4 to 8 of them per frame
-- Tighter corridor games: smaller cells (4 to 8m) to cull aggressively around corners
-
-Track surviving-chunk count per frame as a debug stat to see how culling is
-actually performing.
-
----
-
 ## What the combined static path looks like
 
-After all three (baked transforms + baked lighting + chunked frustum cull),
-the per-frame static render becomes:
+After both bakes, the per-frame static render becomes:
 
 ```
 Per frame, once:
   VP = pers · view
-  planes = extract_frustum_planes(&VP)
 
-Per chunk:
-  cull_aabb(chunk.bounds, &planes)  -> Outside | Inside | Intersect
-
-Per batch in visible chunks:
+Per static mesh:
   Per vertex:
     VP · Vec4              <-- the only real work
     outcode + screen mapping
     sm.baked_lighting[i] lookup   <-- effectively free
 
   Per triangle:
-    Trivial reject (skipped if chunk is Inside)
+    Trivial reject
     Backface area test
     fill_triangle (rasterisation unchanged)
 ```
@@ -518,19 +391,11 @@ rasterise.
 
 ## Prerequisites
 
-These are not strictly required, but the design is cleanest if they're in
-place first:
+The only real prerequisite:
 
-- **Aabb + Plane primitives in `math/`.** Small module, ~50 lines, easily
-  unit-testable. Used by frustum culling.
-
-- **Frustum plane extraction from a Mat4.** ~30 lines, called once per
-  frame from `render_static`.
-
-- **A way to clone a `Material`.** Either derive `Clone` on it, or wrap
-  the texture in `Rc<Texture>` so cloning is cheap. Needed because
-  `StaticMesh` takes ownership of the material from the source mesh at
-  bake time.
+- **A way to clone a `Material`.** Either derive `Clone` on it, or wrap the
+  texture in `Rc<Texture>` so cloning is cheap. Needed because `StaticMesh`
+  takes ownership of the material from the source mesh at bake time.
 
 ---
 
@@ -538,44 +403,51 @@ place first:
 
 A reasonable path that keeps the renderer working at every step:
 
-1. Add `Aabb`, `Plane`, `extract_frustum_planes`, `cull_aabb` to `math/`.
-   Unit-test in isolation.
-2. Make `Material` cloneable (derive `Clone`, or `Rc<Texture>` inside). Tiny
+1. Make `Material` cloneable (derive `Clone`, or `Rc<Texture>` inside). Tiny
    local change in `models.rs`.
-3. Add `StaticMesh` and `Chunk` types. Add `Vec<Chunk>` to `Scene`.
-4. Implement `Scene::add_static` that bakes geometry into world space and
-   bucket into chunks by triangle centroid. No baked lighting yet, leave
+2. Add `StaticMesh`. Add `static_meshes: Vec<StaticMesh>` to `Scene`.
+3. Implement `Scene::add_static` that bakes geometry into world space and
+   pushes one `StaticMesh` per source mesh. No baked lighting yet, leave
    `baked_lighting` empty and fall back to per-frame `shade_vert`.
-5. Implement `render_static` with chunk frustum culling. Verify it draws
+4. Implement `render_static` walking `scn.static_meshes`. Verify it draws
    correctly and produces identical pixels to the equivalent
    `render_instance` calls. This is a regression-test checkpoint.
-6. Add `is_static` / `is_dynamic` flags to `Light`.
-7. Implement `StaticMesh::bake_lighting` and
-   `Scene::bake_static_lighting`. Call from user code after all static
-   lights and static geometry are added.
-8. Swap `render_static`'s shading section to use `baked_lighting` lookups.
-9. (Optional) Add the `Inside` vs `Intersect` split in chunk rendering for
-   the trivial-accept fast path.
-10. (Optional) Add the dynamic-light overlay for moving lights that need to
-    affect static geometry.
+5. Add `is_static` / `is_dynamic` flags to `Light`.
+6. Implement `StaticMesh::bake_lighting` and `Scene::bake_static_lighting`.
+   Call from user code after all static lights and static geometry are
+   added.
+7. Swap `render_static`'s shading section to use `baked_lighting` lookups.
+8. (Optional) Add the dynamic-light overlay for moving lights that need to
+   affect static geometry.
 
 Each step is independently shippable. The renderer is never broken in
 between.
 
 ---
 
-## Things deliberately not in scope
+## Things deliberately not in scope (yet)
 
-These are natural next chapters but not part of this design:
+Natural next chapters once the flat-list version is working:
 
+- **Spatial chunking + AABB frustum culling.** Group static geometry into
+  spatial chunks, each with an enclosing AABB. Each frame, test each
+  chunk's AABB against the camera frustum and skip the rest of the work
+  for off-screen chunks. Required for the static path to actually scale,
+  because without it every static vertex is still transformed every frame.
+  Needs `Aabb` and `Plane` math primitives and a `Mat4 -> 6 planes`
+  extractor (Gribb & Hartmann). Start with `Vec<Chunk>` and centroid
+  binning; upgrade to a grid or BVH only if profiling demands it.
+- **Inside vs Intersect rendering split.** When a chunk is fully inside the
+  frustum, skip per-vertex outcode work and per-triangle trivial reject.
+  Worth a separate `render_chunk_no_clip` path. Only meaningful once
+  chunking exists.
 - **Cross-source material merging within a chunk.** Today each source mesh
-  becomes one `StaticMesh`. If two source meshes in the same chunk share a
-  material, they're still rendered as separate batches. Merging them into
-  one big vertex/index buffer per material per chunk would cut per-batch
-  overhead and improve cache locality. Requires cheap "same material?"
-  comparison, which is why this naturally pairs with promoting `Material`
-  to a handle-managed resource (`MaterialHandle` is already declared in
-  `engine/mod.rs` waiting for storage).
+  becomes one `StaticMesh`. If two source meshes share a material, they're
+  still rendered as separate batches. Merging into one big vertex/index
+  buffer per material would cut per-batch overhead and improve cache
+  locality. Pairs naturally with promoting `Material` to a handle-managed
+  resource (`MaterialHandle` is already declared in `engine/mod.rs`
+  waiting for storage).
 - **Lightmaps.** Per-texel baked lighting via low-resolution textures
   layered over the static geometry. Strictly better quality than vertex
   lighting on large flat surfaces. Big implementation step beyond this
@@ -584,9 +456,9 @@ These are natural next chapters but not part of this design:
   occlusion (one wall blocking another's light). Adding shadow rays in
   the bake (offline ray-cast at load time) gives big visual upgrade.
   Slow to bake, free at render.
-- **PVS (Potentially Visible Sets).** Quake-style precomputed
-  cell-to-cell visibility. Replaces per-frame frustum culling with a
-  table lookup. Heavy bake, very fast runtime. Overkill until your scene
-  has thousands of chunks.
-- **Dynamic-light shadows on static geometry.** Shadow volumes or
-  per-light shadow maps. Outside the scope of "make static stuff fast."
+- **PVS (Potentially Visible Sets).** Quake-style precomputed cell-to-cell
+  visibility. Replaces per-frame frustum culling with a table lookup.
+  Heavy bake, very fast runtime. Overkill until your scene has thousands
+  of chunks.
+- **Dynamic-light shadows on static geometry.** Shadow volumes or per-light
+  shadow maps. Outside the scope of "make static stuff fast."

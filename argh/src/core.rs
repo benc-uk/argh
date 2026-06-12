@@ -7,11 +7,13 @@
 // ==============================================================================================
 
 use image::{ImageError, ImageReader};
-use std::io;
+use slotmap::SlotMap;
+use std::{io, rc::Rc};
 
 use crate::{
-  colour::{Colour, INV_255, WHITE},
-  engine::ModelHandle,
+  colour::{BLACK, Colour, INV_255, WHITE},
+  engine::{LightHandle, ModelHandle},
+  light::Light,
   math::{Mat4, Quat, Vec2, Vec3},
 };
 
@@ -40,7 +42,7 @@ pub struct Texture {
   h: u32,
 
   /// Treat alpha transparent pixels as invisible (cut them out). Defaults to true
-  pub alpha_cutout: bool,
+  pub(crate) alpha_cutout: bool,
 }
 
 // In Rust enums can have methods and an implementation, which is kinda wild
@@ -92,6 +94,11 @@ impl Texture {
 
     (Colour::from_packed_0rgb(p), a)
   }
+
+  /// Enable or disable alpha cutout
+  pub fn enable_cutout(&mut self, cutout: bool) {
+    self.alpha_cutout = cutout
+  }
 }
 
 // ===================================
@@ -99,6 +106,7 @@ impl Texture {
 // ===================================
 
 /// Material holds parameters for rendering the surface of a mesh, can be textured or flat
+#[derive(Clone)]
 pub struct Material {
   /// Diffuse or base colour of the object
   pub diffuse: Colour,
@@ -110,7 +118,7 @@ pub struct Material {
   pub hardness: f32,
 
   // Internal texture, might be None
-  pub(crate) texture: Option<Texture>,
+  pub(crate) texture: Option<Rc<Texture>>,
 }
 
 /// Most basic Material possible
@@ -128,7 +136,7 @@ impl Material {
       diffuse: WHITE,
       specular: WHITE,
       hardness: 20.0,
-      texture: Some(tex),
+      texture: Some(Rc::new(tex)),
     }
   }
 
@@ -144,12 +152,12 @@ impl Material {
 
   /// Simple setter for the texture
   pub fn set_texture(&mut self, tex: Texture) {
-    self.texture = Some(tex)
+    self.texture = Some(Rc::new(tex))
   }
 
   /// Get the internal texture
-  pub fn get_texture(&mut self) -> &Option<Texture> {
-    &self.texture
+  pub fn get_texture(&self) -> Option<&Rc<Texture>> {
+    self.texture.as_ref()
   }
 }
 
@@ -158,13 +166,14 @@ impl Material {
 // ===================================
 
 /// Triangle based 3D mesh of verts + material
-pub struct Mesh {
+pub(crate) struct Mesh {
   pub(crate) material: Material,
   pub(crate) verts: Vec<Vec3>,   // Vert position
   pub(crate) normals: Vec<Vec3>, // Normal per vert
   pub(crate) uvs: Vec<Vec2>,     // Texture coords
   pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
   pub(crate) name: String,
+  pub(crate) tri_count: u32,
 }
 
 impl Mesh {
@@ -177,6 +186,7 @@ impl Mesh {
       uvs: vec![],
       indices: vec![],
       name: "".to_string(),
+      tri_count: 0,
     }
   }
 
@@ -189,11 +199,8 @@ impl Mesh {
       uvs: vec![],
       indices: vec![],
       name: "".to_string(),
+      tri_count: 0,
     }
-  }
-
-  pub fn set_material(&mut self, mat: Material) {
-    self.material = mat
   }
 }
 
@@ -203,24 +210,27 @@ impl Mesh {
 
 /// Model holds multiple meshes
 pub struct Model {
-  pub(super) meshes: Vec<Mesh>,
-  pub(super) name: String,
+  pub(crate) meshes: Vec<Mesh>,
+  pub(crate) name: String,
+  pub(crate) tri_count: u32,
 }
 
 impl Model {
   /// Create an empty model with no meshes
-  pub fn new(name: &str) -> Self {
+  pub(crate) fn new(name: &str) -> Self {
     Self {
       meshes: vec![],
       name: name.to_string(),
+      tri_count: 0,
     }
   }
 
   /// Convenience to wrap a single [Mesh] in a [Model]
-  pub fn from_mesh(mesh: Mesh, name: &str) -> Self {
+  pub(crate) fn from_mesh(mesh: Mesh, name: &str) -> Self {
     let mut model = Self {
       meshes: vec![],
       name: name.to_string(),
+      tri_count: 0,
     };
 
     model.add_mesh(mesh);
@@ -228,16 +238,12 @@ impl Model {
   }
 
   /// Add a mesh to a model
-  pub fn add_mesh(&mut self, mesh: Mesh) {
+  pub(crate) fn add_mesh(&mut self, mesh: Mesh) {
     debug_assert_eq!(mesh.uvs.len(), mesh.verts.len(), "UVs must match vert count");
     debug_assert_eq!(mesh.normals.len(), mesh.verts.len(), "normals must match vert count");
 
+    self.tri_count += &mesh.tri_count;
     self.meshes.push(mesh);
-  }
-
-  /// Get the meshes
-  pub fn get_meshes(&self) -> &Vec<Mesh> {
-    &self.meshes
   }
 }
 
@@ -323,24 +329,42 @@ impl Instance {
 }
 
 // ===================================
-// Static Mesh
+// Baked Mesh
 // ===================================
 
-// pub struct StaticMesh {
-//   pub(crate) material: Material, // owned by value, same as Mesh today
-//   pub(crate) verts: Vec<Vec3>,   // already in WORLD space
-//   pub(crate) normals: Vec<Vec3>, // already in WORLD space, normalised
-//   pub(crate) uvs: Vec<Vec2>,
-//   pub(crate) indices: Vec<i32>,
-//   // pub(crate) bounds: Aabb, // for frustum culling
-//   pub(crate) baked_lighting: Vec<Colour>, // Baked lighting happening later
-// }
+pub(crate) struct BakedMesh {
+  pub(crate) material: Material,
+  pub(crate) verts: Vec<Vec3>,   // already in WORLD space
+  pub(crate) normals: Vec<Vec3>, // already in WORLD space, normalised
+  pub(crate) uvs: Vec<Vec2>,
+  pub(crate) indices: Vec<i32>,
+  pub(crate) baked_lighting: Vec<Colour>, // Baked lighting
+}
 
-// // ===================================
-// // Chunk
-// // ===================================
+impl BakedMesh {
+  pub(crate) fn bake_lighting(&mut self, lights: &SlotMap<LightHandle, Light>, ambient: Colour) {
+    self.baked_lighting.clear();
+    self.baked_lighting.reserve(self.verts.len());
 
-// pub struct Chunk {
-//   bounds: Aabb,
-//   meshes: Vec<StaticMesh>, // one per source mesh that landed in this chunk
-// }
+    for (vert, normal) in self.verts.iter().zip(&self.normals) {
+      let mut diffuse = BLACK;
+
+      for light in lights.values() {
+        // Important, only is_static lights are used for baking
+        if !light.is_static {
+          continue;
+        }
+
+        let l_raw = light.pos - *vert;
+        let d = l_raw.len();
+        let l = l_raw.normalize_new();
+        let atten = 1.0 / (1.0 + light.atten_linear * d + light.atten_quad * d * d);
+        let n_dot_l = normal.dot(l).max(0.0);
+        diffuse += light.colour * light.brightness * n_dot_l * atten;
+      }
+
+      let amb = ambient * self.material.diffuse;
+      self.baked_lighting.push(diffuse * self.material.diffuse + amb);
+    }
+  }
+}

@@ -211,7 +211,7 @@ const GLYPHS: [[u8; GLYPH_H]; GLYPH_COUNT] = [
 
 /// Look up the glyph bitmap for a printable ASCII character (space through '~').
 /// Returns None for characters outside this range.
-pub fn glyph(ch: char) -> Option<&'static [u8; GLYPH_H]> {
+pub(crate) fn glyph(ch: char) -> Option<&'static [u8; GLYPH_H]> {
   let code = ch as u32;
   if code < FIRST_CHAR as u32 || code > LAST_CHAR as u32 {
     return None;
@@ -220,6 +220,6 @@ pub fn glyph(ch: char) -> Option<&'static [u8; GLYPH_H]> {
 }
 
 /// Returns the (width, height) of a single glyph in pixels.
-pub const fn glyph_size() -> (usize, usize) {
+pub(crate) const fn glyph_size() -> (usize, usize) {
   (GLYPH_W, GLYPH_H)
 }
