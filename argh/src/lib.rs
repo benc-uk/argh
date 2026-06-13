@@ -41,8 +41,23 @@ pub mod colour;
 
 pub mod engine; // This has it's own docs in engine/mod.rs
 
-/// Models, meshes, textures, materials and 3D objects
-pub mod core;
+/// Image-backed textures used by materials
+pub mod texture;
+
+/// Surface materials, flat or textured
+pub mod material;
+
+/// Triangle meshes (crate-internal)
+pub(crate) mod mesh;
+
+/// 3D models composed of one or more meshes
+pub mod model;
+
+/// World-space instances of models, with position, rotation and scale
+pub mod instance;
+
+/// World-space meshes with pre-baked lighting (crate-internal)
+pub(crate) mod baked_mesh;
 
 /// Static methods for creating meshes of simple primatives
 pub mod primitives;
@@ -65,7 +80,8 @@ pub mod prelude {
   pub use crate::app::App;
   pub use crate::camera::Camera;
   pub use crate::colour::*;
-  pub use crate::core::{MATERIAL_PLACEHOLDER, Material, Texture};
+  pub use crate::material::{MATERIAL_PLACEHOLDER, Material};
+  pub use crate::texture::Texture;
   pub use crate::engine::{Engine, InstanceHandle, LightHandle, ModelHandle};
   pub use crate::light::Light;
   pub use crate::math::{Affine2, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};

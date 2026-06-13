@@ -7,11 +7,12 @@
 // ==============================================================================================
 
 use crate::{
+  baked_mesh::BakedMesh,
   buffer::Buffer,
   camera::Camera,
   colour::{BLACK, Colour},
-  core::{BakedMesh, Material},
   helpers::{OUT_NEAR, compute_outcode, shade_vert, shade_vert_diffuse},
+  material::Material,
   math::{Mat3, Mat4, Vec3, Vec4},
   scene::Scene,
 };

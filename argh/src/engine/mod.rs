@@ -22,7 +22,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::{app::App, engine::input::Inputs};
-use crate::{buffer::Buffer, colour::*, core::Model, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3};
+use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3, model::Model};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;

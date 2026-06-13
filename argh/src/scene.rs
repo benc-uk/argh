@@ -9,9 +9,10 @@
 use slotmap::SlotMap;
 
 use crate::{
+  baked_mesh::BakedMesh,
   colour::Colour,
-  core::{BakedMesh, Instance},
   engine::{Engine, InstanceHandle, LightHandle, ModelHandle},
+  instance::Instance,
   light::Light,
   math::{Mat3, Mat4, Quat, V3_ONE, V3_ZERO, Vec3},
 };

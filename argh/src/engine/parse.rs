@@ -11,9 +11,12 @@ use tobj::Material;
 
 use crate::{
   colour::Colour,
-  core::{Material as ArghMaterial, Mesh as ArghMesh, Model as ArghModel, Texture, TextureError},
   engine::ModelHandle,
+  material::Material as ArghMaterial,
+  mesh::Mesh as ArghMesh,
+  model::Model as ArghModel,
   prelude::{v2, v3},
+  texture::{Texture, TextureError},
 };
 
 use super::Engine;
@@ -67,7 +70,7 @@ impl Engine {
 
     // Now supporting multiple models (aka meshes!)
     for (i, in_model) in models.iter().enumerate() {
-      println!("\n  Mesh {}: {}", i, &in_model.name);
+      println!("  Mesh {}: {}", i, &in_model.name);
       let mut out_mesh = ArghMesh::new();
       let in_mesh = &in_model.mesh;
 
@@ -121,7 +124,7 @@ impl Engine {
 
 // Convert tobj::Material (MTL) into argh::Material
 pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, ObjError> {
-  println!("\n  Material: {}", in_material.name);
+  println!("  Material: {}", in_material.name);
 
   let diff_col = in_material.diffuse.unwrap_or([1.0, 1.0, 1.0]);
   let mut mat = ArghMaterial::new_flat(Colour::from_slice(diff_col));
