@@ -80,13 +80,13 @@ pub mod prelude {
   pub use crate::app::App;
   pub use crate::camera::Camera;
   pub use crate::colour::*;
-  pub use crate::material::{MATERIAL_PLACEHOLDER, Material};
-  pub use crate::texture::Texture;
   pub use crate::engine::{Engine, InstanceHandle, LightHandle, ModelHandle};
   pub use crate::light::Light;
+  pub use crate::material::{MATERIAL_PLACEHOLDER, Material};
   pub use crate::math::{Affine2, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
   pub use crate::primitives;
   pub use crate::scene::Scene;
+  pub use crate::texture::Texture;
 
   /// Shorthand for [`Vec3::new`]
   #[inline]
