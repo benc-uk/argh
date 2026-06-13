@@ -59,13 +59,21 @@ static SRGB_TO_LINEAR: [f32; 256] = [
 
 // Helper static colours
 
+/// Solid black (0, 0, 0)
 pub const BLACK: Colour = Colour::new(0.0, 0.0, 0.0);
+/// Solid white (1, 1, 1)
 pub const WHITE: Colour = Colour::new(1.0, 1.0, 1.0);
+/// Pure red (1, 0, 0)
 pub const RED: Colour = Colour::new(1.0, 0.0, 0.0);
+/// Pure green (0, 1, 0)
 pub const GREEN: Colour = Colour::new(0.0, 1.0, 0.0);
+/// Pure blue (0, 0, 1)
 pub const BLUE: Colour = Colour::new(0.0, 0.0, 1.0);
+/// Magenta (1, 0, 1)
 pub const MAGENTA: Colour = Colour::new(1.0, 0.0, 1.0);
+/// Cyan (0, 1, 1)
 pub const CYAN: Colour = Colour::new(0.0, 1.0, 1.0);
+/// Yellow (1, 1, 0)
 pub const YELLOW: Colour = Colour::new(1.0, 1.0, 0.0);
 
 impl Colour {

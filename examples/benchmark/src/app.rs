@@ -44,7 +44,7 @@ impl App for MyApp {
       self.move_cam(2, 7)
     }
 
-    if !eng.get_keys_pressed().is_empty() {
+    if !eng.keys_pressed().is_empty() {
       // Quit on escape
       if eng.is_pressed(Key::Escape) {
         eng.stop();
@@ -138,14 +138,14 @@ pub fn new(eng: &mut Engine) -> MyApp {
   let py = 1;
   let lx = 0;
   let ly = 1;
-  let camera = Camera::new_perspective(eng.get_aspect(), cell_pos(px, py, CAM_HEIGHT), cell_pos(px + lx, py + ly, 2.5), 70.0, 0.01, 300.0).unwrap();
+  let camera = Camera::new_perspective(eng.aspect(), cell_pos(px, py, CAM_HEIGHT), cell_pos(px + lx, py + ly, 2.5), 70.0, 0.01, 300.0).unwrap();
 
   scn.bake_static_lighting();
 
   println!("=== DUNGEON SCENE ===");
-  println!("Static meshes: {}", scn.get_stats(eng).1);
-  println!("Lights: {}", scn.get_stats(eng).2);
-  println!("Total Tris: {}\n", scn.get_stats(eng).3);
+  println!("Static meshes: {}", scn.stats(eng).1);
+  println!("Lights: {}", scn.stats(eng).2);
+  println!("Total Tris: {}\n", scn.stats(eng).3);
 
   MyApp {
     camera,

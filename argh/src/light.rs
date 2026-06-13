@@ -14,13 +14,20 @@ use crate::{
 /// Light holds position, brightness and colour, plus attenuation (drop off)
 #[derive(Debug, Clone, Copy)]
 pub struct Light {
+  /// Position of the light in world space
   pub pos: Vec3,
+  /// Scales the brightness of the light, typically 0.0 - 1.0 but can go higher
   pub brightness: f32,
+  /// Colour of the light, usually [WHITE]
   pub colour: Colour,
+  /// Linear attenuation coefficient, controls how light falls off with distance
   pub atten_linear: f32,
+  /// Quadratic attenuation coefficient, controls how light falls off with the square of distance
   pub atten_quad: f32,
-  pub is_static: bool,  // baked into static geometry
-  pub is_dynamic: bool, // applied per-frame even to static geometry
+  /// If true, this light contributes to baked lighting on static geometry
+  pub is_static: bool,
+  /// If true, this light is applied per-frame even to static geometry
+  pub is_dynamic: bool,
 }
 
 impl Light {

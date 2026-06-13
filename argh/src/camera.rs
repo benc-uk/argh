@@ -45,12 +45,12 @@ impl Camera {
   }
 
   /// Get the position of this camera
-  pub fn get_pos(&self) -> Vec3 {
+  pub fn pos(&self) -> Vec3 {
     self.pos
   }
 
   /// Get the position of where the camera is looking
-  pub fn get_look_at(&self) -> Vec3 {
+  pub fn look_at(&self) -> Vec3 {
     self.look_at
   }
 

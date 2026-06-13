@@ -8,6 +8,7 @@ use crate::fps_camera::FpsCamera;
 pub struct MyApp {
   camera: FpsCamera,
   scn: Scene,
+  torch: LightHandle,
 }
 
 const CAM_HEIGHT: f32 = 2.5;
@@ -24,15 +25,17 @@ const DUNGEON_MAP: &str = "..........
 ..........";
 
 impl App for MyApp {
-  fn update(&mut self, eng: &mut Engine, dt: f64, _t: f64) {
+  fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
     eng.clear(BLACK);
 
-    // fps controls
     self.camera.update(eng, dt as f32);
+    let torch = self.scn.light_mut(self.torch);
+    torch.brightness = (f32::sin(t as f32 * 4.0) * 8.0) + 32.0;
+    torch.pos = self.camera.camera.pos();
 
     eng.render(&self.camera.camera, &self.scn);
 
-    if !eng.get_keys_pressed().is_empty() {
+    if !eng.keys_pressed().is_empty() {
       // Quit on escape
       if eng.is_pressed(Key::Escape) {
         eng.stop();
@@ -113,18 +116,21 @@ pub fn new(eng: &mut Engine) -> MyApp {
 
   let camera = FpsCamera::new(
     3.4,
-    Camera::new_perspective(eng.get_aspect(), cell_pos(px, py, CAM_HEIGHT), cell_pos(px - 1, py, 2.5), 70.0, 0.01, 50.0).unwrap(),
+    Camera::new_perspective(eng.aspect(), cell_pos(px, py, CAM_HEIGHT), cell_pos(px - 1, py, 2.5), 70.0, 0.01, 50.0).unwrap(),
   );
 
   scn.ambient_light = BLACK;
   scn.bake_static_lighting();
 
-  println!("=== DUNGEON SCENE ===");
-  println!("Static meshes: {}", scn.get_stats(eng).1);
-  println!("Lights: {}", scn.get_stats(eng).2);
-  println!("Total Tris: {}\n", scn.get_stats(eng).3);
+  let l = Light::new(cell_pos(px, py, 2.0), 20.0, col8(255, 210, 180), 0.0, 2.0, false, true);
+  let torch = scn.add_light(l);
 
-  MyApp { camera, scn }
+  println!("=== DUNGEON SCENE ===");
+  println!("Static meshes: {}", scn.stats(eng).1);
+  println!("Lights: {}", scn.stats(eng).2);
+  println!("Total Tris: {}\n", scn.stats(eng).3);
+
+  MyApp { camera, scn, torch }
 }
 
 fn cell_pos(x: usize, y: usize, z: f32) -> Vec3 {

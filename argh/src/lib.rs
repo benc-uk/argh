@@ -20,6 +20,8 @@
 //! }
 //! ```
 
+#![warn(missing_docs)]
+
 // === Crate level modules, remain internal
 
 /// Buffer holds the pixel video buffer to be drawn each frame
@@ -57,7 +59,8 @@ pub mod app;
 /// Scenes hold instances of objects to be rendered
 pub mod scene;
 
-// Prelude
+/// Convenience re-exports of the most commonly used types and helpers.
+/// `use argh::prelude::*;` to pull in everything needed for a typical app.
 pub mod prelude {
   pub use crate::app::App;
   pub use crate::camera::Camera;
@@ -69,21 +72,25 @@ pub mod prelude {
   pub use crate::primitives;
   pub use crate::scene::Scene;
 
+  /// Shorthand for [`Vec3::new`]
   #[inline]
   pub fn v3(x: f32, y: f32, z: f32) -> Vec3 {
     Vec3::new(x, y, z)
   }
 
+  /// Shorthand for [`Vec2::new`]
   #[inline]
   pub fn v2(x: f32, y: f32) -> Vec2 {
     Vec2::new(x, y)
   }
 
+  /// Shorthand for [`Colour::new`], components are floats in the 0.0-1.0 range
   #[inline]
   pub fn col(r: f32, g: f32, b: f32) -> Colour {
     Colour::new(r, g, b)
   }
 
+  /// Shorthand for [`Colour::from_rgb8`], components are bytes in the 0-255 range
   #[inline]
   pub fn col8(r: u8, g: u8, b: u8) -> Colour {
     Colour::from_rgb8(r, g, b)

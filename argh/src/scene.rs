@@ -28,7 +28,7 @@ pub struct Scene {
   // Static geometry held in chunks
   pub(crate) baked_meshes: Vec<BakedMesh>,
 
-  // Ambient light colour, beware setting this too high it will look washed out
+  /// Ambient light colour applied to all geometry, beware setting this too high it will look washed out
   pub ambient_light: Colour,
 }
 
@@ -72,36 +72,46 @@ impl Scene {
 
   // ===== Instances ======================================================================================================
 
-  /// Create an instance of a mesh with given name, using the material
+  /// Create an instance of a model with this handle, returns the [InstanceHandle]
   pub fn add_instance(&mut self, model_handle: ModelHandle) -> InstanceHandle {
-    let i = Instance {
+    // We use insert_with_key to get the key as it is being added to the slotmap
+    let h = self.instances.insert_with_key(|key| Instance {
+      handle: key,
       model_handle,
       pos: V3_ZERO,
       scale: V3_ONE,
       rot: Quat::ident(),
       smooth: true,
-    };
+    });
 
-    let h = self.instances.insert(i);
     self.instance_keys.push(h);
     h
   }
 
+  /// Create an instance of a model with this handle, returns a mutable [Instance]
+  pub fn add_instance_mut(&mut self, model_handle: ModelHandle) -> &mut Instance {
+    let hdl = self.add_instance(model_handle);
+    self.instance_mut(hdl)
+  }
+
   /// Create an instance of a mesh with given name, using the material transformed into the world
-  pub fn add_instance_trans(&mut self, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
-    let mut i = Instance {
-      model_handle,
-      pos,
-      scale,
-      rot: Quat::ident(),
-      smooth: true,
-    };
+  pub fn add_instance_world(&mut self, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
+    // We use insert_with_key to get the key as it is being added to the slotmap
+    let h = self.instances.insert_with_key(|key| {
+      let mut i = Instance {
+        handle: key,
+        model_handle,
+        pos,
+        scale,
+        rot: Quat::ident(),
+        smooth: true,
+      };
+      i.rot.rot_x(rot.x);
+      i.rot.rot_y(rot.y);
+      i.rot.rot_z(rot.z);
+      i
+    });
 
-    i.rot.rot_x(rot.x);
-    i.rot.rot_y(rot.y);
-    i.rot.rot_z(rot.z);
-
-    let h = self.instances.insert(i);
     self.instance_keys.push(h);
     h
   }
@@ -125,7 +135,7 @@ impl Scene {
   }
 
   /// A list of instances in the scene
-  pub fn list_instances(&self) -> impl Iterator<Item = &Instance> {
+  pub fn instances(&self) -> impl Iterator<Item = &Instance> {
     self.instances.values()
   }
 
@@ -136,6 +146,8 @@ impl Scene {
 
   // ===== BakedMesh ====================================
 
+  /// Bake static lighting into all [BakedMesh]es in this scene. Call this once after
+  /// adding all static geometry and lights, before rendering.
   pub fn bake_static_lighting(&mut self) {
     for sm in &mut self.baked_meshes {
       sm.bake_lighting(&self.lights, self.ambient_light);
@@ -152,7 +164,7 @@ impl Scene {
     let m = Mat4::new_scale_rot_trans(scale.x, scale.y, scale.z, rot_q, pos.x, pos.y, pos.z);
     let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_default();
 
-    let model = eng.get_model(model_handle);
+    let model = eng.model(model_handle);
 
     // Each Mesh in the Model becomes StaticMesh
     for mesh in &model.meshes {
@@ -173,12 +185,12 @@ impl Scene {
   }
 
   /// Get number of instances, statics, lights, & total triangles
-  pub fn get_stats(&self, eng: &Engine) -> (usize, usize, usize, u32) {
+  pub fn stats(&self, eng: &Engine) -> (usize, usize, usize, u32) {
     let inst_tris: u32 = self
       .instance_keys
       .iter()
       .map(|h| {
-        let m = eng.get_model(self.instances[*h].model_handle);
+        let m = eng.model(self.instances[*h].model_handle);
         m.tri_count
       })
       .sum();

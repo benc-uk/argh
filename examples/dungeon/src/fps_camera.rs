@@ -43,9 +43,9 @@ impl FpsCamera {
 
   pub fn update(&mut self, eng: &Engine, dt: f32) {
     // Mouse look
-    if let Some(mpos) = eng.get_mouse_pos() {
+    if let Some(mpos) = eng.mouse_pos() {
       let (mx, my) = (mpos.0, mpos.1);
-      let (w, h) = (eng.get_size().0 as f32, eng.get_size().1 as f32);
+      let (w, h) = (eng.size().0 as f32, eng.size().1 as f32);
       let dx = dead_zone(((mx / w) * 2.0) - 1.0, MOUSE_DEAD_ZONE);
       let dy = dead_zone(((my / h) * 2.0) - 1.0, MOUSE_DEAD_ZONE);
 
@@ -88,7 +88,7 @@ impl FpsCamera {
     }
 
     // Apply velocity every frame (so released keys still coast)
-    let mut p = self.camera.get_pos();
+    let mut p = self.camera.pos();
     p.x += self.vel_x;
     p.z += self.vel_z;
     self.camera.set_pos(p);

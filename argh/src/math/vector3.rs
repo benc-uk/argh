@@ -19,8 +19,11 @@ mod vector3_tests;
 /// Standard 3D vector with x, y & z coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec3 {
+  /// X component
   pub x: f32,
+  /// Y component
   pub y: f32,
+  /// Z component
   pub z: f32,
 }
 

@@ -159,12 +159,12 @@ impl Engine {
   }
 
   /// Return the width & height of the window
-  pub fn get_size(&self) -> (usize, usize) {
+  pub fn size(&self) -> (usize, usize) {
     (self.size.0, self.size.1)
   }
 
   /// Get the aspect ratio of the viewport and window
-  pub fn get_aspect(&self) -> f32 {
+  pub fn aspect(&self) -> f32 {
     self.aspect
   }
 
@@ -180,7 +180,7 @@ impl Engine {
   }
 
   /// Getter for elapsed time
-  pub fn get_time(&self) -> f64 {
+  pub fn time(&self) -> f64 {
     self.t
   }
 
@@ -191,9 +191,14 @@ impl Engine {
     self.models.insert(model)
   }
 
-  /// Get Model from it's handle
-  pub(crate) fn get_model(&self, model_h: ModelHandle) -> &Model {
+  /// Get a [Model] from its handle
+  pub fn model(&self, model_h: ModelHandle) -> &Model {
     self.models.get(model_h).unwrap()
+  }
+
+  /// Get a mutable [Model] from its handle
+  pub fn model_mut(&mut self, model_h: ModelHandle) -> &mut Model {
+    self.models.get_mut(model_h).unwrap()
   }
 
   /// Draw the debug overlay on top of the current frame. Call AFTER app.update.
@@ -203,7 +208,7 @@ impl Engine {
   }
 
   /// Get engine stats
-  pub fn get_stats(&self) -> u32 {
+  pub fn stats(&self) -> u32 {
     self.stat_rend_tri_frame
   }
 }

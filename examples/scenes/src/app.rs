@@ -15,7 +15,7 @@ impl App for MyApp {
     let cube = self.scn2.instances_mut().next().expect("exists");
     cube.rot_y(0.02);
     let sphere = self.scn1.instances_mut().next().expect("exists");
-    sphere.set_pos(Vec3 {
+    sphere.pos(Vec3 {
       x: 0.0,
       y: f32::sin(t as f32),
       z: 0.0,
@@ -27,7 +27,7 @@ impl App for MyApp {
       _ => eng.render(&self.camera, &self.scn2),
     }
 
-    if !eng.get_keys_pressed().is_empty() {
+    if !eng.keys_pressed().is_empty() {
       // Space changes which scene is rendered
       if eng.is_pressed(Key::Space) {
         self.active_scn += 1;
@@ -56,9 +56,9 @@ pub fn new(eng: &mut Engine) -> MyApp {
   let cube = eng.add_model(primitives::new_cube(Material::new_flat(Colour::rand())));
 
   scene1.add_instance(sphere1);
-  scene2.add_instance_trans(cube, V3_ZERO, v3(0.0, 1.9, 0.0), v3(1.0, 1.0, 1.0));
+  scene2.add_instance_world(cube, V3_ZERO, v3(0.0, 1.9, 0.0), v3(1.0, 1.0, 1.0));
 
-  let camera = Camera::new_perspective(eng.get_aspect(), v3(0.0, 1.0, 3.0), V3_ZERO, 60.0, 0.01, 50.0).unwrap();
+  let camera = Camera::new_perspective(eng.aspect(), v3(0.0, 1.0, 3.0), V3_ZERO, 60.0, 0.01, 50.0).unwrap();
 
   MyApp {
     camera,

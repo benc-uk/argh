@@ -41,17 +41,17 @@ impl Inputs {
 
 impl Engine {
   /// Returns the keys held down this frame. Snapshot taken once per frame before scene.update().
-  pub fn get_keys(&self) -> &[Key] {
+  pub fn keys(&self) -> &[Key] {
     &self.desktop.inputs.keys
   }
 
   /// Returns the keys recently pressed. Snapshot taken once per frame before scene.update().
-  pub fn get_keys_pressed(&self) -> &[Key] {
+  pub fn keys_pressed(&self) -> &[Key] {
     &self.desktop.inputs.keys_pressed
   }
 
   /// Returns the mouse buttons
-  pub fn get_mouse_buttons(&self) -> [bool; 3] {
+  pub fn mouse_buttons(&self) -> [bool; 3] {
     self.desktop.inputs.mouse_buttons
   }
 
@@ -76,7 +76,7 @@ impl Engine {
   }
 
   /// Helper to check if right mouse button is pressed
-  pub fn get_mouse_pos(&self) -> Option<(f32, f32)> {
+  pub fn mouse_pos(&self) -> Option<(f32, f32)> {
     self.desktop.inputs.mouse_pos
   }
 }

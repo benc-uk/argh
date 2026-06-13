@@ -18,7 +18,9 @@ mod vector2_tests;
 /// Standard 2D vector with a pair of x, y coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec2 {
+  /// X component
   pub x: f32,
+  /// Y component
   pub y: f32,
 }
 

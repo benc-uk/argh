@@ -12,7 +12,7 @@
 - [x] Instancing redesign Mesh struct
 - [x] Sub-meshes, complex models
 - [x] OBJ loader
-- [ ] Static geometry
+- [x] Static geometry
 - [ ] More primitives
 - [ ] Skyboxes
 - [ ] Transparency

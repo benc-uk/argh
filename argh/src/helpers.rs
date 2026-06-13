@@ -85,6 +85,33 @@ pub(crate) fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: V
   (diff_sum, spec_sum)
 }
 
+// Used to calc shading on static meshes only
+pub(crate) fn shade_vert_diffuse(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3) -> Colour {
+  // Shading & lighting over multiple lights
+  let mut diff_sum = BLACK;
+
+  for light in lights.values() {
+    if !light.is_dynamic {
+      continue;
+    }
+
+    // Vectors to and from the surface and the light
+    let l_raw = light.pos - world;
+    let d = l_raw.len();
+    let l = l_raw.normalize_new();
+
+    // Add attenuation
+    let atten = 1.0 / (1.0 + light.atten_linear * d + light.atten_quad * d * d);
+
+    // Diffuse lighting
+    let n_dot_l = n.dot(l).max(0.0);
+    let diff_col = light.colour * light.brightness * n_dot_l * atten;
+    diff_sum += diff_col;
+  }
+
+  diff_sum
+}
+
 pub(crate) struct FpsAveragerEight {
   samples: [f32; 8],
   index: usize,

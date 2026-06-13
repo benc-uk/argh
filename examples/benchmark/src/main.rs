@@ -26,13 +26,13 @@ fn main() {
     let t = eng.tick(dt);
 
     app.update(&mut eng, dt, t);
-    total_tris += eng.get_stats();
+    total_tris += eng.stats();
   }
 
   println!();
-  println!("Elapsed:        {}s", eng.get_time());
-  println!("Time per frame: {}ms", eng.get_time() * 1000.0 / frames as f64);
-  println!("FPS:            {}", frames as f64 / eng.get_time());
+  println!("Elapsed:        {}s", eng.time());
+  println!("Time per frame: {}ms", eng.time() * 1000.0 / frames as f64);
+  println!("FPS:            {}", frames as f64 / eng.time());
   println!("Tris rendered:  {}", total_tris);
-  println!("Tris/sec (1k):  {}", (total_tris as f64 / eng.get_time()) / 1000.0);
+  println!("Tris/sec (1k):  {}", (total_tris as f64 / eng.time()) / 1000.0);
 }

@@ -4,7 +4,8 @@ pub struct MyApp {
   cube_hdl: InstanceHandle,
   sphere1_hdl: InstanceHandle,
   sphere2_hdl: InstanceHandle,
-  teapot_hdl: InstanceHandle,
+  cyl_hdl: InstanceHandle,
+  cone_hdl: InstanceHandle,
   camera: Camera,
   scene: Scene,
 }
@@ -24,16 +25,17 @@ impl App for MyApp {
     let px = f32::sin(t * 0.7);
     let pz = -0.5 - (f32::sin(t * 1.4) * 0.9);
     let pz2 = f32::sin(t * 0.9) * 0.6;
-    scn.instance_mut(self.cube_hdl).rot_y(0.5 * dt).rot_x(0.8 * dt).set_pos(v3(-px, py, pz));
-    scn.instance_mut(self.sphere1_hdl).rot_y(0.9 * dt).rot_x(1.2 * dt).set_pos(v3(px, -py, pz2));
-    scn.instance_mut(self.sphere2_hdl).rot_y(0.1 * dt).set_pos(v3(px * 0.7, py * 1.0, 0.0));
-    scn.instance_mut(self.teapot_hdl).rot_y(0.3 * dt);
+    scn.instance_mut(self.cube_hdl).rot_y(0.5 * dt).rot_x(0.8 * dt).pos(v3(-px, py, pz));
+    scn.instance_mut(self.sphere1_hdl).rot_y(0.9 * dt).rot_x(1.2 * dt).pos(v3(px, -py, pz2));
+    scn.instance_mut(self.sphere2_hdl).rot_y(0.1 * dt).pos(v3(px * 0.7, py * 1.0, 0.0));
+    scn.instance_mut(self.cyl_hdl).rot_z(0.3 * dt);
+    scn.instance_mut(self.cone_hdl).rot_x(0.3 * dt).rot_y(0.1 * dt);
 
     eng.render(&self.camera, &self.scene);
 
-    if !eng.get_keys_pressed().is_empty() {
+    if !eng.keys_pressed().is_empty() {
       // Quit on escape
-      if eng.get_keys_pressed()[0].eq(&argh::engine::Key::Escape) {
+      if eng.keys_pressed()[0].eq(&argh::engine::Key::Escape) {
         eng.stop();
       }
     }
@@ -47,28 +49,29 @@ pub fn new(eng: &mut Engine) -> MyApp {
   scene.add_light(Light::new(v3(-5.0, 3.0, 4.0), 1.8, BLUE, 0.09, 0.03, false, true));
   scene.add_light(Light::new(v3(2.0, -1.0, 2.0), 1.0, RED, 0.09, 0.03, false, true));
 
-  let crate_tex = Texture::new("assets/checker_256.png").unwrap();
-  let earth_tex = Texture::new("assets/earth.png").unwrap();
+  let crate_tex = Texture::new("assets/textures/uv_check.png").unwrap();
+  let earth_tex = Texture::new("assets/textures/earth.png").unwrap();
 
   let cube = eng.add_model(primitives::new_cube(Material::new_textured(crate_tex)));
   let sphere1 = eng.add_model(primitives::new_sphere(Material::new_flat(Colour::rand()), 8, 12));
   let sphere2 = eng.add_model(primitives::new_sphere(Material::new_textured(earth_tex), 24, 48));
-  let teapot = eng.add_model(primitives::new_teapot(Material::new_flat(Colour::rand())));
+  let cyl = eng.add_model(primitives::new_cylinder(Material::new_flat(Colour::rand()), 12, true));
+  let cone = eng.add_model(primitives::new_cone(Material::new_flat(Colour::rand()), 16, true));
 
   let cube_hdl = scene.add_instance(cube);
-  let sphere1_hdl = scene.add_instance(sphere1);
+  let sphere1_hdl = scene.add_instance_mut(sphere1).smooth(false).handle();
   let sphere2_hdl = scene.add_instance(sphere2);
-  let teapot_hdl = scene.add_instance(teapot);
-  scene.instance_mut(sphere1_hdl).smooth = false;
-  scene.instance_mut(teapot_hdl).scale(0.5).set_pos_xyz(0.5, -1.55, -2.0);
+  let cyl_hdl = scene.add_instance_mut(cyl).scale(1.2).pos_xyz(0.5, -1.0, -0.4).handle();
+  let cone_hdl = scene.add_instance_mut(cone).scale(1.3).pos_xyz(-1.0, 0.8, -1.2).handle();
 
-  let camera = Camera::new_perspective(eng.get_aspect(), v3(0.0, 1.0, 2.8), v3(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
+  let camera = Camera::new_perspective(eng.aspect(), v3(0.0, 1.0, 2.8), v3(0.0, 0.0, 0.0), 60.0, 0.01, 10.0).unwrap();
 
   MyApp {
     cube_hdl,
     sphere1_hdl,
     sphere2_hdl,
-    teapot_hdl,
+    cyl_hdl,
+    cone_hdl,
     camera,
     scene,
   }

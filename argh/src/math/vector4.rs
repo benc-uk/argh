@@ -19,9 +19,13 @@ mod vector4_tests;
 /// Standard 4D vector with x, y, z & w coords
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Vec4 {
+  /// X component
   pub x: f32,
+  /// Y component
   pub y: f32,
+  /// Z component
   pub z: f32,
+  /// W component, usually 1.0 for points and 0.0 for direction vectors
   pub w: f32,
 }
 

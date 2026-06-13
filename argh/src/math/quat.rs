@@ -16,10 +16,14 @@ mod quat_tests;
 /// A minimal implementation of of a 4-tuple Quaternion (x, y, z, w) used for rotations
 #[derive(Debug, PartialEq, Default, Copy, Clone)]
 pub struct Quat {
-  pub x: f32, // imaginary i
-  pub y: f32, // imaginary j
-  pub z: f32, // imaginary k
-  pub w: f32, // scalar (real) part
+  /// Imaginary `i` component
+  pub x: f32,
+  /// Imaginary `j` component
+  pub y: f32,
+  /// Imaginary `k` component
+  pub z: f32,
+  /// Scalar (real) component
+  pub w: f32,
 }
 
 impl Quat {
