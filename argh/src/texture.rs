@@ -112,6 +112,27 @@ impl Texture {
     }
   }
 
+  /// Load a texture from a raw byte RGB8 slice (no alpha channel)
+  pub fn from_raw_rgb8(bytes: &[u8], w: u32, h: u32) -> Self {
+    let pixels: Vec<u32> = bytes
+      .chunks_exact(3)
+      .map(|p| {
+        (0xFF_u32 << 24) |        // opaque alpha in top byte
+        ((p[0] as u32) << 16) |
+        ((p[1] as u32) << 8)  |
+        (p[2] as u32)
+      })
+      .collect();
+
+    Self {
+      pixels,
+      w,
+      h,
+      alpha_cutout: false,
+      cutoff: 0.5, // ignored
+    }
+  }
+
   /// Sample the texture with wrap-around addressing.
   /// Uses floor() to fold any UV into [0, 1] before scaling to texel space.
   /// Works for any texture size (pow2 or not)
