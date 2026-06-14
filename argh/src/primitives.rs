@@ -19,7 +19,7 @@ pub fn new_cube(mat: Material) -> Model {
 
   // 6 faces * 4 verts each = 24 verts. Order per face: bl, br, tr, tl
   // (relative to looking AT the face from outside the cube).
-  mesh.verts = vec![
+  mesh.positions = vec![
     // front (+Z)
     Vec3::new(-0.5, -0.5, 0.5),
     Vec3::new(0.5, -0.5, 0.5),
@@ -79,16 +79,16 @@ pub fn new_cube(mat: Material) -> Model {
     Vec2::new(0.0, 0.0), // tl
   ];
 
-  mesh.uvs = Vec::with_capacity(24);
+  mesh.tex_coords = Vec::with_capacity(24);
   for _ in 0..6 {
-    mesh.uvs.extend_from_slice(&face_uvs);
+    mesh.tex_coords.extend_from_slice(&face_uvs);
   }
 
   // 12 triangles, CCW winding when viewed from outside the cube.
   // Each face's verts are at base = face_index * 4, with corners (bl, br, tr, tl)
   // at offsets (0, 1, 2, 3): so (bl, br, tr) and (bl, tr, tl) give two CCW tris.
   mesh.indices = Vec::with_capacity(36);
-  for face in 0..6_i32 {
+  for face in 0..6_u32 {
     let b = face * 4;
     mesh.indices.extend_from_slice(&[b, b + 1, b + 2, b, b + 2, b + 3]);
   }
@@ -123,9 +123,9 @@ pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
   // --- 1. Generate verts + per-vert radial normals.
   // (stacks+1) rings of (sectors+1) verts.
   let vert_count = (stacks + 1) * (sectors + 1);
-  mesh.verts = Vec::with_capacity(vert_count);
+  mesh.positions = Vec::with_capacity(vert_count);
   mesh.normals = Vec::with_capacity(vert_count);
-  mesh.uvs = Vec::with_capacity(vert_count);
+  mesh.tex_coords = Vec::with_capacity(vert_count);
 
   for i in 0..=stacks {
     let phi = pi * (i as f32) / (stacks as f32); // 0 at +Y pole, pi at -Y pole
@@ -142,9 +142,9 @@ pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
 
       // (x, y, z) is already a unit vector on the sphere, so it doubles as the
       // outward normal. Position is just that scaled by the radius.
-      mesh.verts.push(Vec3::new(x * radius, y * radius, z * radius));
+      mesh.positions.push(Vec3::new(x * radius, y * radius, z * radius));
       mesh.normals.push(Vec3::new(x, y, z));
-      mesh.uvs.push(Vec2::new(u, v));
+      mesh.tex_coords.push(Vec2::new(u, v));
     }
   }
 
@@ -156,10 +156,10 @@ pub fn new_sphere(mat: Material, stacks: usize, sectors: usize) -> Model {
 
   for i in 0..stacks {
     for j in 0..sectors {
-      let v00 = (i * row_stride + j) as i32; // top-left
-      let v01 = (i * row_stride + j + 1) as i32; // top-right
-      let v10 = ((i + 1) * row_stride + j) as i32; // bottom-left
-      let v11 = ((i + 1) * row_stride + j + 1) as i32; // bottom-right
+      let v00 = (i * row_stride + j) as u32; // top-left
+      let v01 = (i * row_stride + j + 1) as u32; // top-right
+      let v10 = ((i + 1) * row_stride + j) as u32; // bottom-left
+      let v11 = ((i + 1) * row_stride + j + 1) as u32; // bottom-right
 
       if i != stacks - 1 {
         mesh.indices.extend_from_slice(&[v00, v11, v10]);
@@ -211,9 +211,9 @@ pub fn new_cylinder(mat: Material, sectors: usize, caps: bool) -> Model {
   let cap_count = if caps { 1 + sectors } else { 0 };
   let vert_count = side_count + 2 * cap_count;
 
-  mesh.verts = Vec::with_capacity(vert_count);
+  mesh.positions = Vec::with_capacity(vert_count);
   mesh.normals = Vec::with_capacity(vert_count);
-  mesh.uvs = Vec::with_capacity(vert_count);
+  mesh.tex_coords = Vec::with_capacity(vert_count);
 
   // --- 1. Side: two rings of (sectors+1) verts with a seam duplicate at j=sectors
   // so UVs can wrap 0..1 without sharing a vert across the seam.
@@ -224,9 +224,9 @@ pub fn new_cylinder(mat: Material, sectors: usize, caps: bool) -> Model {
       let theta = 2.0 * pi * (j as f32) / (sectors as f32);
       let cx = theta.cos();
       let cz = theta.sin();
-      mesh.verts.push(Vec3::new(cx * radius, y, cz * radius));
+      mesh.positions.push(Vec3::new(cx * radius, y, cz * radius));
       mesh.normals.push(Vec3::new(cx, 0.0, cz));
-      mesh.uvs.push(Vec2::new(j as f32 / sectors as f32, v));
+      mesh.tex_coords.push(Vec2::new(j as f32 / sectors as f32, v));
     }
   }
 
@@ -234,29 +234,29 @@ pub fn new_cylinder(mat: Material, sectors: usize, caps: bool) -> Model {
   // UVs are a disc centred at (0.5, 0.5) in texture space.
   if caps {
     // Top cap: centre vert + sectors rim verts, all with +Y normals.
-    mesh.verts.push(Vec3::new(0.0, half_h, 0.0));
+    mesh.positions.push(Vec3::new(0.0, half_h, 0.0));
     mesh.normals.push(Vec3::new(0.0, 1.0, 0.0));
-    mesh.uvs.push(Vec2::new(0.5, 0.5));
+    mesh.tex_coords.push(Vec2::new(0.5, 0.5));
     for j in 0..sectors {
       let theta = 2.0 * pi * (j as f32) / (sectors as f32);
       let cx = theta.cos();
       let cz = theta.sin();
-      mesh.verts.push(Vec3::new(cx * radius, half_h, cz * radius));
+      mesh.positions.push(Vec3::new(cx * radius, half_h, cz * radius));
       mesh.normals.push(Vec3::new(0.0, 1.0, 0.0));
-      mesh.uvs.push(Vec2::new(0.5 + 0.5 * cx, 0.5 - 0.5 * cz));
+      mesh.tex_coords.push(Vec2::new(0.5 + 0.5 * cx, 0.5 - 0.5 * cz));
     }
 
     // Bottom cap: same layout but at y=-half_h with -Y normals.
-    mesh.verts.push(Vec3::new(0.0, -half_h, 0.0));
+    mesh.positions.push(Vec3::new(0.0, -half_h, 0.0));
     mesh.normals.push(Vec3::new(0.0, -1.0, 0.0));
-    mesh.uvs.push(Vec2::new(0.5, 0.5));
+    mesh.tex_coords.push(Vec2::new(0.5, 0.5));
     for j in 0..sectors {
       let theta = 2.0 * pi * (j as f32) / (sectors as f32);
       let cx = theta.cos();
       let cz = theta.sin();
-      mesh.verts.push(Vec3::new(cx * radius, -half_h, cz * radius));
+      mesh.positions.push(Vec3::new(cx * radius, -half_h, cz * radius));
       mesh.normals.push(Vec3::new(0.0, -1.0, 0.0));
-      mesh.uvs.push(Vec2::new(0.5 + 0.5 * cx, 0.5 - 0.5 * cz));
+      mesh.tex_coords.push(Vec2::new(0.5 + 0.5 * cx, 0.5 - 0.5 * cz));
     }
   }
 
@@ -265,9 +265,9 @@ pub fn new_cylinder(mat: Material, sectors: usize, caps: bool) -> Model {
   mesh.indices = Vec::with_capacity((tri_count * 3) as usize);
 
   // Side: each quad (j, j+1) becomes two triangles, matching sphere's winding pattern.
-  let bot_base = 0_i32;
-  let top_base = (sectors + 1) as i32;
-  for j in 0..sectors as i32 {
+  let bot_base = 0_u32;
+  let top_base = (sectors + 1) as u32;
+  for j in 0..sectors as u32 {
     let bl = bot_base + j;
     let br = bot_base + j + 1;
     let tl = top_base + j;
@@ -276,10 +276,10 @@ pub fn new_cylinder(mat: Material, sectors: usize, caps: bool) -> Model {
   }
 
   if caps {
-    let s = sectors as i32;
+    let s = sectors as u32;
 
     // Top cap fan: (centre, rim[j+1], rim[j]) gives the +Y outward normal.
-    let top_centre = side_count as i32;
+    let top_centre = side_count as u32;
     let top_rim_base = top_centre + 1;
     for j in 0..s {
       let a = top_rim_base + j;
@@ -288,7 +288,7 @@ pub fn new_cylinder(mat: Material, sectors: usize, caps: bool) -> Model {
     }
 
     // Bottom cap fan: (centre, rim[j], rim[j+1]) gives the -Y outward normal.
-    let bot_centre = (side_count + cap_count) as i32;
+    let bot_centre = (side_count + cap_count) as u32;
     let bot_rim_base = bot_centre + 1;
     for j in 0..s {
       let a = bot_rim_base + j;
@@ -348,9 +348,9 @@ pub fn new_cone(mat: Material, sectors: usize, cap: bool) -> Model {
   let cap_count = if cap { 1 + sectors } else { 0 };
   let vert_count = side_count + cap_count;
 
-  mesh.verts = Vec::with_capacity(vert_count);
+  mesh.positions = Vec::with_capacity(vert_count);
   mesh.normals = Vec::with_capacity(vert_count);
-  mesh.uvs = Vec::with_capacity(vert_count);
+  mesh.tex_coords = Vec::with_capacity(vert_count);
 
   // --- 1. Side. Two rings of (sectors+1) verts with a seam duplicate at j=sectors.
   // Base ring sits on the circle at y=-half_h; "apex ring" verts are all at the
@@ -366,25 +366,25 @@ pub fn new_cone(mat: Material, sectors: usize, cap: bool) -> Model {
       let theta = 2.0 * pi * (j as f32) / (sectors as f32);
       let cx = theta.cos();
       let cz = theta.sin();
-      mesh.verts.push(Vec3::new(cx * r, y, cz * r));
+      mesh.positions.push(Vec3::new(cx * r, y, cz * r));
       mesh.normals.push(Vec3::new(n_radial * cx, n_y, n_radial * cz));
-      mesh.uvs.push(Vec2::new(j as f32 / sectors as f32, v));
+      mesh.tex_coords.push(Vec2::new(j as f32 / sectors as f32, v));
     }
   }
 
   // --- 2. Base cap (optional). Centre vert + sectors rim verts, all -Y normals.
   // UVs are a disc centred at (0.5, 0.5) in texture space.
   if cap {
-    mesh.verts.push(Vec3::new(0.0, -half_h, 0.0));
+    mesh.positions.push(Vec3::new(0.0, -half_h, 0.0));
     mesh.normals.push(Vec3::new(0.0, -1.0, 0.0));
-    mesh.uvs.push(Vec2::new(0.5, 0.5));
+    mesh.tex_coords.push(Vec2::new(0.5, 0.5));
     for j in 0..sectors {
       let theta = 2.0 * pi * (j as f32) / (sectors as f32);
       let cx = theta.cos();
       let cz = theta.sin();
-      mesh.verts.push(Vec3::new(cx * radius, -half_h, cz * radius));
+      mesh.positions.push(Vec3::new(cx * radius, -half_h, cz * radius));
       mesh.normals.push(Vec3::new(0.0, -1.0, 0.0));
-      mesh.uvs.push(Vec2::new(0.5 + 0.5 * cx, 0.5 - 0.5 * cz));
+      mesh.tex_coords.push(Vec2::new(0.5 + 0.5 * cx, 0.5 - 0.5 * cz));
     }
   }
 
@@ -396,9 +396,9 @@ pub fn new_cone(mat: Material, sectors: usize, cap: bool) -> Model {
   // quad would be degenerate here (both apex verts at the same 3D point) so
   // we skip it. Surviving triangle: (apex[j], base[j+1], base[j]) which is
   // CCW from outside, matching cylinder's (tl, br, bl) ordering.
-  let base_base = 0_i32;
-  let apex_base = (sectors + 1) as i32;
-  for j in 0..sectors as i32 {
+  let base_base = 0_u32;
+  let apex_base = (sectors + 1) as u32;
+  for j in 0..sectors as u32 {
     let bl = base_base + j;
     let br = base_base + j + 1;
     let tl = apex_base + j;
@@ -407,8 +407,8 @@ pub fn new_cone(mat: Material, sectors: usize, cap: bool) -> Model {
 
   if cap {
     // Base cap fan: (centre, rim[j], rim[j+1]) gives the -Y outward normal.
-    let s = sectors as i32;
-    let centre = side_count as i32;
+    let s = sectors as u32;
+    let centre = side_count as u32;
     let rim_base = centre + 1;
     for j in 0..s {
       let a = rim_base + j;

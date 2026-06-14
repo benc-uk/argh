@@ -14,10 +14,10 @@ use crate::{
 /// Triangle based 3D mesh of verts + material
 pub(crate) struct Mesh {
   pub(crate) material: Material,
-  pub(crate) verts: Vec<Vec3>,   // Vert position
-  pub(crate) normals: Vec<Vec3>, // Normal per vert
-  pub(crate) uvs: Vec<Vec2>,     // Texture coords
-  pub(crate) indices: Vec<i32>,  // Indices are pointers to verts, in groups of three
+  pub(crate) positions: Vec<Vec3>,  // Vert position
+  pub(crate) normals: Vec<Vec3>,    // Normal per vert
+  pub(crate) tex_coords: Vec<Vec2>, // Texture coords
+  pub(crate) indices: Vec<u32>,     // Indices are pointers to verts, in groups of three
   pub(crate) name: String,
   pub(crate) tri_count: u32,
 }
@@ -27,9 +27,9 @@ impl Mesh {
   pub(crate) fn new() -> Self {
     Self {
       material: MATERIAL_PLACEHOLDER,
-      verts: vec![],
+      positions: vec![],
       normals: vec![],
-      uvs: vec![],
+      tex_coords: vec![],
       indices: vec![],
       name: "".to_string(),
       tri_count: 0,
@@ -40,9 +40,9 @@ impl Mesh {
   pub(crate) fn new_with_material(mat: Material) -> Self {
     Self {
       material: mat,
-      verts: vec![],
+      positions: vec![],
       normals: vec![],
-      uvs: vec![],
+      tex_coords: vec![],
       indices: vec![],
       name: "".to_string(),
       tri_count: 0,

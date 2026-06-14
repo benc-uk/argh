@@ -72,15 +72,15 @@ pub fn new(eng: &mut Engine) -> MyApp {
   let mut scn = Scene::new();
   scn.ambient_light = BLACK;
 
-  let floor = eng.load_obj("assets/models/dungeon/floor_tile_large.obj").expect("obj loading failed");
-  // let grate = eng.load_obj("assets/models/dungeon/floor_tile_big_grate.obj").expect("obj loading failed");
-  // let floor_rocks = eng.load_obj("assets/models/dungeon/floor_tile_large_rocks.obj").expect("obj loading failed");
+  let floor = eng.load_obj("assets/obj/dungeon/floor_tile_large.obj").expect("obj loading failed");
+  // let grate = eng.load_obj("assets/obj/dungeon/floor_tile_big_grate.obj").expect("obj loading failed");
+  // let floor_rocks = eng.load_obj("assets/obj/dungeon/floor_tile_large_rocks.obj").expect("obj loading failed");
 
-  let wall = eng.load_obj("assets/models/dungeon/wall.obj").expect("obj loading failed");
+  let wall = eng.load_obj("assets/obj/dungeon/wall.obj").expect("obj loading failed");
 
-  let barrel_small = eng.load_obj("assets/models/dungeon/barrel_large.obj").expect("obj loading failed");
-  let trunk = eng.load_obj("assets/models/dungeon/trunk_large_C.obj").expect("obj loading failed");
-  let boxobj = eng.load_obj("assets/models/dungeon/box_small_decorated.obj").expect("obj loading failed");
+  let barrel_small = eng.load_obj("assets/obj/dungeon/barrel_large.obj").expect("obj loading failed");
+  let trunk = eng.load_obj("assets/obj/dungeon/trunk_large_C.obj").expect("obj loading failed");
+  let boxobj = eng.load_obj("assets/obj/dungeon/box_small_decorated.obj").expect("obj loading failed");
 
   let grid: Vec<Vec<char>> = DUNGEON_MAP.lines().map(|line| line.chars().collect()).collect();
 

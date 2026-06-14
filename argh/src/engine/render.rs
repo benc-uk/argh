@@ -112,7 +112,7 @@ impl Engine {
       self.normals.clear();
 
       // 2. Process verts, into world space, clip space and screen space
-      self.verts.extend(mesh.verts.iter().enumerate().map(|(i, vert)| {
+      self.verts.extend(mesh.positions.iter().enumerate().map(|(i, vert)| {
         // World space: vert transformed by model matrix M
         let world = m.transform_point(vert);
 
@@ -135,7 +135,7 @@ impl Engine {
         let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32; // Flip Y here
 
         // Reach out to the UV array and pre-mult by 1/w, it MUST be the same length
-        let uv = mesh.uvs[i];
+        let uv = mesh.tex_coords[i];
         let u_w = uv.x * inv_w;
         let v_w = uv.y * inv_w;
 
@@ -397,8 +397,8 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
 
             let (texel, alpha) = tex.sample(u, v);
 
-            // When alpha cutting, skip this pixel entirely if alpha is low
-            if alpha < 0.5 && tex.alpha_cutout {
+            // When alpha cutting, skip this pixel entirely if alpha below cutoff
+            if tex.alpha_cutout && alpha < tex.cutoff {
               w0 += dx0;
               w1 += dx1;
               w2 += dx2;

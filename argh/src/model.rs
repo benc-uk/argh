@@ -41,8 +41,8 @@ impl Model {
 
   /// Add a mesh to a model
   pub(crate) fn add_mesh(&mut self, mesh: Mesh) {
-    debug_assert_eq!(mesh.uvs.len(), mesh.verts.len(), "UVs must match vert count");
-    debug_assert_eq!(mesh.normals.len(), mesh.verts.len(), "normals must match vert count");
+    debug_assert_eq!(mesh.tex_coords.len(), mesh.positions.len(), "UVs must match vert count");
+    debug_assert_eq!(mesh.normals.len(), mesh.positions.len(), "normals must match vert count");
 
     self.tri_count += &mesh.tri_count;
     self.meshes.push(mesh);

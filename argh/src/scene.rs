@@ -169,14 +169,14 @@ impl Scene {
 
     // Each Mesh in the Model becomes StaticMesh
     for mesh in &model.meshes {
-      let verts: Vec<Vec3> = mesh.verts.iter().map(|v| m.transform_point(v)).collect();
+      let verts: Vec<Vec3> = mesh.positions.iter().map(|v| m.transform_point(v)).collect();
       let normals: Vec<Vec3> = mesh.normals.iter().map(|n: &Vec3| (m_inv_t * n).normalize_new()).collect();
 
       let baked = BakedMesh {
         material: mesh.material.clone(),
         verts,
         normals,
-        uvs: mesh.uvs.clone(),
+        uvs: mesh.tex_coords.clone(),
         indices: mesh.indices.clone(),
         baked_lighting: vec![], // populated when scene.bake_static_lighting() is called
       };

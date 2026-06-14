@@ -12,7 +12,8 @@
 mod draw2d;
 #[cfg(feature = "desktop")]
 mod input;
-mod parse;
+mod parse_gltf;
+mod parse_obj;
 mod render;
 
 #[cfg(feature = "desktop")]

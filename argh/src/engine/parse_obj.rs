@@ -1,5 +1,5 @@
 // ==============================================================================================
-// Module & file:   engine / parse.rs
+// Module & file:   engine / parse_obj.rs
 // Purpose:         Parser for OBJ and MTL
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
@@ -76,20 +76,20 @@ impl Engine {
 
       // Positions: flat [x,y,z, x,y,z, ...] so walk in non-overlapping chunks of 3
       for chunk in in_mesh.positions.chunks_exact(3) {
-        out_mesh.verts.push(v3(chunk[0], chunk[1], chunk[2]));
+        out_mesh.positions.push(v3(chunk[0], chunk[1], chunk[2]));
       }
-      println!("    pos verts: {}", out_mesh.verts.len());
+      println!("    pos verts: {}", out_mesh.positions.len());
 
       if !in_mesh.texcoords.is_empty() {
         // Texture coords (UVs): flat [u,v, u,v, ...]
         for chunk in in_mesh.texcoords.chunks_exact(2) {
           // We flip Y or V texture coord, super important
-          out_mesh.uvs.push(v2(chunk[0], 1.0 - chunk[1]));
+          out_mesh.tex_coords.push(v2(chunk[0], 1.0 - chunk[1]));
         }
-        println!("    tex uvs: {}", out_mesh.uvs.len());
+        println!("    tex uvs: {}", out_mesh.tex_coords.len());
       } else {
         println!("    tex uvs: none");
-        out_mesh.uvs = vec![v2(0.0, 0.0); out_mesh.verts.len()];
+        out_mesh.tex_coords = vec![v2(0.0, 0.0); out_mesh.positions.len()];
       }
 
       // Normals: flat [x,y,z, x,y,z, ...]
@@ -100,7 +100,7 @@ impl Engine {
 
       // Thanks to single_index in load options we just need to do this
       for i in &in_mesh.indices {
-        out_mesh.indices.push(*i as i32);
+        out_mesh.indices.push(*i);
       }
 
       out_mesh.tri_count = out_mesh.indices.len() as u32 / 3;

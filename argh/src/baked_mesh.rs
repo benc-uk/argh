@@ -21,7 +21,7 @@ pub(crate) struct BakedMesh {
   pub(crate) verts: Vec<Vec3>,   // already in WORLD space
   pub(crate) normals: Vec<Vec3>, // already in WORLD space, normalised
   pub(crate) uvs: Vec<Vec2>,
-  pub(crate) indices: Vec<i32>,
+  pub(crate) indices: Vec<u32>,
   pub(crate) baked_lighting: Vec<Colour>, // Baked lighting
 }
 

@@ -224,6 +224,15 @@ impl Mat4 {
   }
 }
 
+/// Convert a column-major 4x4 array (as produced by `gltf::scene::Transform::matrix()`)
+/// directly into a [`Mat4`]. The layout matches our internal storage so this is a
+/// zero-cost copy, no transpose required.
+impl From<[[f32; 4]; 4]> for Mat4 {
+  fn from(m: [[f32; 4]; 4]) -> Self {
+    Self { ele: m }
+  }
+}
+
 impl fmt::Display for Mat4 {
   /// Output this matrix in readable form
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

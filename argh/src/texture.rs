@@ -36,6 +36,9 @@ pub struct Texture {
 
   /// Treat alpha transparent pixels as invisible (cut them out). Defaults to true
   pub(crate) alpha_cutout: bool,
+
+  /// What alpha value will apply alpha_cutout
+  pub(crate) cutoff: f32,
 }
 
 // In Rust enums can have methods and an implementation, which is kinda wild
@@ -55,7 +58,14 @@ impl Texture {
         (p[2] as u32)
       })
       .collect();
-    Ok(Self { pixels, w, h, alpha_cutout: true })
+
+    Ok(Self {
+      pixels,
+      w,
+      h,
+      alpha_cutout: true,
+      cutoff: 0.5,
+    })
   }
 
   /// Load a texture from a byte buffer (e.g. an embedded asset via `include_bytes!`).
@@ -71,7 +81,35 @@ impl Texture {
         (p[2] as u32)
       })
       .collect();
-    Ok(Self { pixels, w, h, alpha_cutout: true })
+
+    Ok(Self {
+      pixels,
+      w,
+      h,
+      alpha_cutout: true,
+      cutoff: 0.5,
+    })
+  }
+
+  /// Load a texture from a raw byte RGBA8 slice
+  pub fn from_raw_rgba8(bytes: &[u8], w: u32, h: u32) -> Self {
+    let pixels: Vec<u32> = bytes
+      .chunks_exact(4)
+      .map(|p| {
+        ((p[3] as u32) << 24) |   // alpha in top byte
+        ((p[0] as u32) << 16) |
+        ((p[1] as u32) << 8)  |
+        (p[2] as u32)
+      })
+      .collect();
+
+    Self {
+      pixels,
+      w,
+      h,
+      alpha_cutout: true,
+      cutoff: 0.5,
+    }
   }
 
   /// Sample the texture with wrap-around addressing.

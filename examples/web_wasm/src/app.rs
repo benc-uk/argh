@@ -6,8 +6,8 @@ pub struct WasmApp {
 }
 
 const _CRATE_IMG_BYTES: &[u8] = include_bytes!("../../../assets/textures/crate.png");
-const _TEAPOT_MDL_LOW_BYTES: &[u8] = include_bytes!("../../../assets/models/teapot/utah_teapot_low.obj");
-const _TEAPOT_MDL_HIGH_BYTES: &[u8] = include_bytes!("../../../assets/models/teapot/utah_teapot_high.obj");
+const _TEAPOT_MDL_LOW_BYTES: &[u8] = include_bytes!("../../../assets/obj/teapot/utah_teapot_low.obj");
+const _TEAPOT_MDL_HIGH_BYTES: &[u8] = include_bytes!("../../../assets/obj/teapot/utah_teapot_high.obj");
 
 impl App for WasmApp {
   fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {
@@ -38,8 +38,8 @@ pub fn new(eng: &mut Engine) -> WasmApp {
   crate_mat.specular = BLACK;
 
   // See https://graphics.cs.utah.edu/teapot/ for source generator of Utah Teapot obj files
-  let teapot_low = eng.load_obj("assets/models/teapot/utah_teapot_low.obj").expect("obj loading failed");
-  let teapot_high = eng.load_obj("assets/models/teapot/utah_teapot_high.obj").expect("obj loading failed");
+  let teapot_low = eng.load_obj("assets/obj/teapot/utah_teapot_low.obj").expect("obj loading failed");
+  let teapot_high = eng.load_obj("assets/obj/teapot/utah_teapot_high.obj").expect("obj loading failed");
 
   eng.model_mut(teapot_low).set_all_material(Material::new_flat(Colour::new(0.7, 0.6, 0.85)));
   eng.model_mut(teapot_high).set_all_material(Material::new_flat(Colour::new(0.85, 0.7, 0.5)));
