@@ -17,6 +17,10 @@ use crate::{
   math::{Mat3, Mat4, Quat, V3_ONE, V3_ZERO, Vec3},
 };
 
+#[cfg(test)]
+#[path = "tests/scene_tests.rs"]
+mod scene_tests;
+
 /// Scene holds instances, lights etc to be rendered on demand
 pub struct Scene {
   // Things tracked & cached by the engine

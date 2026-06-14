@@ -349,3 +349,286 @@ fn test_instance_handle_matches_returned_handle() {
 fn test_unused_imports_compile() {
   let _m = Material::new_flat(WHITE);
 }
+
+// --- Helpers for multi-mesh testing ---
+
+fn two_mesh_model(name: &str) -> Model {
+  let mut m = Model::new(name);
+  let mut a = Mesh::new();
+  a.positions = vec![Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0)];
+  a.normals = vec![Vec3::new(0.0, 0.0, 1.0); 3];
+  a.tex_coords = vec![Vec2::new(0.0, 0.0); 3];
+  a.indices = vec![0, 1, 2];
+  a.tri_count = 1;
+  m.add_mesh(a);
+  let mut b = Mesh::new();
+  b.positions = vec![Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0)];
+  b.normals = vec![Vec3::new(1.0, 0.0, 0.0); 3];
+  b.tex_coords = vec![Vec2::new(0.5, 0.5); 3];
+  b.indices = vec![0, 1, 2];
+  b.tri_count = 1;
+  m.add_mesh(b);
+  m
+}
+
+// --- Light removal & accessor contracts ---
+
+#[test]
+fn test_remove_light_unknown_handle_is_silent_no_panic() {
+  let mut s = Scene::new();
+  let h_real = s.add_light(Light::new_default());
+  let h_stale = s.add_light(Light::new_default());
+  s.remove_light(h_stale);
+  // Removing the same stale handle a second time must be a silent no-op.
+  s.remove_light(h_stale);
+  assert_eq!(s.lights.len(), 1);
+  assert!(s.lights.contains_key(h_real));
+}
+
+#[test]
+#[should_panic(expected = "light not found")]
+fn test_light_mut_panics_after_remove() {
+  let mut s = Scene::new();
+  let h = s.add_light(Light::new_default());
+  s.remove_light(h);
+  let _ = s.light_mut(h);
+}
+
+#[test]
+fn test_remove_light_preserves_other_lights_state() {
+  let mut s = Scene::new();
+  let h_keep = s.add_light(Light::new(Vec3::new(1.0, 2.0, 3.0), 0.42, RED, 0.0, 0.0, true, false));
+  let h_drop = s.add_light(Light::new_default());
+  s.remove_light(h_drop);
+  let l = s.light(h_keep);
+  assert_eq!(l.pos, Vec3::new(1.0, 2.0, 3.0));
+  assert!((l.brightness - 0.42).abs() < 1e-5);
+}
+
+// --- Instance removal & accessor contracts ---
+
+#[test]
+fn test_remove_instance_unknown_handle_is_silent_no_panic() {
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  let h_real = s.add_instance(mh);
+  let h_stale = s.add_instance(mh);
+  s.remove_instance(h_stale);
+  s.remove_instance(h_stale); // double-remove must not panic
+  assert_eq!(s.instances.len(), 1);
+  assert_eq!(s.instance(h_real).handle(), h_real);
+}
+
+#[test]
+#[should_panic]
+fn test_instance_mut_panics_after_remove() {
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  let h = s.add_instance(mh);
+  s.remove_instance(h);
+  let _ = s.instance_mut(h);
+}
+
+#[test]
+fn test_remove_instance_preserves_other_instance_state() {
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  let h_keep = s.add_instance(mh);
+  s.instance_mut(h_keep).pos_xyz(7.0, 8.0, 9.0).scale(3.0);
+  let h_drop = s.add_instance(mh);
+  s.remove_instance(h_drop);
+  let i = s.instance(h_keep);
+  assert_eq!(i.pos, Vec3::new(7.0, 8.0, 9.0));
+  assert_eq!(i.scale, Vec3::new(3.0, 3.0, 3.0));
+}
+
+#[test]
+fn test_add_instance_mut_fluent_chain_persists_in_scene() {
+  // The mutable reference returned by add_instance_mut must support a full builder
+  // chain and the resulting state must be visible via a subsequent lookup.
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  let h = s.add_instance_mut(mh).pos_xyz(1.0, 2.0, 3.0).scale(5.0).smooth(false).handle();
+  let i = s.instance(h);
+  assert_eq!(i.pos, Vec3::new(1.0, 2.0, 3.0));
+  assert_eq!(i.scale, Vec3::new(5.0, 5.0, 5.0));
+  assert!(!i.smooth);
+}
+
+// --- add_static deep semantics ---
+
+#[test]
+fn test_add_static_multi_mesh_model_appends_one_baked_per_mesh() {
+  let mut e = engine();
+  let mh = e.add_model(two_mesh_model("two"));
+  let mut s = Scene::new();
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  // Each Mesh inside the Model becomes its own BakedMesh.
+  assert_eq!(s.baked_meshes.len(), 2);
+  assert_eq!(s.baked_meshes[0].verts.len(), 3);
+  assert_eq!(s.baked_meshes[1].verts.len(), 3);
+}
+
+#[test]
+fn test_add_static_scale_applied_to_verts() {
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, Vec3::new(5.0, 1.0, 1.0));
+  // The original (1,0,0) vert must be scaled to (5,0,0) in world space.
+  let v1 = s.baked_meshes[0].verts[1];
+  assert!((v1.x - 5.0).abs() < 1e-4, "expected x=5, got {}", v1.x);
+  assert!(v1.y.abs() < 1e-4);
+  assert!(v1.z.abs() < 1e-4);
+}
+
+#[test]
+fn test_add_static_rotation_applied_to_verts() {
+  // 90 degrees around Y rotates (1,0,0) onto the XZ plane (X→0).
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.add_static(&e, mh, V3_ZERO, Vec3::new(0.0, std::f32::consts::FRAC_PI_2, 0.0), V3_ONE);
+  let v1 = s.baked_meshes[0].verts[1];
+  assert!(v1.x.abs() < 1e-4, "expected x≈0 after Y rotation, got {}", v1.x);
+  let len = (v1.x * v1.x + v1.z * v1.z).sqrt();
+  assert!((len - 1.0).abs() < 1e-4);
+}
+
+#[test]
+fn test_add_static_normals_remain_unit_length() {
+  // The inverse-transpose path used for normals must still produce unit vectors
+  // under a non-uniform scale.
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, Vec3::new(2.0, 1.0, 0.5));
+  for n in &s.baked_meshes[0].normals {
+    let len = (n.x * n.x + n.y * n.y + n.z * n.z).sqrt();
+    assert!((len - 1.0).abs() < 1e-4, "normal not unit length: {}", len);
+  }
+}
+
+#[test]
+fn test_add_static_copies_indices_and_uvs() {
+  let mut e = engine();
+  let mh = e.add_model(quad_model("quad"));
+  let mut s = Scene::new();
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  // Indices and UV counts must be preserved verbatim from the source mesh.
+  assert_eq!(s.baked_meshes[0].indices, vec![0, 1, 2, 0, 2, 3]);
+  assert_eq!(s.baked_meshes[0].uvs.len(), 4);
+}
+
+#[test]
+fn test_multiple_add_static_calls_accumulate() {
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  s.add_static(&e, mh, Vec3::new(10.0, 0.0, 0.0), V3_ZERO, V3_ONE);
+  s.add_static(&e, mh, Vec3::new(0.0, 10.0, 0.0), V3_ZERO, V3_ONE);
+  assert_eq!(s.baked_meshes.len(), 3);
+}
+
+// --- bake_static_lighting deep semantics ---
+
+#[test]
+fn test_bake_static_lighting_with_no_lights_still_populates_with_ambient() {
+  // Even with zero lights, baking must produce a per-vert colour entry; the
+  // ambient component alone (>0) must show up.
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.ambient_light = WHITE;
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  s.bake_static_lighting();
+  let baked = &s.baked_meshes[0];
+  assert_eq!(baked.baked_lighting.len(), baked.verts.len());
+  let (r, g, b) = baked.baked_lighting[0].channels();
+  assert!(r > 0.0 || g > 0.0 || b > 0.0, "ambient should contribute, got {} {} {}", r, g, b);
+}
+
+#[test]
+fn test_bake_static_lighting_skips_non_static_lights() {
+  // A non-static light must NOT contribute to the bake; the result with only
+  // a dynamic light should match an unlit (ambient-only) bake.
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+
+  let mut s_ambient = Scene::new();
+  s_ambient.ambient_light = WHITE;
+  s_ambient.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  s_ambient.bake_static_lighting();
+
+  let mut s_dynonly = Scene::new();
+  s_dynonly.ambient_light = WHITE;
+  s_dynonly.add_light(Light::new(Vec3::new(0.0, 0.0, 5.0), 1.0, WHITE, 0.0, 0.0, false, true));
+  s_dynonly.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  s_dynonly.bake_static_lighting();
+
+  let (ra, ga, ba) = s_ambient.baked_meshes[0].baked_lighting[0].channels();
+  let (rd, gd, bd) = s_dynonly.baked_meshes[0].baked_lighting[0].channels();
+  assert!((ra - rd).abs() < 1e-5, "non-static light leaked into bake (r): {} vs {}", ra, rd);
+  assert!((ga - gd).abs() < 1e-5);
+  assert!((ba - bd).abs() < 1e-5);
+}
+
+#[test]
+fn test_bake_static_lighting_applies_to_all_baked_meshes() {
+  // Every BakedMesh in the scene must get its baked_lighting populated.
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.ambient_light = WHITE;
+  for _ in 0..3 {
+    s.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  }
+  s.bake_static_lighting();
+  for bm in &s.baked_meshes {
+    assert_eq!(bm.baked_lighting.len(), bm.verts.len());
+  }
+}
+
+#[test]
+fn test_bake_static_lighting_is_idempotent() {
+  // Calling bake twice in a row should produce identical results; the second
+  // call must not accumulate or duplicate the per-vert lighting.
+  let mut e = engine();
+  let mh = e.add_model(triangle_model("tri"));
+  let mut s = Scene::new();
+  s.ambient_light = WHITE;
+  s.add_light(Light::new(Vec3::new(0.0, 0.0, 5.0), 1.0, WHITE, 0.0, 0.0, true, false));
+  s.add_static(&e, mh, V3_ZERO, V3_ZERO, V3_ONE);
+  s.bake_static_lighting();
+  let first: Vec<_> = s.baked_meshes[0].baked_lighting.iter().map(|c| c.channels()).collect();
+  s.bake_static_lighting();
+  let second: Vec<_> = s.baked_meshes[0].baked_lighting.iter().map(|c| c.channels()).collect();
+  assert_eq!(first.len(), second.len());
+  for (a, b) in first.iter().zip(&second) {
+    assert!((a.0 - b.0).abs() < 1e-5);
+    assert!((a.1 - b.1).abs() < 1e-5);
+    assert!((a.2 - b.2).abs() < 1e-5);
+  }
+}
+
+// --- Mixed stats ---
+
+#[test]
+fn test_stats_counts_instance_and_static_tris_together() {
+  let mut e = engine();
+  let tri = e.add_model(triangle_model("tri"));
+  let quad = e.add_model(quad_model("quad"));
+  let mut s = Scene::new();
+  s.add_instance(tri); // 1 dynamic tri
+  s.add_instance(quad); // 2 dynamic tris
+  s.add_static(&e, quad, V3_ZERO, V3_ZERO, V3_ONE); // 2 static tris
+  let (instances, baked, _, tris) = s.stats(&e);
+  assert_eq!(instances, 2);
+  assert_eq!(baked, 1);
+  assert_eq!(tris, 5);
+}

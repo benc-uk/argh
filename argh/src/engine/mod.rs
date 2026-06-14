@@ -16,6 +16,10 @@ mod parse_gltf;
 mod parse_obj;
 mod render;
 
+#[cfg(test)]
+#[path = "../tests/engine_tests.rs"]
+mod engine_tests;
+
 #[cfg(feature = "desktop")]
 use minifb::{Window, WindowOptions};
 use slotmap::{SlotMap, new_key_type};

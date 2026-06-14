@@ -739,3 +739,240 @@ fn test_setting_pos_overwrites_previous_pos() {
   // Position setters replace, not accumulate.
   assert_eq!(s.instance(h).pos, Vec3::new(-1.0, -2.0, -3.0));
 }
+
+// --- World-axis rotation coverage ---
+
+#[test]
+fn test_rot_x_world_rotates_unit_y_to_unit_z_ish() {
+  // From identity, rotating (0,1,0) by 90 around X must place the result on the YZ plane
+  // with magnitude 1 and zero X component. Sign of Z depends on handedness.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h = s.add_instance(mh);
+  s.instance_mut(h).rot_x_world(std::f32::consts::FRAC_PI_2);
+  let q = s.instance(h).model_mat().transform_point(&Vec3::new(0.0, 1.0, 0.0));
+  assert!(q.x.abs() < EPS_TRIG, "X should stay 0, got {}", q.x);
+  let len = (q.y * q.y + q.z * q.z).sqrt();
+  assert!((len - 1.0).abs() < EPS_TRIG, "length should be preserved");
+  assert!(q.y.abs() < EPS_TRIG, "Y should rotate out, got {}", q.y);
+}
+
+#[test]
+fn test_rot_z_world_rotates_unit_x_to_unit_y_ish() {
+  // From identity, rotating (1,0,0) by 90 around Z must move the result onto the XY plane
+  // with magnitude 1 and zero Z component.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h = s.add_instance(mh);
+  s.instance_mut(h).rot_z_world(std::f32::consts::FRAC_PI_2);
+  let q = s.instance(h).model_mat().transform_point(&Vec3::new(1.0, 0.0, 0.0));
+  assert!(q.z.abs() < EPS_TRIG, "Z should stay 0, got {}", q.z);
+  let len = (q.x * q.x + q.y * q.y).sqrt();
+  assert!((len - 1.0).abs() < EPS_TRIG, "length should be preserved");
+  assert!(q.x.abs() < EPS_TRIG, "X should rotate out, got {}", q.x);
+}
+
+#[test]
+fn test_rot_world_same_axis_repeated_equals_sum() {
+  // Rotations around the same world axis commute and sum, so two halves
+  // must equal one whole turn through the same angle.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h_split = s.add_instance(mh);
+  let h_whole = s.add_instance(mh);
+  s.instance_mut(h_split).rot_y_world(0.4).rot_y_world(0.4);
+  s.instance_mut(h_whole).rot_y_world(0.8);
+  assert_mat4_near(&s.instance(h_split).model_mat(), &s.instance(h_whole).model_mat(), 1e-5);
+}
+
+#[test]
+fn test_rot_x_world_matches_rot_x_from_identity() {
+  // From the identity orientation, world-axis and local-axis rotations are equivalent.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h_local = s.add_instance(mh);
+  let h_world = s.add_instance(mh);
+  s.instance_mut(h_local).rot_x(0.6);
+  s.instance_mut(h_world).rot_x_world(0.6);
+  assert_mat4_near(&s.instance(h_local).model_mat(), &s.instance(h_world).model_mat(), 1e-5);
+}
+
+// --- add_instance_posed deeper semantics ---
+
+#[test]
+fn test_add_instance_posed_equivalent_to_manual_builder() {
+  // add_instance_posed(pos, rot, scale) must produce the same model matrix as
+  // building an instance manually with pos / scale / rot_x / rot_y / rot_z.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let pos = Vec3::new(2.0, -1.5, 3.25);
+  let rot = Vec3::new(0.3, -0.7, 1.1);
+  let scl = Vec3::new(1.5, 0.5, 2.0);
+  let h_posed = s.add_instance_posed(mh, pos, rot, scl);
+  let h_manual = s.add_instance(mh);
+  s.instance_mut(h_manual)
+    .pos(pos)
+    .scale_x(scl.x)
+    .scale_y(scl.y)
+    .scale_z(scl.z)
+    .rot_x(rot.x)
+    .rot_y(rot.y)
+    .rot_z(rot.z);
+  assert_mat4_near(&s.instance(h_posed).model_mat(), &s.instance(h_manual).model_mat(), 1e-5);
+}
+
+#[test]
+fn test_add_instance_posed_applies_euler_in_xyz_order() {
+  // The docstring promises rot.x then rot.y then rot.z. Verify by comparing against
+  // a manual chain in the opposite order, which must NOT match for non-trivial angles.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let rot = Vec3::new(0.7, 0.5, 0.9);
+  let h_posed = s.add_instance_posed(mh, V3_ZERO, rot, Vec3::new(1.0, 1.0, 1.0));
+  let h_reversed = s.add_instance(mh);
+  s.instance_mut(h_reversed).rot_z(rot.z).rot_y(rot.y).rot_x(rot.x);
+  let f1: Vec<f32> = s.instance(h_posed).model_mat().raw_for_test().iter().flatten().copied().collect();
+  let f2: Vec<f32> = s.instance(h_reversed).model_mat().raw_for_test().iter().flatten().copied().collect();
+  let differs = f1.iter().zip(f2.iter()).any(|(a, b)| (a - b).abs() > 1e-4);
+  assert!(differs, "posed XYZ order must differ from reversed ZYX chain");
+}
+
+#[test]
+fn test_add_instance_posed_negative_scale_reflected_in_model_mat() {
+  // A negative scale on the X axis mirrors the X component of any transformed point.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h = s.add_instance_posed(mh, V3_ZERO, V3_ZERO, Vec3::new(-1.0, 1.0, 1.0));
+  let q = s.instance(h).model_mat().transform_point(&Vec3::new(2.5, 0.0, 0.0));
+  assert!((q.x + 2.5).abs() < EPS_TRIG, "X should be mirrored, got {}", q.x);
+  assert!(q.y.abs() < EPS_TRIG);
+  assert!(q.z.abs() < EPS_TRIG);
+}
+
+#[test]
+fn test_add_instance_posed_position_is_world_space_not_rotated() {
+  // The pos argument is plain world-space translation; the rot argument must not rotate it.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let pos = Vec3::new(5.0, 0.0, 0.0);
+  let rot = Vec3::new(0.0, std::f32::consts::FRAC_PI_2, 0.0);
+  let h = s.add_instance_posed(mh, pos, rot, Vec3::new(1.0, 1.0, 1.0));
+  // Origin transformed by the model matrix should land at the requested pos exactly.
+  let q = s.instance(h).model_mat().transform_point(&V3_ZERO);
+  assert!((q.x - pos.x).abs() < EPS_TRIG);
+  assert!((q.y - pos.y).abs() < EPS_TRIG);
+  assert!((q.z - pos.z).abs() < EPS_TRIG);
+}
+
+// --- add_instance_mut fluent chain ---
+
+#[test]
+fn test_add_instance_mut_full_chain_then_lookup() {
+  // The reference returned by add_instance_mut should be a normal mutable Instance
+  // that supports the same fluent chain and persists into the scene.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h = s
+    .add_instance_mut(mh)
+    .pos_xyz(1.0, 2.0, 3.0)
+    .scale(4.0)
+    .rot_y(0.5)
+    .smooth(false)
+    .handle();
+  let i = s.instance(h);
+  assert_eq!(i.pos, Vec3::new(1.0, 2.0, 3.0));
+  assert_eq!(i.scale, Vec3::new(4.0, 4.0, 4.0));
+  assert!(!i.smooth);
+}
+
+// --- Scene-level instance contracts ---
+
+#[test]
+fn test_new_scene_has_no_instances() {
+  let s = Scene::new();
+  assert_eq!(s.instances().count(), 0);
+}
+
+#[test]
+fn test_instances_and_instances_mut_yield_same_count() {
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  for _ in 0..3 {
+    s.add_instance(mh);
+  }
+  let n_immut = s.instances().count();
+  let n_mut = s.instances_mut().count();
+  assert_eq!(n_immut, n_mut);
+}
+
+#[test]
+fn test_remove_unknown_handle_is_silent_no_panic() {
+  // Removing a never-added handle is a silent no-op; only the live handle
+  // we did add should be removed when asked.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h_real = s.add_instance(mh);
+  let h_stale = s.add_instance(mh);
+  s.remove_instance(h_stale);
+  // Removing the (already removed) stale handle again must not panic.
+  s.remove_instance(h_stale);
+  // The real handle should still be intact.
+  assert_eq!(s.instances().count(), 1);
+  assert_eq!(s.instance(h_real).handle(), h_real);
+}
+
+// --- model_mat purity ---
+
+#[test]
+fn test_model_mat_is_pure_no_mutation_between_calls() {
+  // Calling model_mat() twice without intervening mutation must yield equal matrices,
+  // proving the getter does not mutate the instance.
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h = s.add_instance(mh);
+  s.instance_mut(h).pos_xyz(1.0, 2.0, 3.0).scale(2.0).rot_z(0.4);
+  let m1 = s.instance(h).model_mat();
+  let m2 = s.instance(h).model_mat();
+  assert_mat4_near(&m1, &m2, 1e-7);
+}
+
+// --- pos isolation ---
+
+#[test]
+fn test_pos_vec3_does_not_affect_rotation_or_scale() {
+  let (mut e, mh) = dummy_engine_with_triangle();
+  let _ = &mut e;
+  let mut s = Scene::new();
+  let h = s.add_instance(mh);
+  s.instance_mut(h).scale(2.0).rot_y(0.5);
+  let m_before = s.instance(h).model_mat();
+  s.instance_mut(h).pos(Vec3::new(10.0, 20.0, 30.0));
+  let m_after = s.instance(h).model_mat();
+  // The upper-left 3x3 (rotation * scale) should be identical; only translation differs.
+  let a = m_before.raw_for_test();
+  let b = m_after.raw_for_test();
+  for r in 0..3 {
+    for c in 0..3 {
+      assert!(
+        (a[r][c] - b[r][c]).abs() < EPS_TRIG,
+        "pos should not touch rotation/scale at [{},{}]: {} vs {}",
+        r,
+        c,
+        a[r][c],
+        b[r][c]
+      );
+    }
+  }
+}
