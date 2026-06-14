@@ -1,7 +1,7 @@
 # ARGH: Another Rust Graphics Helper
 
 [![CI](https://img.shields.io/github/actions/workflow/status/benc-uk/argh/ci.yml?label=CI)](https://github.com/benc-uk/argh/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/github/actions/workflow/status/benc-uk/argh/docs.yml?label=Docs)](https://github.com/benc-uk/argh/actions/workflows/docs.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/benc-uk/argh/pages.yml?label=Site%20Build)](https://github.com/benc-uk/argh/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/github/license/benc-uk/argh)](https://github.com/benc-uk/argh/blob/main/LICENSE)
 [![Rust](https://img.shields.io/badge/rust-2024_edition-orange?logo=rust)](https://www.rust-lang.org/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/benc-uk/argh)](https://github.com/benc-uk/argh/commits/main)
