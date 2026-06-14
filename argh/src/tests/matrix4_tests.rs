@@ -507,7 +507,7 @@ fn test_copy_semantics() {
 #[test]
 fn test_clone_equal() {
   let a = Mat4::new_scale(2.0, 3.0, 4.0);
-  let b = a.clone();
+  let b = a;
   assert_eq!(a, b);
 }
 

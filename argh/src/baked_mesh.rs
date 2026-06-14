@@ -16,6 +16,10 @@ use crate::{
   math::{Vec2, Vec3},
 };
 
+#[cfg(test)]
+#[path = "tests/baked_mesh_tests.rs"]
+mod baked_mesh_tests;
+
 pub(crate) struct BakedMesh {
   pub(crate) material: Material,
   pub(crate) verts: Vec<Vec3>,   // already in WORLD space

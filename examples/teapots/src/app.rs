@@ -1,3 +1,9 @@
+// ==============================================================================================
+// Purpose:         Classic Utah teapots loaded from GLtf files and shown in a little scene
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// ==============================================================================================
+
 use argh::engine::Key;
 use argh::math::V3_AXIS_Y;
 use argh::prelude::*;
@@ -36,9 +42,9 @@ pub fn new(eng: &mut Engine) -> MyApp {
   scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 2.7, RED, 0.09, 0.03, false, true));
   scene.add_light(Light::new(v3(0.0, 6.0, -4.0), 2.9, WHITE, 0.09, 0.03, false, true));
 
-  let tp1 = eng.load_gltf("assets/glft/utah_teapot_low.glb").expect("gltf loading failed");
-  let tp2 = eng.load_gltf("assets/glft/utah_teapot_med.glb").expect("gltf loading failed");
-  let tp3 = eng.load_gltf("assets/glft/utah_teapot_high.glb").expect("gltf loading failed");
+  let tp1 = eng.load_gltf("assets/gltf/utah_teapot_low.glb").expect("gltf loading failed");
+  let tp2 = eng.load_gltf("assets/gltf/utah_teapot_med.glb").expect("gltf loading failed");
+  let tp3 = eng.load_gltf("assets/gltf/utah_teapot_high.glb").expect("gltf loading failed");
 
   // Crate is a cube primitive with a custom image texture
   let mut crate_mat = Material::new_textured(Texture::new("assets/textures/crate.png").unwrap());
@@ -51,7 +57,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
   scene.add_instance_mut(tp3).pos_xyz(-2.8, 0.0, 2.8).scale(1.0).rot_y(-1.1);
   scene.add_instance_mut(cube).pos_xyz(0.0, -6.0, 0.0).scale(12.0);
 
-  let camera = Camera::new_perspective(eng.aspect(), v3(0.0, 5.0, 14.0), v3(0.0, 0.5, 0.0), 50.0, 0.01, 100.0).unwrap();
+  let camera = Camera::new_perspective(eng.aspect(), v3(0.0, 5.0, 12.0), v3(0.0, -0.2, 0.0), 50.0, 0.01, 100.0).unwrap();
 
   MyApp { camera, scene }
 }

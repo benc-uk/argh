@@ -12,7 +12,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Sub, SubAssign};
 
 #[cfg(test)]
-#[path = "vector2_tests.rs"]
+#[path = "../tests/vector2_tests.rs"]
 mod vector2_tests;
 
 /// Standard 2D vector with a pair of x, y coords

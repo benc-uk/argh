@@ -11,6 +11,10 @@ use crate::{
   math::{Mat4, Quat, Vec3},
 };
 
+#[cfg(test)]
+#[path = "tests/instance_tests.rs"]
+mod instance_tests;
+
 /// Instance of a model in the world, with position, scale and rotation
 /// Instances represent dynamic objects in the world which can be moved
 pub struct Instance {

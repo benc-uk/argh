@@ -12,7 +12,7 @@ use std::fmt::Formatter;
 use std::ops::{Mul, MulAssign};
 
 #[cfg(test)]
-#[path = "matrix4_tests.rs"]
+#[path = "../tests/matrix4_tests.rs"]
 mod matrix4_tests;
 
 /// A classic 4x4 affine transformation matrix, designed for transformations on [Vec3] and [Vec4].
@@ -41,6 +41,14 @@ impl Mat4 {
   /// Internal read-only accessor to the raw storage. Sibling math modules
   /// only; nobody else needs to see how Mat4 lays out its bytes.
   pub(super) fn raw(&self) -> &[[f32; 4]; 4] {
+    &self.ele
+  }
+
+  /// Test-only access to the raw storage for assertions in cross-module test
+  /// helpers (anything outside the `math` module). Gated by #[cfg(test)] so it
+  /// never compiles into release builds.
+  #[cfg(test)]
+  pub(crate) fn raw_for_test(&self) -> &[[f32; 4]; 4] {
     &self.ele
   }
 

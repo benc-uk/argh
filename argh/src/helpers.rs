@@ -15,6 +15,10 @@ use crate::{
   math::{Vec3, Vec4},
 };
 
+#[cfg(test)]
+#[path = "tests/helpers_tests.rs"]
+mod helpers_tests;
+
 // One bit per frustum plane
 pub(crate) const OUT_LEFT: u8 = 1 << 0;
 pub(crate) const OUT_RIGHT: u8 = 1 << 1;

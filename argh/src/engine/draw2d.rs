@@ -10,6 +10,10 @@ use crate::{colour::Colour, math::Vec2};
 
 use super::Engine;
 
+#[cfg(test)]
+#[path = "../tests/draw2d_tests.rs"]
+mod draw2d_tests;
+
 impl Engine {
   /// Clear the entire window and buffer with the given colour
   /// Also clears the depth buffer

@@ -2,7 +2,7 @@ EXAMPLE ?= teapots
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build build-win release release-win run clean fmt fmt-check lint clippy doc doc-open test check wasm-build wasm-serve site
+.PHONY: help build build-win release release-win run clean fmt fmt-check lint clippy doc doc-open doc-check test check wasm-build wasm-serve site
 
 help: ## 💡 Show this help message
 	@echo ""
@@ -45,10 +45,13 @@ clippy: ## 📎 Run clippy lints
 lint: fmt-check clippy ## 🧹 Run all lints (fmt + clippy)
 
 doc: ## 📚 Generate documentation
-	cargo doc --workspace --no-deps
+	cargo doc -p argh --no-deps
 
 doc-open: ## 📖 Generate and open documentation
-	cargo doc --workspace --no-deps --open
+	cargo doc -p argh --no-deps --open
+
+doc-check: ## 🔍 Validate docs (broken links, private links, missing docs)
+	RUSTDOCFLAGS="-D rustdoc::all -D missing-docs" cargo doc -p argh --no-deps
 
 clean: ## 🗑️  Clean build artefacts
 	cargo clean

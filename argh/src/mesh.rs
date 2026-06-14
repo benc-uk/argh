@@ -11,6 +11,10 @@ use crate::{
   math::{Vec2, Vec3},
 };
 
+#[cfg(test)]
+#[path = "tests/mesh_tests.rs"]
+mod mesh_tests;
+
 /// Triangle based 3D mesh of verts + material
 pub(crate) struct Mesh {
   pub(crate) material: Material,

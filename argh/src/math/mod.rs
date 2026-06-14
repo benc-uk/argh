@@ -23,3 +23,7 @@ pub use quat::Quat;
 pub use vector2::Vec2;
 pub use vector3::*;
 pub use vector4::Vec4;
+
+#[cfg(test)]
+#[path = "../tests/math_audit_tests.rs"]
+mod audit_tests;

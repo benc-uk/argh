@@ -13,6 +13,10 @@ use crate::{
   texture::Texture,
 };
 
+#[cfg(test)]
+#[path = "tests/material_tests.rs"]
+mod material_tests;
+
 /// Material holds parameters for rendering the surface of a mesh, can be textured or flat
 #[derive(Clone)]
 pub struct Material {

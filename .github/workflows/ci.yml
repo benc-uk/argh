@@ -21,6 +21,7 @@ jobs:
           components: rustfmt, clippy
 
       - run: make check
+      - run: make doc-check
       - run: make lint
 
       - name: Install cargo-nextest

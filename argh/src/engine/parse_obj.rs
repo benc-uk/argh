@@ -21,6 +21,10 @@ use crate::{
 
 use super::Engine;
 
+#[cfg(test)]
+#[path = "../tests/parse_obj_tests.rs"]
+mod parse_obj_tests;
+
 #[derive(thiserror::Error)]
 pub enum ObjError {
   #[error("failed to load .obj file: {0}")]

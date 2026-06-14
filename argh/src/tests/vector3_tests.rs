@@ -725,7 +725,7 @@ fn test_copy_semantics() {
 #[test]
 fn test_clone() {
   let a = Vec3::new(1.0, 2.0, 3.0);
-  let b = a.clone();
+  let b = a;
   assert_eq!(a, b);
 }
 

@@ -12,7 +12,7 @@ use std::fmt::Formatter;
 use std::ops::{Mul, MulAssign};
 
 #[cfg(test)]
-#[path = "affine2_tests.rs"]
+#[path = "../tests/affine2_tests.rs"]
 mod affine2_tests;
 
 /// A classic 3x3 affine transformation matrix, designed for transformations on [Vec2]

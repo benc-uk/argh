@@ -8,6 +8,10 @@
 
 use crate::{material::Material, math::*, mesh::Mesh, model::Model};
 
+#[cfg(test)]
+#[path = "tests/primitives_tests.rs"]
+mod primitives_tests;
+
 /// Create a mesh for a unit cube, two triangles per face.
 ///
 /// Verts are duplicated per face (24 verts total) so each face can carry its

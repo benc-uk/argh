@@ -1,3 +1,12 @@
+// ==============================================================================================
+// Module & file:   web_wasm / app.rs
+// Purpose:         WasmApp is an implementation of the teapots demo
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// Notes:           This file is a copy of the teapots example, but with the assets baked as
+//                  include_bytes rather than using the filesystem (doesn't exist in WASM)
+// ==============================================================================================
+
 use argh::{math::V3_AXIS_Y, prelude::*};
 
 pub struct WasmApp {
@@ -6,9 +15,9 @@ pub struct WasmApp {
 }
 
 const CRATE_IMG_BYTES: &[u8] = include_bytes!("../../../assets/textures/crate.png");
-const TEAPOT_MDL_LOW_BYTES: &[u8] = include_bytes!("../../../assets/glft/utah_teapot_low.glb");
-const TEAPOT_MDL_MED_BYTES: &[u8] = include_bytes!("../../../assets/glft/utah_teapot_med.glb");
-const TEAPOT_MDL_HIGH_BYTES: &[u8] = include_bytes!("../../../assets/glft/utah_teapot_high.glb");
+const TEAPOT_MDL_LOW_BYTES: &[u8] = include_bytes!("../../../assets/gltf/utah_teapot_low.glb");
+const TEAPOT_MDL_MED_BYTES: &[u8] = include_bytes!("../../../assets/gltf/utah_teapot_med.glb");
+const TEAPOT_MDL_HIGH_BYTES: &[u8] = include_bytes!("../../../assets/gltf/utah_teapot_high.glb");
 
 impl App for WasmApp {
   fn update(&mut self, eng: &mut Engine, dt: f64, t: f64) {

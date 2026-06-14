@@ -289,7 +289,7 @@ fn test_copy_semantics() {
 #[test]
 fn test_clone() {
   let a = Affine2::new_scale(2.0, 3.0);
-  let b = a.clone();
+  let b = a;
   assert_eq!(a, b);
 }
 

@@ -24,6 +24,10 @@ use crate::{
 
 use super::Engine;
 
+#[cfg(test)]
+#[path = "../tests/parse_gltf_tests.rs"]
+mod parse_gltf_tests;
+
 struct GltfData {
   buffers: Vec<gltf::buffer::Data>,
   textures: Vec<gltf::image::Data>,
@@ -150,6 +154,7 @@ impl GltfData {
         }
         println!("    Verts: {} Indices: {}", out_mesh.positions.len(), out_mesh.indices.len());
 
+        out_mesh.tri_count = (out_mesh.indices.len() / 3) as u32;
         out_mesh.material = self.parse_material(prim.material());
 
         // Add mesh to the output model

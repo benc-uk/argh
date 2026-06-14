@@ -63,6 +63,10 @@ fn main() {
 }
 ```
 
+# Examples
+
+See [examples index](./examples/readme.md)
+
 # Taxonomy
 
 See [architecture](./architecture.md) for more details

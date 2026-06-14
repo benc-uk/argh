@@ -10,6 +10,10 @@ use std::collections::HashMap;
 
 use crate::{material::Material, mesh::Mesh};
 
+#[cfg(test)]
+#[path = "tests/model_tests.rs"]
+mod model_tests;
+
 /// Model holds multiple meshes
 pub struct Model {
   pub(crate) meshes: Vec<Mesh>,

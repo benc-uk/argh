@@ -12,7 +12,7 @@ use std::fmt::Formatter;
 use std::ops::{Mul, MulAssign};
 
 #[cfg(test)]
-#[path = "matrix3_tests.rs"]
+#[path = "../tests/matrix3_tests.rs"]
 mod matrix3_tests;
 
 /// A pure 3x3 matrix, designed for math operations not general purpose transforms, use [Mat4] for that

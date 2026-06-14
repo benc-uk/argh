@@ -13,7 +13,7 @@ use std::{
 };
 
 #[cfg(test)]
-#[path = "vector4_tests.rs"]
+#[path = "../tests/vector4_tests.rs"]
 mod vector4_tests;
 
 /// Standard 4D vector with x, y, z & w coords

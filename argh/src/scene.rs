@@ -95,8 +95,12 @@ impl Scene {
     self.instance_mut(hdl)
   }
 
-  /// Create an instance of a mesh with given name, using the material transformed into the world
-  pub fn add_instance_world(&mut self, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
+  /// Create an instance of a model with this handle, returns the [InstanceHandle]. Posed into the world with modifiers:
+  /// Arguments:
+  /// * `pos` - Holds the X, Y and Z world position of the created instance
+  /// * `rot` - Holds Euler rotation angles around the X, Y and Z axis, applied in order; rot-x, rot-y then rot-z
+  /// * `scale` - Holds the X, Y and Z scaling factors of the created instance
+  pub fn add_instance_posed(&mut self, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
     // We use insert_with_key to get the key as it is being added to the slotmap
     let h = self.instances.insert_with_key(|key| {
       let mut i = Instance {
@@ -147,7 +151,7 @@ impl Scene {
 
   // ===== BakedMesh ====================================
 
-  /// Bake static lighting into all [BakedMesh]es in this scene. Call this once after
+  /// Bake static lighting into all BakedMeshes in this scene. Call this once after
   /// adding all static geometry and lights, before rendering.
   pub fn bake_static_lighting(&mut self) {
     for sm in &mut self.baked_meshes {
@@ -155,7 +159,7 @@ impl Scene {
     }
   }
 
-  /// Create a static version of a [ModelHandle] will be stored as one or more [BakedMesh] internally
+  /// Create a static version of a [ModelHandle] will be stored as one or more BakedMesh internally
   pub fn add_static(&mut self, eng: &Engine, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) {
     let mut rot_q = Quat::ident();
     rot_q.rot_x(rot.x);

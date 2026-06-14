@@ -72,7 +72,7 @@ impl Engine {
     }
   }
 
-  /// Render a [Scene] from given [Camera], this is the most common thing to call inside your [App] update
+  /// Render a [Scene] from given [Camera], this is the most common thing to call inside your [../App] update
   pub fn render(&mut self, cam: &Camera, scn: &Scene) {
     // render all static stuff
     for mesh in &scn.baked_meshes {
@@ -86,7 +86,7 @@ impl Engine {
     }
   }
 
-  /// Renders a 3D [Instance] (ref by [InstanceHandle]) onto the screen from given camera position
+  /// Renders an Instance (ref by [InstanceHandle]) onto the screen from given camera position
   /// This triggers the full rendering pipeline
   pub fn render_instance(&mut self, hdl: InstanceHandle, cam: &Camera, scn: &Scene) {
     // Shorthand for finding the instance

@@ -11,6 +11,10 @@ use crate::{
   math::*,
 };
 
+#[cfg(test)]
+#[path = "tests/light_tests.rs"]
+mod light_tests;
+
 /// Light holds position, brightness and colour, plus attenuation (drop off)
 #[derive(Debug, Clone, Copy)]
 pub struct Light {

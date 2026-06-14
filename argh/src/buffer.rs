@@ -8,6 +8,10 @@
 
 use crate::colour::Colour;
 
+#[cfg(test)]
+#[path = "tests/buffer_tests.rs"]
+mod buffer_tests;
+
 // Internal frame & depth buffer
 // The encoding for each pixel is 32bits 0RGB: The upper 8-bits are ignored, the next 24 bits are 8-bits of RGB each
 // Depth buffer is f32

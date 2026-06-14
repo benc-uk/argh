@@ -74,6 +74,10 @@ pub mod app;
 /// Scenes hold instances of objects to be rendered
 pub mod scene;
 
+#[cfg(test)]
+#[path = "tests/test_helpers.rs"]
+pub(crate) mod test_helpers;
+
 /// Convenience re-exports of the most commonly used types and helpers.
 /// `use argh::prelude::*;` to pull in everything needed for a typical app.
 pub mod prelude {

@@ -11,6 +11,10 @@ use std::io;
 
 use crate::colour::{Colour, INV_255};
 
+#[cfg(test)]
+#[path = "tests/texture_tests.rs"]
+mod texture_tests;
+
 /// Errors that can occur when loading or decoding a [Texture]
 #[derive(thiserror::Error)]
 pub enum TextureError {

@@ -1,3 +1,9 @@
+// ==============================================================================================
+// Purpose:         Attempt at a first person camera with mouse look
+// Author & Date:   Ben Coleman, 2026
+// License:         MIT
+// ==============================================================================================
+
 use argh::{
   camera::Camera,
   engine::{Engine, Key},

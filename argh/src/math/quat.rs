@@ -10,7 +10,7 @@ use crate::math::{V3_AXIS_X, V3_AXIS_Y, V3_AXIS_Z, Vec3};
 use std::ops::Mul;
 
 #[cfg(test)]
-#[path = "quat_tests.rs"]
+#[path = "../tests/quat_tests.rs"]
 mod quat_tests;
 
 /// A minimal implementation of of a 4-tuple Quaternion (x, y, z, w) used for rotations

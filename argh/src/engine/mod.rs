@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-//! The engine is the core construct of argh, used to carry out rendering via a [Scene] & [Camera],
+//! The engine is the core construct of argh, used to carry out rendering via a [../Scene] & [../Camera],
 //! Holds the internal framebuffer and other constructs for rendering
 
 mod draw2d;

@@ -9,6 +9,10 @@
 use core::fmt;
 use std::{fmt::Formatter, ops::*};
 
+#[cfg(test)]
+#[path = "tests/colour_tests.rs"]
+mod colour_tests;
+
 /// A RGB colour tuple. Linear RGB colour, components in [0.0, 1.0] for normal use but range is not enforced
 #[derive(Debug, Clone, Copy)]
 pub struct Colour {
@@ -80,6 +84,13 @@ impl Colour {
   /// Create a new Colour from given RGB values
   pub const fn new(r: f32, g: f32, b: f32) -> Self {
     Self { r, g, b }
+  }
+
+  /// Test-only field access. Used by cross-module tests where Colour comes through
+  /// other types (Light, Material, etc) and we want to assert on individual channels.
+  #[cfg(test)]
+  pub(crate) fn channels(&self) -> (f32, f32, f32) {
+    (self.r, self.g, self.b)
   }
 
   /// Create a new Colour from given u8 RGB values (0 - 255). Inputs are treated as sRGB-encoded and
