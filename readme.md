@@ -27,11 +27,17 @@ Features:
   - Generators for cubes, spheres and teapots (what graphics system would be complete without the classic Newell Teapot!)
 - Methods for drawing 2D primitives, pixels, lines and text
 
-## Examples
+## What Does It Look Like?
+
+![alt text](misc/image.png)
+![alt text](misc/image-1.png)
+![alt text](misc/image-2.png)
 
 <video src="https://github.com/user-attachments/assets/d7a717f7-1ad2-4392-9c1d-51f683e005f0" controls></video>
 
-See the [`examples/`](./examples) directory for runnable demos (`basic1`, `hello_world`, `poly_2d`, `rects`, `simple_3d`).
+### Examples
+
+See the [`examples`](./examples) directory for runnable demos (`basic1`, `hello_world`, `poly_2d`, `rects`, `simple_3d`).
 
 ## Usage
 
@@ -62,10 +68,6 @@ fn main() {
   eng.start_window(&mut app, "Hello World", 1);
 }
 ```
-
-# Examples
-
-See [examples index](./examples/readme.md)
 
 # Taxonomy
 
