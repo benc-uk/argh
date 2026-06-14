@@ -881,13 +881,7 @@ fn test_add_instance_mut_full_chain_then_lookup() {
   let (mut e, mh) = dummy_engine_with_triangle();
   let _ = &mut e;
   let mut s = Scene::new();
-  let h = s
-    .add_instance_mut(mh)
-    .pos_xyz(1.0, 2.0, 3.0)
-    .scale(4.0)
-    .rot_y(0.5)
-    .smooth(false)
-    .handle();
+  let h = s.add_instance_mut(mh).pos_xyz(1.0, 2.0, 3.0).scale(4.0).rot_y(0.5).smooth(false).handle();
   let i = s.instance(h);
   assert_eq!(i.pos, Vec3::new(1.0, 2.0, 3.0));
   assert_eq!(i.scale, Vec3::new(4.0, 4.0, 4.0));
