@@ -192,7 +192,7 @@ impl Engine {
   }
 
   /// Renders an Instance (ref by [InstanceHandle]) onto the screen from given camera position
-  /// This triggers the full rendering pipeline
+  /// This starts the full rendering pipeline
   pub fn render_instance(&mut self, hdl: InstanceHandle, cam: &Camera, scn: &Scene) {
     // Shorthand for finding the instance
     let Some(instance) = scn.instances.get(hdl) else {
@@ -252,55 +252,14 @@ impl Engine {
       // 4. Now to rendering triangles
       // Walk the index list 3 at a time for triangles, cull, shade & rasterize
       for tri in mesh.indices.chunks(3) {
-        let i0 = tri[0] as usize;
-        let i1 = tri[1] as usize;
-        let i2 = tri[2] as usize;
-
-        // Trivial reject: all three vertices outside the SAME plane if they all share the same bitmask
-        let combined_out = self.verts[i0].outcode & self.verts[i1].outcode & self.verts[i2].outcode;
-        if combined_out != 0 {
-          continue;
-        }
-
-        let mat = &mesh.material;
-
-        // Near-plane handling: if any vert is past the near plane we have to clip the triangle with Sutherland-Hodgman
-        // Common case (nothing crossing near) hits the fast path below with clip overhead
-        let any_near = (self.verts[i0].outcode | self.verts[i1].outcode | self.verts[i2].outcode) & OUT_NEAR;
-
-        if any_near == 0 {
-          // ---- FAST PATH: no clipping needed, screen verts are already valid ----
-          rasterize_tri(&mut self.buffer, self.verts[i0].screen, self.verts[i1].screen, self.verts[i2].screen, mat);
-          self.stat_rend_tri_frame += 1;
-
-          // Fast path triangle done, exit early and move to next triangle
-          continue;
-        }
-
-        // ---- SLOW PATH: near-plane clipping via Sutherland-Hodgman ----
-        let cv_in = [ClipVert::from(&self.verts[i0]), ClipVert::from(&self.verts[i1]), ClipVert::from(&self.verts[i2])];
-
-        let mut cv_out = [cv_in[0]; 4];
-        let vert_tot = clip_triangle_near(&cv_in, &mut cv_out);
-        if vert_tot < 3 {
-          continue;
-        }
-
-        // Fan out triangles might be 1 or 2 triangles in cv_out
-        for ti in 0..(vert_tot - 2) {
-          let sv0 = ScreenVert::from_clip(&cv_out[0], self.size);
-          let sv1 = ScreenVert::from_clip(&cv_out[ti + 1], self.size);
-          let sv2 = ScreenVert::from_clip(&cv_out[ti + 2], self.size);
-
-          rasterize_tri(&mut self.buffer, sv0, sv1, sv2, mat);
-          self.stat_rend_tri_frame += 1;
-        }
+        render_tri(tri, &mesh.material, &self.verts, &mut self.buffer, self.size);
+        self.stat_rend_tri_frame += 1;
       }
     }
   }
 
-  /// Renders a 3D mesh onto the screen from given camera position
-  /// This triggers a rendering pipeline
+  // Renders a static [BakedMesh] onto the screen from given camera position
+  // This starts the full rendering pipeline. Note not public
   fn render_static(&mut self, mesh: &BakedMesh, vp: Mat4, scn: &Scene, eye: Vec3) {
     // Prevents a panic but very likely result in absolutely nothing being rendered
     if mesh.lighting.is_empty() {
@@ -341,52 +300,15 @@ impl Engine {
       });
     }
 
-    // 3. Walk the index list 3 at a time for triangles, cull, shade & rasterize
+    // 3. Walk the index list 3 at a time for triangles, pass down to shared render_tri()
     for tri in mesh.indices.chunks(3) {
-      let i0 = tri[0] as usize;
-      let i1 = tri[1] as usize;
-      let i2 = tri[2] as usize;
-
-      // Trivial reject: all three vertices outside the SAME frustum plane
-      let combined_out = self.verts[i0].outcode & self.verts[i1].outcode & self.verts[i2].outcode;
-      if combined_out != 0 {
-        continue;
-      }
-
-      // Near-plane handling: if any vert is past the near plane we have to clip the triangle with Sutherland-Hodgman
-      // Common case (nothing crossing near) hits the fast path below with clip overhead
-      let any_near = (self.verts[i0].outcode | self.verts[i1].outcode | self.verts[i2].outcode) & OUT_NEAR;
-
-      if any_near == 0 {
-        // ---- FAST PATH: no near-plane clipping needed ----
-        rasterize_tri(&mut self.buffer, self.verts[i0].screen, self.verts[i1].screen, self.verts[i2].screen, &mesh.material);
-        self.stat_rend_tri_frame += 1;
-
-        // Fast path triangle done, exit early and move to next triangle
-        continue;
-      }
-
-      let cv_in = [ClipVert::from(&self.verts[i0]), ClipVert::from(&self.verts[i1]), ClipVert::from(&self.verts[i2])];
-
-      // Clip near triangles into cv_out slice
-      let mut cv_out = [cv_in[0]; 4];
-      let vert_tot = clip_triangle_near(&cv_in, &mut cv_out);
-      if vert_tot < 3 {
-        continue;
-      }
-
-      // Fan out triangles might be 1 or 2 triangles in cv_out
-      for ti in 0..(vert_tot - 2) {
-        let sv0 = ScreenVert::from_clip(&cv_out[0], self.size);
-        let sv1 = ScreenVert::from_clip(&cv_out[ti + 1], self.size);
-        let sv2 = ScreenVert::from_clip(&cv_out[ti + 2], self.size);
-
-        rasterize_tri(&mut self.buffer, sv0, sv1, sv2, &mesh.material);
-        self.stat_rend_tri_frame += 1;
-      }
+      render_tri(tri, &mesh.material, &self.verts, &mut self.buffer, self.size);
+      self.stat_rend_tri_frame += 1;
     }
   }
 }
+
+// ===== Standalone functions ===========
 
 // Standard edge function, it's basically a cross product
 #[inline(always)]
@@ -402,8 +324,43 @@ fn is_back_facing(sv0: &ScreenVert, sv1: &ScreenVert, sv2: &ScreenVert) -> bool 
   area >= 0.0
 }
 
+// Shared render path for instances & statics - process triangles deal with clipping etc the call rasterize_tri
+fn render_tri(tri: &[u32], mat: &Material, verts: &[ProcessedVert], buffer: &mut Buffer, size: (usize, usize)) {
+  let i0 = tri[0] as usize;
+  let i1 = tri[1] as usize;
+  let i2 = tri[2] as usize;
+
+  // Trivial reject: all three vertices outside the SAME plane if they all share the same bitmask
+  let combined_out = verts[i0].outcode & verts[i1].outcode & verts[i2].outcode;
+  if combined_out != 0 {
+    return;
+  }
+
+  // Near-plane handling: if any vert is past the near plane we have to clip the triangle with Sutherland-Hodgman
+  // Common case (nothing crossing near) hits the fast path below with clip overhead
+  let any_near = (verts[i0].outcode | verts[i1].outcode | verts[i2].outcode) & OUT_NEAR;
+  if any_near == 0 {
+    // ---- FAST PATH: no clipping needed, screen verts are already valid ----
+    rasterize_tri(buffer, verts[i0].screen, verts[i1].screen, verts[i2].screen, mat);
+    return;
+  }
+
+  // ---- SLOW PATH: near-plane clipping via Sutherland-Hodgman ----
+  let cv_in = [ClipVert::from(&verts[i0]), ClipVert::from(&verts[i1]), ClipVert::from(&verts[i2])];
+  let mut cv_out = [cv_in[0]; 4];
+  let vert_tot = clip_triangle_near(&cv_in, &mut cv_out);
+
+  // Fan out triangles might be 1 or 2 triangles in cv_out
+  for ti in 0..(vert_tot - 2) {
+    let sv0 = ScreenVert::from_clip(&cv_out[0], size);
+    let sv1 = ScreenVert::from_clip(&cv_out[ti + 1], size);
+    let sv2 = ScreenVert::from_clip(&cv_out[ti + 2], size);
+
+    rasterize_tri(buffer, sv0, sv1, sv2, mat);
+  }
+}
+
 // Fill a triangle between three ScreenVertex points in screen space interpolating lighting, z-depth and texture samples
-#[inline(always)]
 fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material) {
   if is_back_facing(&v0, &v1, &v2) {
     return;

@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   light.rs
-// Purpose:         Point light source
+// Purpose:         Point light source, can be dynamic or static (baked with static meshes)
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:

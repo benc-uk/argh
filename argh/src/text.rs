@@ -1,6 +1,6 @@
 // ==============================================================================================
 // Module & file:   text.rs
-// Purpose:         Bitmap font rendering for ASCII text output
+// Purpose:         Bitmap font 5x7 rendering for ASCII text output
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
 // Notes:

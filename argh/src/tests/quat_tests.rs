@@ -141,14 +141,14 @@ fn test_new_from_unit_axis_is_unit_quat() {
 #[test]
 fn test_normalise_unit_quat_is_unchanged() {
   let q = Quat { w: 1.0, x: 0.0, y: 0.0, z: 0.0 };
-  let n = q.normalise();
+  let n = q.normalize();
   assert!(quat_approx_eq(&n, &q));
 }
 
 #[test]
 fn test_normalise_produces_unit_length() {
   let q = Quat { w: 2.0, x: 3.0, y: 4.0, z: 5.0 };
-  let n = q.normalise();
+  let n = q.normalize();
   let len_sq = n.w * n.w + n.x * n.x + n.y * n.y + n.z * n.z;
   assert!(approx_eq(len_sq, 1.0));
 }
@@ -156,7 +156,7 @@ fn test_normalise_produces_unit_length() {
 #[test]
 fn test_normalise_preserves_direction() {
   let q = Quat { w: 2.0, x: 4.0, y: 6.0, z: 8.0 };
-  let n = q.normalise();
+  let n = q.normalize();
   // All components scaled by the same factor, so ratios are preserved.
   let len = (2.0_f32 * 2.0 + 4.0 * 4.0 + 6.0 * 6.0 + 8.0 * 8.0).sqrt();
   let expected = Quat {
@@ -172,15 +172,15 @@ fn test_normalise_preserves_direction() {
 fn test_normalise_returns_new_value() {
   // normalise takes &self and returns a new Quat, leaving the original alone.
   let q = Quat { w: 2.0, x: 0.0, y: 0.0, z: 0.0 };
-  let _ = q.normalise();
+  let _ = q.normalize();
   assert_eq!(q, Quat { w: 2.0, x: 0.0, y: 0.0, z: 0.0 });
 }
 
 #[test]
 fn test_normalise_arbitrary_rotation_quat_is_idempotent() {
   let q = Quat::new(AXIS_Y, 1.7);
-  let n1 = q.normalise();
-  let n2 = n1.normalise();
+  let n1 = q.normalize();
+  let n2 = n1.normalize();
   assert!(quat_approx_eq(&n1, &n2));
 }
 
@@ -347,14 +347,14 @@ fn test_new_zero_axis_yields_identity() {
 #[test]
 fn test_normalise_preserves_unit_quat() {
   let q = Quat::new(AXIS_Z, FRAC_PI_2);
-  let n = q.normalise();
+  let n = q.normalize();
   assert!(quat_approx_eq(&q, &n));
 }
 
 #[test]
 fn test_normalise_scales_to_unit() {
   let q = Quat { w: 2.0, x: 4.0, y: 4.0, z: 0.0 }; // length 6
-  let n = q.normalise();
+  let n = q.normalize();
   let len_sq = n.w * n.w + n.x * n.x + n.y * n.y + n.z * n.z;
   assert!(approx_eq(len_sq, 1.0));
   // Direction preserved: ratios should match
@@ -366,7 +366,7 @@ fn test_normalise_scales_to_unit() {
 fn test_normalise_zero_quat_yields_nan() {
   // Pin current behaviour: zero quaternion divides by zero
   let z = Quat { w: 0.0, x: 0.0, y: 0.0, z: 0.0 };
-  let n = z.normalise();
+  let n = z.normalize();
   assert!(n.w.is_nan() && n.x.is_nan() && n.y.is_nan() && n.z.is_nan());
 }
 

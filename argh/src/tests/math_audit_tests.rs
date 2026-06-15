@@ -171,8 +171,8 @@ fn test_quat_normalise_is_idempotent() {
   for _ in 0..10000 {
     q.rot_x(0.01);
   }
-  let qn = q.normalise();
-  let qn2 = qn.normalise();
+  let qn = q.normalize();
+  let qn2 = qn.normalize();
   // Comparing components requires reaching into the quat; instead verify that
   // rotating a vector with q vs qn yields a unit-length result.
   let v = Vec3::new(1.0, 0.0, 0.0);

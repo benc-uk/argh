@@ -42,13 +42,27 @@ impl Quat {
     }
   }
 
+  /// Create a Quaternion with given X, Y & Z Euler angles, applied in order
+  /// # Arguments
+  /// * `x` - X angle in radians
+  /// * `y` - Y angle in radians
+  /// * `z` - Z angle in radians
+  pub fn new_euler(x: f32, y: f32, z: f32) -> Self {
+    let mut new = Self::ident();
+    new.rot_x(x);
+    new.rot_y(y);
+    new.rot_z(z);
+
+    new
+  }
+
   /// Create identity Quat
   pub fn ident() -> Self {
     Self { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }
   }
 
   /// Normalize this Quaternion
-  pub fn normalise(&self) -> Self {
+  pub fn normalize(&self) -> Self {
     let len = (self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
     let inv = 1.0 / len;
     Self {

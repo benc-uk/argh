@@ -105,22 +105,20 @@ impl Scene {
   /// * `scale` - Holds the X, Y and Z scaling factors of the created instance
   pub fn add_instance_posed(&mut self, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) -> InstanceHandle {
     // We use insert_with_key to get the key as it is being added to the slotmap
-    let h = self.instances.insert_with_key(|key| {
-      let mut i = Instance {
+    let handle = self.instances.insert_with_key(|key| {
+      let rot = Quat::new_euler(rot.x, rot.y, rot.z);
+
+      Instance {
         handle: key,
         model_handle,
         pos,
         scale,
-        rot: Quat::ident(),
-      };
-      i.rot.rot_x(rot.x);
-      i.rot.rot_y(rot.y);
-      i.rot.rot_z(rot.z);
-      i
+        rot,
+      }
     });
 
-    self.instance_keys.push(h);
-    h
+    self.instance_keys.push(handle);
+    handle
   }
 
   /// Get an mutable instance from its handle
@@ -153,8 +151,8 @@ impl Scene {
 
   // ===== BakedMesh ====================================
 
-  /// Bake static lighting into all BakedMeshes in this scene. Call this once after
-  /// adding all static geometry and lights, before rendering.
+  /// Bake static lighting into all BakedMeshes in this scene.
+  /// Important: Call once after adding all static geometry and lights, before rendering.
   pub fn bake_static_lighting(&mut self) {
     for sm in &mut self.baked_meshes {
       sm.bake_lighting(&self.lights, self.ambient_light);
@@ -163,24 +161,21 @@ impl Scene {
 
   /// Create a static version of a [ModelHandle] will be stored as one or more BakedMesh internally
   pub fn add_static(&mut self, eng: &Engine, model_handle: ModelHandle, pos: Vec3, rot: Vec3, scale: Vec3) {
-    let mut rot_q = Quat::ident();
-    rot_q.rot_x(rot.x);
-    rot_q.rot_y(rot.y);
-    rot_q.rot_z(rot.z);
+    let rot_q = Quat::new_euler(rot.x, rot.y, rot.z);
 
     let m = Mat4::new_scale_rot_trans(scale.x, scale.y, scale.z, rot_q, pos.x, pos.y, pos.z);
     let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_default();
 
     let model = eng.model(model_handle);
 
-    // Each Mesh in the Model becomes StaticMesh
+    // Each Mesh in the Model becomes BakedMesh, internal data is copied
     for mesh in &model.meshes {
-      let verts: Vec<Vec3> = mesh.positions.iter().map(|v| m.transform_point(v)).collect();
+      let positions: Vec<Vec3> = mesh.positions.iter().map(|v| m.transform_point(v)).collect();
       let normals: Vec<Vec3> = mesh.normals.iter().map(|n: &Vec3| (m_inv_t * n).normalize_new()).collect();
 
       let baked = BakedMesh {
         material: mesh.material.clone(),
-        positions: verts,
+        positions,
         normals,
         tex_coords: mesh.tex_coords.clone(),
         indices: mesh.indices.clone(),
