@@ -16,7 +16,7 @@
 //! fn main() {
 //!   let mut eng = Engine::new(800, 600);
 //!   let mut app = MyApp {};
-//!   eng.start_window(&mut app, "Hello World", 1);
+//!   eng.start_window(&mut app, "Hello World", 1, 0);
 //! }
 //! ```
 
@@ -86,7 +86,7 @@ pub mod prelude {
   pub use crate::colour::*;
   pub use crate::engine::{Engine, InstanceHandle, LightHandle, ModelHandle};
   pub use crate::light::Light;
-  pub use crate::material::{MATERIAL_PLACEHOLDER, Material};
+  pub use crate::material::Material;
   pub use crate::math::{Affine2, Mat4, Quat, V3_ZERO, Vec2, Vec3, Vec4};
   pub use crate::primitives;
   pub use crate::scene::Scene;

@@ -22,19 +22,19 @@ mod baked_mesh_tests;
 
 pub(crate) struct BakedMesh {
   pub(crate) material: Material,
-  pub(crate) verts: Vec<Vec3>,   // already in WORLD space
-  pub(crate) normals: Vec<Vec3>, // already in WORLD space, normalised
-  pub(crate) uvs: Vec<Vec2>,
+  pub(crate) positions: Vec<Vec3>, // already in WORLD space
+  pub(crate) normals: Vec<Vec3>,   // already in WORLD space, normalised
+  pub(crate) tex_coords: Vec<Vec2>,
   pub(crate) indices: Vec<u32>,
-  pub(crate) baked_lighting: Vec<Colour>, // Baked lighting
+  pub(crate) lighting: Vec<Colour>, // Baked lighting
 }
 
 impl BakedMesh {
   pub(crate) fn bake_lighting(&mut self, lights: &SlotMap<LightHandle, Light>, ambient: Colour) {
-    self.baked_lighting.clear();
-    self.baked_lighting.reserve(self.verts.len());
+    self.lighting.clear();
+    self.lighting.reserve(self.positions.len());
 
-    for (vert, normal) in self.verts.iter().zip(&self.normals) {
+    for (vert, normal) in self.positions.iter().zip(&self.normals) {
       let mut diffuse = BLACK;
 
       for light in lights.values() {
@@ -52,7 +52,7 @@ impl BakedMesh {
       }
 
       let amb = ambient * self.material.diffuse;
-      self.baked_lighting.push(diffuse * self.material.diffuse + amb);
+      self.lighting.push(diffuse * self.material.diffuse + amb);
     }
   }
 }

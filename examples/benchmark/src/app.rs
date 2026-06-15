@@ -114,7 +114,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
             scn.add_static(eng, boxobj, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
           }
           'L' => {
-            let l = Light::new(cell_pos(x, y, 3.0), 9.0, col8(255, 250, 200), 0.0, 2.0, true, false);
+            let l = Light::new_static(cell_pos(x, y, 3.0), 9.0, col8(255, 250, 200), 0.0, 2.0);
             scn.add_light(l);
           }
           _ => {}

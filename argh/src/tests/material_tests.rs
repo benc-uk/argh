@@ -20,12 +20,18 @@ fn small_texture() -> Texture {
 
 #[test]
 fn test_placeholder_is_white_diffuse() {
-  assert_eq!(MATERIAL_PLACEHOLDER.diffuse.channels(), WHITE.channels());
+  assert_eq!(
+    (MATERIAL_PLACEHOLDER.diffuse.r(), MATERIAL_PLACEHOLDER.diffuse.g(), MATERIAL_PLACEHOLDER.diffuse.b()),
+    (WHITE.r(), WHITE.g(), WHITE.b())
+  );
 }
 
 #[test]
 fn test_placeholder_is_white_specular() {
-  assert_eq!(MATERIAL_PLACEHOLDER.specular.channels(), WHITE.channels());
+  assert_eq!(
+    (MATERIAL_PLACEHOLDER.specular.r(), MATERIAL_PLACEHOLDER.specular.g(), MATERIAL_PLACEHOLDER.specular.b()),
+    (WHITE.r(), WHITE.g(), WHITE.b())
+  );
 }
 
 #[test]
@@ -43,13 +49,13 @@ fn test_placeholder_has_no_texture() {
 #[test]
 fn test_new_flat_sets_diffuse() {
   let m = Material::new_flat(RED);
-  assert_eq!(m.diffuse.channels(), RED.channels());
+  assert_eq!((m.diffuse.r(), m.diffuse.g(), m.diffuse.b()), (RED.r(), RED.g(), RED.b()));
 }
 
 #[test]
 fn test_new_flat_specular_white() {
   let m = Material::new_flat(RED);
-  assert_eq!(m.specular.channels(), WHITE.channels());
+  assert_eq!((m.specular.r(), m.specular.g(), m.specular.b()), (WHITE.r(), WHITE.g(), WHITE.b()));
 }
 
 #[test]
@@ -77,13 +83,13 @@ fn test_new_textured_stores_texture() {
 #[test]
 fn test_new_textured_default_diffuse_white() {
   let m = Material::new_textured(small_texture());
-  assert_eq!(m.diffuse.channels(), WHITE.channels());
+  assert_eq!((m.diffuse.r(), m.diffuse.g(), m.diffuse.b()), (WHITE.r(), WHITE.g(), WHITE.b()));
 }
 
 #[test]
 fn test_new_textured_default_specular_white() {
   let m = Material::new_textured(small_texture());
-  assert_eq!(m.specular.channels(), WHITE.channels());
+  assert_eq!((m.specular.r(), m.specular.g(), m.specular.b()), (WHITE.r(), WHITE.g(), WHITE.b()));
 }
 
 #[test]
@@ -137,8 +143,8 @@ fn test_clone_copies_scalar_fields() {
   m1.hardness = 99.0;
   m1.specular = Colour::new(0.5, 0.5, 0.5);
   let m2 = m1.clone();
-  assert_eq!(m2.diffuse.channels(), m1.diffuse.channels());
-  assert_eq!(m2.specular.channels(), m1.specular.channels());
+  assert_eq!((m2.diffuse.r(), m2.diffuse.g(), m2.diffuse.b()), (m1.diffuse.r(), m1.diffuse.g(), m1.diffuse.b()));
+  assert_eq!((m2.specular.r(), m2.specular.g(), m2.specular.b()), (m1.specular.r(), m1.specular.g(), m1.specular.b()));
   assert_eq!(m2.hardness, m1.hardness);
 }
 
@@ -148,14 +154,14 @@ fn test_clone_copies_scalar_fields() {
 fn test_diffuse_field_writable() {
   let mut m = Material::new_flat(RED);
   m.diffuse = Colour::new(0.1, 0.2, 0.3);
-  assert_eq!(m.diffuse.channels(), (0.1, 0.2, 0.3));
+  assert_eq!((m.diffuse.r(), m.diffuse.g(), m.diffuse.b()), (0.1, 0.2, 0.3));
 }
 
 #[test]
 fn test_specular_field_writable() {
   let mut m = Material::new_flat(RED);
   m.specular = Colour::new(0.4, 0.5, 0.6);
-  assert_eq!(m.specular.channels(), (0.4, 0.5, 0.6));
+  assert_eq!((m.specular.r(), m.specular.g(), m.specular.b()), (0.4, 0.5, 0.6));
 }
 
 #[test]

@@ -6,14 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-use slotmap::SlotMap;
-
-use crate::{
-  colour::*,
-  engine::LightHandle,
-  light::Light,
-  math::{Vec3, Vec4},
-};
+use crate::math::Vec4;
 
 #[cfg(test)]
 #[path = "tests/helpers_tests.rs"]
@@ -50,70 +43,6 @@ pub(crate) fn compute_outcode(v: &Vec4) -> u8 {
     code |= OUT_NEAR;
   }
   code
-}
-
-// Internal function for calculating the light at a vertex in world space
-// We return light values (as RGB Colours) falling on that vert, NOT the colour of the surface
-#[inline(always)]
-pub(crate) fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f32) -> (Colour, Colour) {
-  // Shading & lighting over multiple lights
-  let mut diff_sum = BLACK;
-  let mut spec_sum = BLACK;
-
-  for light in lights.values() {
-    // Vectors to and from the surface and the light
-    let l_raw = light.pos - world;
-    let d = l_raw.len();
-    let l = l_raw.normalize_new();
-    let li = l.invert();
-
-    // Add attenuation
-    let atten = 1.0 / (1.0 + light.atten_linear * d + light.atten_quad * d * d);
-
-    // Diffuse lighting
-    let n_dot_l = n.dot(l).max(0.0);
-    let diff_col = light.colour * light.brightness * n_dot_l * atten;
-    diff_sum += diff_col;
-
-    // Specular
-    if n_dot_l > 0.0 {
-      let v = (eye - world).normalize_new();
-      let r = li.reflect(n);
-      let v_dot_r = v.dot(r).max(0.0);
-      let spec = v_dot_r.powf(hardness);
-      let spec_col = light.colour * spec * light.brightness * atten;
-      spec_sum += spec_col;
-    }
-  }
-
-  (diff_sum, spec_sum)
-}
-
-// Used to calc shading on static meshes only
-pub(crate) fn shade_vert_diffuse(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3) -> Colour {
-  // Shading & lighting over multiple lights
-  let mut diff_sum = BLACK;
-
-  for light in lights.values() {
-    if !light.is_dynamic {
-      continue;
-    }
-
-    // Vectors to and from the surface and the light
-    let l_raw = light.pos - world;
-    let d = l_raw.len();
-    let l = l_raw.normalize_new();
-
-    // Add attenuation
-    let atten = 1.0 / (1.0 + light.atten_linear * d + light.atten_quad * d * d);
-
-    // Diffuse lighting
-    let n_dot_l = n.dot(l).max(0.0);
-    let diff_col = light.colour * light.brightness * n_dot_l * atten;
-    diff_sum += diff_col;
-  }
-
-  diff_sum
 }
 
 pub(crate) struct FpsAveragerEight {

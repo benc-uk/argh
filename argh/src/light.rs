@@ -32,29 +32,56 @@ pub struct Light {
   pub is_static: bool,
   /// If true, this light is applied per-frame even to static geometry
   pub is_dynamic: bool,
+  /// Enable or disable
+  pub is_enabled: bool,
 }
 
 impl Light {
-  /// Create a light
+  /// Create a dynamic light
   /// # Arguments:
   /// * `pos` - Position in world space of the light
   /// * `brightness` - Scales the brightness of the the light 0-1
   /// * `colour` - Light colour
-  pub fn new(pos: Vec3, brightness: f32, colour: Colour, atten_linear: f32, atten_quad: f32, is_static: bool, is_dynamic: bool) -> Self {
+  /// * `atten_linear` - Attenuation linear
+  /// * `atten_quad` - Attenuation quadratic
+  pub fn new_dynamic(pos: Vec3, brightness: f32, colour: Colour, atten_linear: f32, atten_quad: f32) -> Self {
     Self {
       pos,
       brightness,
       colour,
       atten_linear,
       atten_quad,
-      is_static,
-      is_dynamic,
+      is_static: false,
+      is_dynamic: true,
+      is_enabled: true,
     }
   }
 
-  /// Create a default light at (0, 0, 0) with white colour and full brightness
-  /// Attenuation linear= 0.09, quad=0.032
-  pub fn new_default() -> Self {
+  /// Create a static light used for baking into static meshes
+  /// # Arguments:
+  /// * `pos` - Position in world space of the light
+  /// * `brightness` - Scales the brightness of the the light 0-1
+  /// * `colour` - Light colour
+  /// * `atten_linear` - Attenuation linear
+  /// * `atten_quad` - Attenuation quadratic
+  pub fn new_static(pos: Vec3, brightness: f32, colour: Colour, atten_linear: f32, atten_quad: f32) -> Self {
+    Self {
+      pos,
+      brightness,
+      colour,
+      atten_linear,
+      atten_quad,
+      is_static: true,
+      is_dynamic: false,
+      is_enabled: true,
+    }
+  }
+}
+
+impl Default for Light {
+  /// A sensible default: dynamic, enabled, white, full brightness, at the origin.
+  /// Attenuation linear=0.09, quad=0.032.
+  fn default() -> Self {
     Self {
       pos: V3_ZERO,
       brightness: 1.0,
@@ -62,7 +89,8 @@ impl Light {
       atten_linear: 0.09,
       atten_quad: 0.032,
       is_static: false,
-      is_dynamic: false,
+      is_dynamic: true,
+      is_enabled: true,
     }
   }
 }

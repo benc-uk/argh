@@ -6,12 +6,16 @@
 // Notes:
 // ==============================================================================================
 
+use slotmap::SlotMap;
+
 use crate::{
   baked_mesh::BakedMesh,
   buffer::Buffer,
   camera::Camera,
   colour::{BLACK, Colour},
-  helpers::{OUT_NEAR, compute_outcode, shade_vert, shade_vert_diffuse},
+  engine::LightHandle,
+  helpers::{OUT_NEAR, compute_outcode},
+  light::Light,
   material::Material,
   math::{Mat3, Mat4, Vec2, Vec3, Vec4},
   scene::Scene,
@@ -24,10 +28,10 @@ const TRI_AREA_EPS: f32 = 1e-8;
 // ProcessedVert collects various data from the processing/transformation of mesh vertex in the rendering pass
 // It holds data ready for rasterization, shading etc
 pub(super) struct ProcessedVert {
-  world: Vec3,
   clip: Vec4, // Pre-divide clip space position, used for near-plane clipping
   screen: ScreenVert,
   outcode: u8,
+  uv: Vec2, // Raw UV only used by fast path
 }
 
 // ClipVert is the per-vertex payload that flows through near-plane clipping.
@@ -37,80 +41,74 @@ pub(super) struct ProcessedVert {
 #[derive(Copy, Clone)]
 struct ClipVert {
   clip: Vec4,
-  world: Vec3,
-  normal: Vec3,
   uv: Vec2,
   light: Colour, // pre-computed per-vertex lighting (Gouraud), carried through interp
 }
 
 impl ClipVert {
+  // A standard lerp (t: 0~1) between two ClipVert which blends all values inside
   #[inline(always)]
-  fn lerp(&self, other: &ClipVert, t: f32) -> ClipVert {
+  fn lerp(&self, other: &Self, t: f32) -> Self {
     let inv_t = 1.0 - t;
-    ClipVert {
+    Self {
       clip: self.clip * inv_t + other.clip * t,
-      world: self.world * inv_t + other.world * t,
-      normal: (self.normal * inv_t + other.normal * t).normalize_new(),
       uv: self.uv * inv_t + other.uv * t,
       light: self.light * inv_t + other.light * t,
     }
   }
 }
 
+impl From<&ProcessedVert> for ClipVert {
+  fn from(vert: &ProcessedVert) -> Self {
+    Self {
+      clip: vert.clip,
+      uv: vert.uv,
+      light: vert.screen.light,
+    }
+  }
+}
+
 // Sutherland-Hodgman clip of a single triangle against the near plane.
-// Convention matches Mat4::new_perspective (reverse-Z): near plane sits at
-// clip.z = clip.w, so "inside near" means clip.w - clip.z >= 0.
 // Output is written into `out` and length (0, 3 or 4) returned.
+// This is a very hard algorithm to understand see: misc/clip_triangle_near.png for a visual guide
 fn clip_triangle_near(tri: &[ClipVert; 3], out: &mut [ClipVert; 4]) -> usize {
+  // Distance from the near clip plane
   let d = [tri[0].clip.w - tri[0].clip.z, tri[1].clip.w - tri[1].clip.z, tri[2].clip.w - tri[2].clip.z];
+  // We use reverse-Z, so near plane sits at clip.z = clip.w
   let inside = [d[0] >= 0.0, d[1] >= 0.0, d[2] >= 0.0];
 
-  let mut n = 0usize;
+  let mut count = 0usize;
   for i in 0..3 {
     let j = (i + 1) % 3;
+    // Check edges, with verts i and j
     match (inside[i], inside[j]) {
+      // Both verts are inside: copy the j vert
       (true, true) => {
-        out[n] = tri[j];
-        n += 1;
+        out[count] = tri[j];
+        count += 1;
       }
+
+      // First vert inside: add a new vert, lerped between i & j
       (true, false) => {
         let t = d[i] / (d[i] - d[j]);
-        out[n] = tri[i].lerp(&tri[j], t);
-        n += 1;
+        out[count] = tri[i].lerp(&tri[j], t);
+        count += 1;
       }
+
+      // Second vert inside: add two new verts, 1) lerped between i & j, 2) copy of j
       (false, true) => {
         let t = d[i] / (d[i] - d[j]);
-        out[n] = tri[i].lerp(&tri[j], t);
-        n += 1;
-        out[n] = tri[j];
-        n += 1;
+        out[count] = tri[i].lerp(&tri[j], t);
+        count += 1;
+        out[count] = tri[j];
+        count += 1;
       }
+
+      // Both verts outside
       (false, false) => {}
     }
   }
-  n
-}
-
-// Finish a ClipVert into a ScreenVert by doing the perspective divide and
-// viewport mapping (origin top-left, Y flipped). Mirrors the per-vertex code
-// in the vertex-processing loop so screen-space results match for unchanged verts.
-#[inline(always)]
-fn screen_vert_from_clip(cv: &ClipVert, size: (usize, usize)) -> ScreenVert {
-  let inv_w = 1.0 / cv.clip.w;
-  let ndc_x = cv.clip.x * inv_w;
-  let ndc_y = cv.clip.y * inv_w;
-  let ndc_z = cv.clip.z * inv_w;
-  let sx = (ndc_x * 0.5 + 0.5) * size.0 as f32;
-  let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * size.1 as f32;
-  ScreenVert {
-    x: sx,
-    y: sy,
-    z: ndc_z,
-    inv_w,
-    light: cv.light,
-    u_w: cv.uv.x * inv_w,
-    v_w: cv.uv.y * inv_w,
-  }
+  count
 }
 
 // This is used internally to represent a vertex transformed into screen space (after perspective divide)
@@ -124,6 +122,29 @@ struct ScreenVert {
   inv_w: f32,    // Inverse of w
   u_w: f32,      // PRE-DIVIDED, not raw u and v.
   v_w: f32,      // PRE-DIVIDED, not raw u and v.
+}
+
+impl ScreenVert {
+  // Finish a ClipVert into a ScreenVert by doing the perspective divide and
+  // viewport mapping (origin top-left, Y flipped). Mirrors the per-vertex code
+  // in the vertex-processing loop so screen-space results match for unchanged verts.
+  #[inline(always)]
+  fn from_clip(cv: &ClipVert, size: (usize, usize)) -> Self {
+    let inv_w = 1.0 / cv.clip.w;
+    let ndc_x = cv.clip.x * inv_w;
+    let ndc_y = cv.clip.y * inv_w;
+    let ndc_z = cv.clip.z * inv_w;
+
+    Self {
+      x: (ndc_x * 0.5 + 0.5) * size.0 as f32,
+      y: (1.0 - (ndc_y * 0.5 + 0.5)) * size.1 as f32,
+      z: ndc_z,
+      inv_w,
+      light: cv.light,
+      u_w: cv.uv.x * inv_w,
+      v_w: cv.uv.y * inv_w,
+    }
+  }
 }
 
 impl Engine {
@@ -156,11 +177,11 @@ impl Engine {
     }
   }
 
-  /// Render a [Scene] from given [Camera], this is the most common thing to call inside your [../App] update
+  /// Render a [Scene] from given [Camera], this is the most common thing to call inside your [App][crate::app::App] update
   pub fn render(&mut self, cam: &Camera, scn: &Scene) {
     // render all static stuff
     for mesh in &scn.baked_meshes {
-      self.render_static(mesh, cam.pers_mat * cam.view_mat, scn);
+      self.render_static(mesh, cam.pers_mat * cam.view_mat, scn, cam.pos());
     }
 
     // render all dynamic instances
@@ -187,61 +208,46 @@ impl Engine {
     let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_default();
 
     // 1. Combine MVP (model, view, perspective) matrix
-    let mvp = cam.pers_mat * cam.view_mat * m;
+    let mvp = cam.pers_mat * cam.view_mat * m; // full transforms
 
-    // Model is made of meshes, iterate over them
+    // 2. Model is made of meshes, iterate over them
     for mesh in model.meshes.iter() {
       // Clear vert vector cache
       self.verts.clear();
-      self.normals.clear();
 
-      // 2. Process verts, into world space, clip space and screen space
-      self.verts.extend(mesh.positions.iter().enumerate().map(|(i, vert)| {
-        // World space: vert transformed by model matrix M
-        let world = m.transform_point(vert);
+      // 3. Main vertex processing loop, does just about everything
+      // Prepares both processed verts and screen vert
+      for i in 0..mesh.positions.len() {
+        let pos = &mesh.positions[i];
+        let world = m.transform_point(&mesh.positions[i]);
+        let clip = mvp * &Vec4::new(pos.x, pos.y, pos.z, 1.0);
+        let normal = (m_inv_t * &mesh.normals[i]).normalize_new();
+        let uv = mesh.tex_coords[i];
 
-        // Clip space: vert with w=1 transformed by MVP
-        let clip = mvp * &Vec4::new(vert.x, vert.y, vert.z, 1.0);
+        // We shade early, probably faster than after back face culling due to tris sharing verts
+        let (d, s) = shade_vert(&scn.lights, world, normal, cam.pos(), mesh.material.hardness);
+        let light = d * mesh.material.diffuse + s * mesh.material.specular + scn.ambient_light;
 
-        // Calc how vertex is clipped or not
-        let outcode = compute_outcode(&clip);
-
-        // 1/w used for perspective and we store it for other reasons too
         let inv_w = 1.0 / clip.w;
-
-        // Clip space -> NDCs, which get us towards screen space
         let ndc_x = clip.x * inv_w;
         let ndc_y = clip.y * inv_w;
         let ndc_z = clip.z * inv_w;
 
-        // Screen space: is NDC [-1,+1] -> pixels. IMPORTANT! flip Y because screen origin is top-left.
-        let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f32;
-        let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32; // Flip Y here
-
-        // Reach out to the UV array and pre-mult by 1/w, it MUST be the same length
-        let uv = mesh.tex_coords[i];
-        let u_w = uv.x * inv_w;
-        let v_w = uv.y * inv_w;
-
-        // Bundle up processed data into a single struct
-        ProcessedVert {
-          world,
+        self.verts.push(ProcessedVert {
           clip,
+          uv,
           screen: ScreenVert {
-            x: sx,
-            y: sy,
+            x: (ndc_x * 0.5 + 0.5) * self.size.0 as f32,
+            y: (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32,
             z: ndc_z,
             inv_w,
-            light: BLACK, // Mutated later
-            u_w,
-            v_w,
+            light,
+            u_w: uv.x * inv_w,
+            v_w: uv.y * inv_w,
           },
-          outcode,
-        }
-      }));
-
-      // 3. Process normals using the Mat3 inverse transpose of the model matrix
-      self.normals.extend(mesh.normals.iter().map(|n| (m_inv_t * n).normalize_new()));
+          outcode: compute_outcode(&clip),
+        });
+      }
 
       // 4. Now to rendering triangles
       // Walk the index list 3 at a time for triangles, cull, shade & rasterize
@@ -257,127 +263,36 @@ impl Engine {
         }
 
         let mat = &mesh.material;
-        let amb = scn.ambient_light * mat.diffuse;
-        let eye = cam.pos();
 
-        // Near-plane handling: if any vert is past the near plane we have to actually
-        // clip the triangle, otherwise the perspective divide produces garbage. The
-        // common case (nothing crossing near) hits the fast path below with no Sutherland-Hodgman.
+        // Near-plane handling: if any vert is past the near plane we have to clip the triangle with Sutherland-Hodgman
+        // Common case (nothing crossing near) hits the fast path below with clip overhead
         let any_near = (self.verts[i0].outcode | self.verts[i1].outcode | self.verts[i2].outcode) & OUT_NEAR;
 
         if any_near == 0 {
           // ---- FAST PATH: no clipping needed, screen verts are already valid ----
-          let mut sv0 = self.verts[i0].screen;
-          let mut sv1 = self.verts[i1].screen;
-          let mut sv2 = self.verts[i2].screen;
-          let wv0 = self.verts[i0].world;
-          let wv1 = self.verts[i1].world;
-          let wv2 = self.verts[i2].world;
-
-          let mut n0 = self.normals[i0];
-          let n1 = self.normals[i1];
-          let n2 = self.normals[i2];
-
-          // Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
-          //  - Back faces (mesh CW or back of CCW) have POSITIVE area
-          // So we discard anything non-negative.
-          let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
-          if area >= 0.0 {
-            continue;
-          }
-
-          // Cludge n0 to be a normal for the whole face for flat shading
-          if !instance.smooth {
-            n0 = (wv1 - wv0).cross(wv2 - wv0).normalize_new();
-          }
-
-          // Always shade vert 0
-          let (d0, s0) = shade_vert(&scn.lights, wv0, n0, eye, mat.hardness);
-          sv0.light = (d0 * mat.diffuse) + (s0 * mat.specular) + amb;
-
-          // Only shade vert 1 & 2 when smooth shading
-          if instance.smooth {
-            let (d1, s1) = shade_vert(&scn.lights, wv1, n1, eye, mat.hardness);
-            let (d2, s2) = shade_vert(&scn.lights, wv2, n2, eye, mat.hardness);
-            sv1.light = (d1 * mat.diffuse) + (s1 * mat.specular) + amb;
-            sv2.light = (d2 * mat.diffuse) + (s2 * mat.specular) + amb;
-          }
-
-          fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
+          rasterize_tri(&mut self.buffer, self.verts[i0].screen, self.verts[i1].screen, self.verts[i2].screen, mat);
           self.stat_rend_tri_frame += 1;
+
+          // Fast path triangle done, exit early and move to next triangle
           continue;
         }
 
         // ---- SLOW PATH: near-plane clipping via Sutherland-Hodgman ----
-        // Pre-shade per original vert so the lighting is interpolated correctly
-        // across the clip seam (vertex attributes lerp together).
-        let wv0 = self.verts[i0].world;
-        let wv1 = self.verts[i1].world;
-        let wv2 = self.verts[i2].world;
-        let (cn0, cn1, cn2) = if instance.smooth {
-          (self.normals[i0], self.normals[i1], self.normals[i2])
-        } else {
-          // Flat: use the face normal for all three vertices so lerping is a no-op
-          let face = (wv1 - wv0).cross(wv2 - wv0).normalize_new();
-          (face, face, face)
-        };
-
-        let shade = |w: Vec3, n: Vec3| -> Colour {
-          let (d, s) = shade_vert(&scn.lights, w, n, eye, mat.hardness);
-          (d * mat.diffuse) + (s * mat.specular) + amb
-        };
-
-        // For flat shading we want every output vertex to carry the same lighting
-        // value (the v0 shade), so the rasterizer's flat path stays consistent.
-        let (l0, l1, l2) = if instance.smooth {
-          (shade(wv0, cn0), shade(wv1, cn1), shade(wv2, cn2))
-        } else {
-          let l = shade(wv0, cn0);
-          (l, l, l)
-        };
-
-        let cv_in = [
-          ClipVert {
-            clip: self.verts[i0].clip,
-            world: wv0,
-            normal: cn0,
-            uv: mesh.tex_coords[i0],
-            light: l0,
-          },
-          ClipVert {
-            clip: self.verts[i1].clip,
-            world: wv1,
-            normal: cn1,
-            uv: mesh.tex_coords[i1],
-            light: l1,
-          },
-          ClipVert {
-            clip: self.verts[i2].clip,
-            world: wv2,
-            normal: cn2,
-            uv: mesh.tex_coords[i2],
-            light: l2,
-          },
-        ];
+        let cv_in = [ClipVert::from(&self.verts[i0]), ClipVert::from(&self.verts[i1]), ClipVert::from(&self.verts[i2])];
 
         let mut cv_out = [cv_in[0]; 4];
-        let n_out = clip_triangle_near(&cv_in, &mut cv_out);
-        if n_out < 3 {
+        let vert_tot = clip_triangle_near(&cv_in, &mut cv_out);
+        if vert_tot < 3 {
           continue;
         }
 
-        // Fan triangulate: (0,1,2) and, for a quad, (0,2,3)
-        for ti in 0..(n_out - 2) {
-          let sv0 = screen_vert_from_clip(&cv_out[0], self.size);
-          let sv1 = screen_vert_from_clip(&cv_out[ti + 1], self.size);
-          let sv2 = screen_vert_from_clip(&cv_out[ti + 2], self.size);
+        // Fan out triangles might be 1 or 2 triangles in cv_out
+        for ti in 0..(vert_tot - 2) {
+          let sv0 = ScreenVert::from_clip(&cv_out[0], self.size);
+          let sv1 = ScreenVert::from_clip(&cv_out[ti + 1], self.size);
+          let sv2 = ScreenVert::from_clip(&cv_out[ti + 2], self.size);
 
-          let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
-          if area >= 0.0 {
-            continue;
-          }
-
-          fill_triangle(&mut self.buffer, sv0, sv1, sv2, mat, instance.smooth);
+          rasterize_tri(&mut self.buffer, sv0, sv1, sv2, mat);
           self.stat_rend_tri_frame += 1;
         }
       }
@@ -386,45 +301,48 @@ impl Engine {
 
   /// Renders a 3D mesh onto the screen from given camera position
   /// This triggers a rendering pipeline
-  fn render_static(&mut self, baked_mesh: &BakedMesh, vp: Mat4, scn: &Scene) {
-    self.verts.clear();
-    self.normals.clear();
-
+  fn render_static(&mut self, mesh: &BakedMesh, vp: Mat4, scn: &Scene, eye: Vec3) {
     // Prevents a panic but very likely result in absolutely nothing being rendered
-    if baked_mesh.baked_lighting.is_empty() {
+    if mesh.lighting.is_empty() {
       return;
     }
 
-    // Similar but different code from processing the verts in a dynamic instance
-    self.verts.extend(baked_mesh.verts.iter().enumerate().map(|(i, world)| {
+    self.verts.clear();
+
+    // Main vertex processing loop, does just about everything
+    // Prepares both processed verts and screen vert
+    for i in 0..mesh.positions.len() {
+      let world = mesh.positions[i]; // Pretransformed
       let clip = vp * &Vec4::new(world.x, world.y, world.z, 1.0);
-      let outcode = compute_outcode(&clip);
+      let uv = mesh.tex_coords[i];
+
+      // Dynamic lights also get lighting from dynamic lights too
+      let (d, s) = shade_vert(&scn.lights, world, mesh.normals[i], eye, mesh.material.hardness);
+      let light = d * mesh.material.diffuse + s * mesh.material.specular + scn.ambient_light;
+
       let inv_w = 1.0 / clip.w;
       let ndc_x = clip.x * inv_w;
       let ndc_y = clip.y * inv_w;
       let ndc_z = clip.z * inv_w;
-      let sx = (ndc_x * 0.5 + 0.5) * self.size.0 as f32;
-      let sy = (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32;
-      let uv = baked_mesh.uvs[i];
 
-      ProcessedVert {
-        world: *world, // no transform!
+      self.verts.push(ProcessedVert {
         clip,
+        uv,
         screen: ScreenVert {
-          x: sx,
-          y: sy,
+          x: (ndc_x * 0.5 + 0.5) * self.size.0 as f32,
+          y: (1.0 - (ndc_y * 0.5 + 0.5)) * self.size.1 as f32,
           z: ndc_z,
           inv_w,
-          light: baked_mesh.baked_lighting[i],
+          light: mesh.lighting[i] + light,
           u_w: uv.x * inv_w,
           v_w: uv.y * inv_w,
         },
-        outcode,
-      }
-    }));
+        outcode: compute_outcode(&clip),
+      });
+    }
 
     // 3. Walk the index list 3 at a time for triangles, cull, shade & rasterize
-    for tri in baked_mesh.indices.chunks(3) {
+    for tri in mesh.indices.chunks(3) {
       let i0 = tri[0] as usize;
       let i1 = tri[1] as usize;
       let i2 = tri[2] as usize;
@@ -435,93 +353,35 @@ impl Engine {
         continue;
       }
 
+      // Near-plane handling: if any vert is past the near plane we have to clip the triangle with Sutherland-Hodgman
+      // Common case (nothing crossing near) hits the fast path below with clip overhead
       let any_near = (self.verts[i0].outcode | self.verts[i1].outcode | self.verts[i2].outcode) & OUT_NEAR;
 
       if any_near == 0 {
         // ---- FAST PATH: no near-plane clipping needed ----
-        let mut sv0 = self.verts[i0].screen;
-        let mut sv1 = self.verts[i1].screen;
-        let mut sv2 = self.verts[i2].screen;
-        let wv0 = self.verts[i0].world;
-        let wv1 = self.verts[i1].world;
-        let wv2 = self.verts[i2].world;
-
-        let n0 = baked_mesh.normals[i0];
-        let n1 = baked_mesh.normals[i1];
-        let n2 = baked_mesh.normals[i2];
-
-        // Back-face cull (see note in dynamic path)
-        let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
-        if area >= 0.0 {
-          continue;
-        }
-
-        // Bake-light plus a dynamic diffuse contribution from scene lights
-        sv0.light = baked_mesh.baked_lighting[i0] + shade_vert_diffuse(&scn.lights, wv0, n0);
-        sv1.light = baked_mesh.baked_lighting[i1] + shade_vert_diffuse(&scn.lights, wv1, n1);
-        sv2.light = baked_mesh.baked_lighting[i2] + shade_vert_diffuse(&scn.lights, wv2, n2);
-
-        // Note: baked path is always smooth shaded
-        fill_triangle(&mut self.buffer, sv0, sv1, sv2, &baked_mesh.material, true);
+        rasterize_tri(&mut self.buffer, self.verts[i0].screen, self.verts[i1].screen, self.verts[i2].screen, &mesh.material);
         self.stat_rend_tri_frame += 1;
+
+        // Fast path triangle done, exit early and move to next triangle
         continue;
       }
 
-      // ---- SLOW PATH: near-plane clipping via Sutherland-Hodgman ----
-      // Pre-shade per original vert so lighting interpolates correctly across the clip seam.
-      let wv0 = self.verts[i0].world;
-      let wv1 = self.verts[i1].world;
-      let wv2 = self.verts[i2].world;
-      let n0 = baked_mesh.normals[i0];
-      let n1 = baked_mesh.normals[i1];
-      let n2 = baked_mesh.normals[i2];
+      let cv_in = [ClipVert::from(&self.verts[i0]), ClipVert::from(&self.verts[i1]), ClipVert::from(&self.verts[i2])];
 
-      let l0 = baked_mesh.baked_lighting[i0] + shade_vert_diffuse(&scn.lights, wv0, n0);
-      let l1 = baked_mesh.baked_lighting[i1] + shade_vert_diffuse(&scn.lights, wv1, n1);
-      let l2 = baked_mesh.baked_lighting[i2] + shade_vert_diffuse(&scn.lights, wv2, n2);
-
-      let cv_in = [
-        ClipVert {
-          clip: self.verts[i0].clip,
-          world: wv0,
-          normal: n0,
-          uv: baked_mesh.uvs[i0],
-          light: l0,
-        },
-        ClipVert {
-          clip: self.verts[i1].clip,
-          world: wv1,
-          normal: n1,
-          uv: baked_mesh.uvs[i1],
-          light: l1,
-        },
-        ClipVert {
-          clip: self.verts[i2].clip,
-          world: wv2,
-          normal: n2,
-          uv: baked_mesh.uvs[i2],
-          light: l2,
-        },
-      ];
-
-      // Clip near triangles into cv_out
+      // Clip near triangles into cv_out slice
       let mut cv_out = [cv_in[0]; 4];
       let vert_tot = clip_triangle_near(&cv_in, &mut cv_out);
       if vert_tot < 3 {
-        panic!("bad")
+        continue;
       }
 
+      // Fan out triangles might be 1 or 2 triangles in cv_out
       for ti in 0..(vert_tot - 2) {
-        let sv0 = screen_vert_from_clip(&cv_out[0], self.size);
-        let sv1 = screen_vert_from_clip(&cv_out[ti + 1], self.size);
-        let sv2 = screen_vert_from_clip(&cv_out[ti + 2], self.size);
+        let sv0 = ScreenVert::from_clip(&cv_out[0], self.size);
+        let sv1 = ScreenVert::from_clip(&cv_out[ti + 1], self.size);
+        let sv2 = ScreenVert::from_clip(&cv_out[ti + 2], self.size);
 
-        let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
-        if area >= 0.0 {
-          continue;
-        }
-
-        fill_triangle(&mut self.buffer, sv0, sv1, sv2, &baked_mesh.material, true);
+        rasterize_tri(&mut self.buffer, sv0, sv1, sv2, &mesh.material);
         self.stat_rend_tri_frame += 1;
       }
     }
@@ -534,9 +394,21 @@ fn edge_function(a: ScreenVert, b: ScreenVert, px: f32, py: f32) -> f32 {
   (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x)
 }
 
+// Back-face cull. We use Y-flipped screen space, the signed area test is inverted from OpenGL
+// Back faces (mesh CW or back of CCW) have POSITIVE area; So we discard anything non-negative.
+#[inline(always)]
+fn is_back_facing(sv0: &ScreenVert, sv1: &ScreenVert, sv2: &ScreenVert) -> bool {
+  let area = (sv1.x - sv0.x) * (sv2.y - sv0.y) - (sv1.y - sv0.y) * (sv2.x - sv0.x);
+  area >= 0.0
+}
+
 // Fill a triangle between three ScreenVertex points in screen space interpolating lighting, z-depth and texture samples
 #[inline(always)]
-fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material, smooth: bool) {
+fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material) {
+  if is_back_facing(&v0, &v1, &v2) {
+    return;
+  }
+
   let area = edge_function(v1, v2, v0.x, v0.y);
 
   // Degenerate triangle, save ourselves a NaN panic
@@ -621,13 +493,9 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
           None => mat.diffuse,
         };
 
-        // Default shading uses on vert 0 only (flat)
-        let mut lighting = v0.light;
-
-        // Gouraud shading interpolates between shade at all 3 verts
-        if smooth {
-          lighting = v0.light * b0 + v1.light * b1 + v2.light * b2;
-        }
+        // Pure Gouraud: light is always interpolated across the three verts.
+        // For a flat-shaded look, author meshes with per-face normals (Model::flatten).
+        let lighting = v0.light * b0 + v1.light * b1 + v2.light * b2;
 
         buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z);
       }
@@ -641,4 +509,50 @@ fn fill_triangle(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
     w1_row += dy1;
     w2_row += dy2;
   }
+}
+
+// Internal function for calculating the light at a vertex in world space
+// We return light values (as RGB Colours) falling on that vert, NOT the colour of the surface
+#[inline(always)]
+pub(crate) fn shade_vert(lights: &SlotMap<LightHandle, Light>, world: Vec3, n: Vec3, eye: Vec3, hardness: f32) -> (Colour, Colour) {
+  // Shading & lighting over multiple lights
+  let mut diff_sum = BLACK;
+  let mut spec_sum = BLACK;
+
+  for light in lights.values() {
+    // Only apply dynamic lights
+    if !light.is_dynamic {
+      continue;
+    }
+
+    if !light.is_enabled {
+      continue;
+    }
+
+    // Vectors to and from the surface and the light
+    let l_raw = light.pos - world;
+    let d = l_raw.len();
+    let l = l_raw.normalize_new();
+    let li = l.invert();
+
+    // Add attenuation
+    let atten = 1.0 / (1.0 + light.atten_linear * d + light.atten_quad * d * d);
+
+    // Diffuse lighting
+    let n_dot_l = n.dot(l).max(0.0);
+    let diff_col = light.colour * light.brightness * n_dot_l * atten;
+    diff_sum += diff_col;
+
+    // Specular, hardness guardrail serves as a quick way to disable specular
+    if n_dot_l > 0.0 && hardness > 0.0 {
+      let v = (eye - world).normalize_new();
+      let r = li.reflect(n);
+      let v_dot_r = v.dot(r).max(0.0);
+      let spec = v_dot_r.powf(hardness);
+      let spec_col = light.colour * spec * light.brightness * atten;
+      spec_sum += spec_col;
+    }
+  }
+
+  (diff_sum, spec_sum)
 }

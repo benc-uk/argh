@@ -14,7 +14,7 @@ use crate::math::{Mat4, Vec3};
 #[path = "tests/camera_tests.rs"]
 mod camera_tests;
 
-/// Camera is used to render a 3D scene (set of meshes) from a given position and pointing in a given direction
+/// Camera is used to render a [Scene][crate::scene::Scene] from a given position and pointing in a given direction
 pub struct Camera {
   pos: Vec3,
   look_at: Vec3,

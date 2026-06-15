@@ -21,6 +21,26 @@ pub struct Colour {
   b: f32,
 }
 
+impl Colour {
+  /// Get red component
+  #[inline]
+  pub fn r(&self) -> f32 {
+    self.r
+  }
+
+  /// Get green component
+  #[inline]
+  pub fn g(&self) -> f32 {
+    self.g
+  }
+
+  /// Get blue component
+  #[inline]
+  pub fn b(&self) -> f32 {
+    self.b
+  }
+}
+
 pub(crate) const INV_255: f32 = 1.0 / 255.0;
 
 /// Lookup table mapping an sRGB-encoded byte (0..=255) to its linear-light value, using a 2.2 gamma curve.
@@ -84,13 +104,6 @@ impl Colour {
   /// Create a new Colour from given RGB values
   pub const fn new(r: f32, g: f32, b: f32) -> Self {
     Self { r, g, b }
-  }
-
-  /// Test-only field access. Used by cross-module tests where Colour comes through
-  /// other types (Light, Material, etc) and we want to assert on individual channels.
-  #[cfg(test)]
-  pub(crate) fn channels(&self) -> (f32, f32, f32) {
-    (self.r, self.g, self.b)
   }
 
   /// Create a new Colour from given u8 RGB values (0 - 255). Inputs are treated as sRGB-encoded and

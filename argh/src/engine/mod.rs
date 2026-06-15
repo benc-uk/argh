@@ -6,7 +6,7 @@
 // Notes:
 // ==============================================================================================
 
-//! The engine is the core construct of argh, used to carry out rendering via a [../Scene] & [../Camera],
+//! The engine is the core construct of argh, used to carry out rendering via a [Scene][crate::scene::Scene] & [Camera][crate::camera::Camera],
 //! Holds the internal framebuffer and other constructs for rendering
 
 mod draw2d;
@@ -15,6 +15,9 @@ mod input;
 mod parse_gltf;
 mod parse_obj;
 mod render;
+
+#[cfg(test)]
+pub(crate) use render::shade_vert;
 
 #[cfg(test)]
 #[path = "../tests/engine_tests.rs"]
@@ -27,7 +30,7 @@ use web_time::Instant;
 
 #[cfg(feature = "desktop")]
 use crate::{app::App, engine::input::Inputs};
-use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, helpers::FpsAveragerEight, math::Vec3, model::Model};
+use crate::{buffer::Buffer, colour::*, engine::render::ProcessedVert, helpers::FpsAveragerEight, model::Model};
 
 #[cfg(feature = "desktop")]
 pub use minifb::Key;
@@ -65,7 +68,6 @@ pub struct Engine {
 
   // Internal rendering perf cache kinda stuff
   verts: Vec<ProcessedVert>,
-  normals: Vec<Vec3>,
 
   // Things tracked & cached by the engine
   models: SlotMap<ModelHandle, Model>,
@@ -90,7 +92,6 @@ impl Engine {
       fps: FpsAveragerEight::new(),
       debug: false,
       verts: vec![],
-      normals: vec![],
       stat_rend_tri_frame: 0,
 
       #[cfg(feature = "desktop")]

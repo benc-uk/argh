@@ -9,6 +9,7 @@
 use super::*;
 use crate::colour::WHITE;
 use crate::engine::LightHandle;
+use crate::engine::shade_vert;
 use crate::light::Light;
 use crate::math::{Vec3, Vec4};
 use slotmap::SlotMap;
@@ -94,14 +95,14 @@ fn test_compute_outcode_corner_combines_multiple_planes() {
 fn test_shade_vert_no_lights_returns_black() {
   let lights = empty_lights();
   let (diff, spec) = shade_vert(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
-  assert_eq!(diff.channels(), (0.0, 0.0, 0.0));
-  assert_eq!(spec.channels(), (0.0, 0.0, 0.0));
+  assert_eq!((diff.r(), diff.g(), diff.b()), (0.0, 0.0, 0.0));
+  assert_eq!((spec.r(), spec.g(), spec.b()), (0.0, 0.0, 0.0));
 }
 
 #[test]
 fn test_shade_vert_back_facing_normal_returns_no_diffuse_or_spec() {
   // Normal points away from light; n_dot_l clamps to 0.
-  let lights = single_light(Light::new(Vec3::new(0.0, 0.0, 5.0), 1.0, WHITE, 0.0, 0.0, false, false));
+  let lights = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 5.0), 1.0, WHITE, 0.0, 0.0));
   let (diff, spec) = shade_vert(
     &lights,
     Vec3::new(0.0, 0.0, 0.0),
@@ -109,78 +110,69 @@ fn test_shade_vert_back_facing_normal_returns_no_diffuse_or_spec() {
     Vec3::new(0.0, 0.0, 10.0),
     20.0,
   );
-  assert_eq!(diff.channels(), (0.0, 0.0, 0.0));
-  assert_eq!(spec.channels(), (0.0, 0.0, 0.0));
+  assert_eq!((diff.r(), diff.g(), diff.b()), (0.0, 0.0, 0.0));
+  assert_eq!((spec.r(), spec.g(), spec.b()), (0.0, 0.0, 0.0));
 }
 
 #[test]
 fn test_shade_vert_facing_light_produces_diffuse() {
-  let lights = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0, false, false));
+  let lights = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0));
   let (diff, _spec) = shade_vert(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
-  let (r, _, _) = diff.channels();
+  let (r, _, _) = (diff.r(), diff.g(), diff.b());
   assert!(r > 0.5, "expected strong diffuse, got r={r}");
 }
 
 #[test]
 fn test_shade_vert_aligned_view_produces_specular() {
   // Light, eye and normal all aligned along +Z. Reflection vector aligns with view.
-  let lights = single_light(Light::new(Vec3::new(0.0, 0.0, 5.0), 1.0, WHITE, 0.0, 0.0, false, false));
+  let lights = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 5.0), 1.0, WHITE, 0.0, 0.0));
   let (_diff, spec) = shade_vert(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
-  let (r, _, _) = spec.channels();
+  let (r, _, _) = (spec.r(), spec.g(), spec.b());
   assert!(r > 0.5, "expected strong specular when view/light/normal aligned, got r={r}");
 }
 
 #[test]
 fn test_shade_vert_attenuation_falls_off_with_distance() {
   // Same setup but compare two distances.
-  let near = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.1, 0.1, false, false));
-  let far = single_light(Light::new(Vec3::new(0.0, 0.0, 10.0), 1.0, WHITE, 0.1, 0.1, false, false));
+  let near = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.1, 0.1));
+  let far = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 10.0), 1.0, WHITE, 0.1, 0.1));
 
   let (diff_near, _) = shade_vert(&near, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
   let (diff_far, _) = shade_vert(&far, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
-  assert!(diff_near.channels().0 > diff_far.channels().0, "near light should be brighter than far light");
+  assert!(diff_near.r() > diff_far.r(), "near light should be brighter than far light");
 }
 
 #[test]
 fn test_shade_vert_brightness_scales_diffuse() {
-  let dim = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 0.25, WHITE, 0.0, 0.0, false, false));
-  let bright = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0, false, false));
+  let dim = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 1.0), 0.25, WHITE, 0.0, 0.0));
+  let bright = single_light(Light::new_dynamic(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0));
   let (dim_d, _) = shade_vert(&dim, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
   let (bright_d, _) = shade_vert(&bright, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
   // dim is 0.25 brightness so should be roughly a quarter.
-  assert!(bright_d.channels().0 > dim_d.channels().0);
-  assert!((bright_d.channels().0 * 0.25 - dim_d.channels().0).abs() < 1e-4);
+  assert!(bright_d.r() > dim_d.r());
+  assert!((bright_d.r() * 0.25 - dim_d.r()).abs() < 1e-4);
 }
 
-// --- shade_vert_diffuse ---
+// --- shade_vert filtering ---
 
 #[test]
-fn test_shade_vert_diffuse_skips_non_dynamic_lights() {
-  // is_dynamic=false: should be skipped, returns black.
-  let lights = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0, true, false));
-  let diff = shade_vert_diffuse(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0));
-  assert_eq!(diff.channels(), (0.0, 0.0, 0.0));
-}
-
-#[test]
-fn test_shade_vert_diffuse_uses_dynamic_lights() {
-  let lights = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0, false, true));
-  let diff = shade_vert_diffuse(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0));
-  assert!(diff.channels().0 > 0.5);
+fn test_shade_vert_skips_non_dynamic_lights() {
+  // is_dynamic=false: shade_vert must skip this light, leaving diffuse and specular at zero.
+  let lights = single_light(Light::new_static(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0));
+  let (diff, spec) = shade_vert(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
+  assert_eq!((diff.r(), diff.g(), diff.b()), (0.0, 0.0, 0.0));
+  assert_eq!((spec.r(), spec.g(), spec.b()), (0.0, 0.0, 0.0));
 }
 
 #[test]
-fn test_shade_vert_diffuse_back_facing_returns_black() {
-  let lights = single_light(Light::new(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0, false, true));
-  let diff = shade_vert_diffuse(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -1.0));
-  assert_eq!(diff.channels(), (0.0, 0.0, 0.0));
-}
-
-#[test]
-fn test_shade_vert_diffuse_no_lights_returns_black() {
-  let lights = empty_lights();
-  let diff = shade_vert_diffuse(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0));
-  assert_eq!(diff.channels(), (0.0, 0.0, 0.0));
+fn test_shade_vert_skips_disabled_lights() {
+  // is_enabled=false: even a dynamic light is skipped when disabled.
+  let mut light = Light::new_dynamic(Vec3::new(0.0, 0.0, 1.0), 1.0, WHITE, 0.0, 0.0);
+  light.is_enabled = false;
+  let lights = single_light(light);
+  let (diff, spec) = shade_vert(&lights, Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 5.0), 20.0);
+  assert_eq!((diff.r(), diff.g(), diff.b()), (0.0, 0.0, 0.0));
+  assert_eq!((spec.r(), spec.g(), spec.b()), (0.0, 0.0, 0.0));
 }
 
 // --- FpsAveragerEight ---

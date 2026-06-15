@@ -40,13 +40,16 @@ impl App for WasmApp {
 pub fn new(eng: &mut Engine) -> WasmApp {
   let mut scene = Scene::new();
 
-  scene.add_light(Light::new(v3(5.0, 2.0, 5.0), 6.6, BLUE, 0.09, 0.03, false, true));
-  scene.add_light(Light::new(v3(-9.0, 1.0, 9.0), 2.7, RED, 0.09, 0.03, false, true));
-  scene.add_light(Light::new(v3(0.0, 6.0, -4.0), 2.9, WHITE, 0.09, 0.03, false, true));
+  scene.add_light(Light::new_dynamic(v3(5.0, 2.0, 5.0), 6.6, BLUE, 0.09, 0.03));
+  scene.add_light(Light::new_dynamic(v3(-9.0, 1.0, 9.0), 2.7, RED, 0.09, 0.03));
+  scene.add_light(Light::new_dynamic(v3(0.0, 6.0, -4.0), 2.9, WHITE, 0.09, 0.03));
 
   let tp1 = eng.load_gltf_bytes(TEAPOT_MDL_LOW_BYTES).expect("gltf loading failed");
   let tp2 = eng.load_gltf_bytes(TEAPOT_MDL_MED_BYTES).expect("gltf loading failed");
   let tp3 = eng.load_gltf_bytes(TEAPOT_MDL_HIGH_BYTES).expect("gltf loading failed");
+
+  // Bake flat (per-face) normals into the low-poly teapot to give it a faceted look.
+  eng.model_mut(tp1).flatten();
 
   // Crate is a cube primitive with a custom image texture
   let mut crate_mat = Material::new_textured(Texture::from_bytes(CRATE_IMG_BYTES).unwrap());
@@ -54,7 +57,7 @@ pub fn new(eng: &mut Engine) -> WasmApp {
   let cube = eng.add_model(primitives::new_cube(crate_mat));
 
   // Build the scene
-  scene.add_instance_mut(tp1).pos_xyz(2.8, 0.0, 0.0).scale(1.0).smooth(false);
+  scene.add_instance_mut(tp1).pos_xyz(2.8, 0.0, 0.0).scale(1.0);
   scene.add_instance_mut(tp2).pos_xyz(-2.8, 0.0, -2.8).scale(1.0).rot_y(0.8);
   scene.add_instance_mut(tp3).pos_xyz(-2.8, 0.0, 2.8).scale(1.0).rot_y(-1.1);
   scene.add_instance_mut(cube).pos_xyz(0.0, -6.0, 0.0).scale(12.0);

@@ -26,9 +26,6 @@ pub struct Instance {
   // References
   pub(crate) model_handle: ModelHandle, // Reference to the model this is an instance of
   pub(crate) handle: InstanceHandle,    // Self reference to the instance handle
-
-  // Enable Gouraud (smooth) shading for this instance
-  pub(crate) smooth: bool,
 }
 
 impl Instance {
@@ -101,12 +98,6 @@ impl Instance {
   /// Set the scale factor on the Z axis only
   pub fn scale_z(&mut self, s: f32) -> &mut Self {
     self.scale.z = s;
-    self
-  }
-
-  /// Set polygon surface smoothing
-  pub fn smooth(&mut self, smooth: bool) -> &mut Self {
-    self.smooth = smooth;
     self
   }
 

@@ -37,7 +37,10 @@ fn test_new_has_zero_tri_count() {
 fn test_new_uses_placeholder_material() {
   let m = Mesh::new();
   // Placeholder is WHITE diffuse, WHITE spec, hardness 20, no texture.
-  assert_eq!(m.material.diffuse.channels(), MATERIAL_PLACEHOLDER.diffuse.channels());
+  assert_eq!(
+    (m.material.diffuse.r(), m.material.diffuse.g(), m.material.diffuse.b()),
+    (MATERIAL_PLACEHOLDER.diffuse.r(), MATERIAL_PLACEHOLDER.diffuse.g(), MATERIAL_PLACEHOLDER.diffuse.b())
+  );
   assert_eq!(m.material.hardness, 20.0);
   assert!(m.material.texture.is_none());
 }
@@ -46,7 +49,7 @@ fn test_new_uses_placeholder_material() {
 fn test_new_with_material_carries_material() {
   let mat = ArghMaterial::new_flat(RED);
   let m = Mesh::new_with_material(mat);
-  let (r, g, b) = m.material.diffuse.channels();
+  let (r, g, b) = (m.material.diffuse.r(), m.material.diffuse.g(), m.material.diffuse.b());
   assert_eq!(r, 1.0);
   assert_eq!(g, 0.0);
   assert_eq!(b, 0.0);

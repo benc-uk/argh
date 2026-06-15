@@ -29,9 +29,9 @@ Features:
 
 ## What Does It Look Like?
 
-![alt text](misc/image.png)
-![alt text](misc/image-1.png)
-![alt text](misc/image-2.png)
+![Classic teapots](misc/screen-teapots.png
+![First person dungeon](misc/screen-dungeon.png
+![Simple 3D](misc/screen-simple3d.png)
 
 <video src="https://github.com/user-attachments/assets/d7a717f7-1ad2-4392-9c1d-51f683e005f0" controls></video>
 

@@ -208,9 +208,9 @@ fn test_packed_round_trip_half_gamma_tolerant() {
   let original = Colour::new(0.5, 0.5, 0.5);
   let packed = original.to_packed_0rgb();
   let recovered = Colour::from_packed_0rgb(packed);
-  assert!((recovered.channels().0 - 0.5).abs() < 0.06);
-  assert!((recovered.channels().1 - 0.5).abs() < 0.06);
-  assert!((recovered.channels().2 - 0.5).abs() < 0.06);
+  assert!((recovered.r() - 0.5).abs() < 0.06);
+  assert!((recovered.g() - 0.5).abs() < 0.06);
+  assert!((recovered.b() - 0.5).abs() < 0.06);
 }
 
 #[test]

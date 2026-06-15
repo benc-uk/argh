@@ -54,8 +54,8 @@ pub fn new(eng: &mut Engine) -> MyApp {
   let mut scene1 = Scene::new();
   let mut scene2 = Scene::new();
 
-  scene1.add_light(Light::new(v3(8.0, 7.0, 5.0), 1.0, WHITE, 0.09, 0.03, false, true));
-  scene2.add_light(Light::new(v3(-8.0, 7.0, 5.0), 1.0, WHITE, 0.09, 0.03, false, true));
+  scene1.add_light(Light::new_dynamic(v3(8.0, 7.0, 5.0), 1.0, WHITE, 0.09, 0.03));
+  scene2.add_light(Light::new_dynamic(v3(-8.0, 7.0, 5.0), 1.0, WHITE, 0.09, 0.03));
 
   let check_tex = Texture::new("assets/textures/checker_256.png").unwrap();
   let sphere1 = eng.add_model(primitives::new_sphere(Material::new_textured(check_tex), 24, 48));

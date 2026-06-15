@@ -24,7 +24,7 @@ const DUNGEON_MAP: &str = "..........
 ..##t..L..
 ..#Lb.##o.
 ..o##..#..
-....#..L#.
+....#..##.
 ....#..#o.
 .##bL###..
 .#o....bL.
@@ -60,7 +60,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
 
   let wall = eng.load_obj("assets/obj/dungeon/wall.obj").expect("obj loading failed");
 
-  let barrel_small = eng.load_obj("assets/obj/dungeon/barrel_large.obj").expect("obj loading failed");
+  let barrel_lg = eng.load_obj("assets/obj/dungeon/barrel_large.obj").expect("obj loading failed");
   let trunk = eng.load_obj("assets/obj/dungeon/trunk_large_C.obj").expect("obj loading failed");
   let boxobj = eng.load_obj("assets/obj/dungeon/box_small_decorated.obj").expect("obj loading failed");
 
@@ -81,7 +81,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
 
         match cell {
           'o' => {
-            scn.add_static(eng, barrel_small, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
+            scn.add_static(eng, barrel_lg, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
           }
           't' => {
             scn.add_static(eng, trunk, cell_pos(x, y, 0.0), v3(0.0, 0.0, 0.0), v3(1.0, 1.0, 1.0));
@@ -91,7 +91,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
           }
           'L' => {
             // Torch: range ~4 units, lights at head height for tighter falloff on floor
-            let l = Light::new(cell_pos(x, y, 2.0), 12.0, col8(255, 250, 200), 1.0, 5.0, true, false);
+            let l = Light::new_static(cell_pos(x, y, 2.0), 12.0, col8(255, 250, 200), 1.0, 5.0);
             scn.add_light(l);
           }
           _ => {}
@@ -128,8 +128,12 @@ pub fn new(eng: &mut Engine) -> MyApp {
   scn.ambient_light = BLACK;
   scn.bake_static_lighting();
 
-  let l = Light::new(cell_pos(px, py, 2.0), 20.0, col8(255, 210, 180), 0.0, 2.0, false, true);
+  let l = Light::new_dynamic(cell_pos(px, py, 2.0), 20.0, col8(255, 210, 180), 0.0, 2.0);
   let torch = scn.add_light(l);
+
+  // test box
+  let sphere2 = eng.add_model(primitives::new_cube(Material::new_textured(Texture::new("assets/textures/crate.png").unwrap())));
+  scn.add_instance_mut(sphere2).pos(cell_pos(3, 4, 0.8)).scale(1.5);
 
   println!("=== DUNGEON SCENE ===");
   println!("Static meshes: {}", scn.stats(eng).1);

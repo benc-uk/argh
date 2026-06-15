@@ -5,7 +5,7 @@ use argh::prelude::*;
 mod app;
 
 fn main() {
-  let frames = 100;
+  let frames = 1000;
 
   let mut eng = Engine::new(640, 480);
   let mut app = app::new(&mut eng);

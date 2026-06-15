@@ -131,6 +131,10 @@ pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, Obj
   println!("  Material: {}", in_material.name);
 
   let diff_col = in_material.diffuse.unwrap_or([1.0, 1.0, 1.0]);
+  let spec_col = in_material.specular.unwrap_or([0.0, 0.0, 0.0]);
+  let hard = in_material.shininess.unwrap_or(20.0);
+
+  // Default to flat colour
   let mut mat = ArghMaterial::new_flat(Colour::from_slice(diff_col));
   println!("    diffuse: {}", mat.diffuse);
 
@@ -142,9 +146,11 @@ pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, Obj
 
     let tex = Texture::new(tex_path.to_str().unwrap())?;
     mat = ArghMaterial::new_textured(tex);
-    mat.diffuse = Colour::from_slice(diff_col);
   }
 
-  mat.hardness = in_material.shininess.unwrap_or(20.0);
+  mat.diffuse = Colour::from_slice(diff_col);
+  mat.specular = Colour::from_slice(spec_col);
+  mat.hardness = hard;
+
   Ok(mat)
 }

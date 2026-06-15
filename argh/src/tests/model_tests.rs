@@ -135,7 +135,14 @@ fn test_set_mesh_material_replaces_material() {
   model.add_mesh(build_triangle_mesh());
   let mat = Material::new_flat(RED);
   model.set_mesh_material(0, mat);
-  assert_eq!(model.meshes[0].material.diffuse.channels(), RED.channels());
+  assert_eq!(
+    (
+      model.meshes[0].material.diffuse.r(),
+      model.meshes[0].material.diffuse.g(),
+      model.meshes[0].material.diffuse.b()
+    ),
+    (RED.r(), RED.g(), RED.b())
+  );
 }
 
 #[test]
@@ -156,7 +163,7 @@ fn test_set_all_material_updates_every_mesh() {
   let mat = Material::new_flat(BLUE);
   model.set_all_material(mat);
   for m in &model.meshes {
-    assert_eq!(m.material.diffuse.channels(), BLUE.channels());
+    assert_eq!((m.material.diffuse.r(), m.material.diffuse.g(), m.material.diffuse.b()), (BLUE.r(), BLUE.g(), BLUE.b()));
   }
 }
 
@@ -177,6 +184,20 @@ fn test_set_all_material_then_add_mesh_does_not_overwrite_new_mesh() {
   model.set_all_material(Material::new_flat(RED));
   model.add_mesh(build_quad_mesh());
   // First mesh: red. Second mesh: placeholder white.
-  assert_eq!(model.meshes[0].material.diffuse.channels(), RED.channels());
-  assert_eq!(model.meshes[1].material.diffuse.channels(), MATERIAL_PLACEHOLDER.diffuse.channels());
+  assert_eq!(
+    (
+      model.meshes[0].material.diffuse.r(),
+      model.meshes[0].material.diffuse.g(),
+      model.meshes[0].material.diffuse.b()
+    ),
+    (RED.r(), RED.g(), RED.b())
+  );
+  assert_eq!(
+    (
+      model.meshes[1].material.diffuse.r(),
+      model.meshes[1].material.diffuse.g(),
+      model.meshes[1].material.diffuse.b()
+    ),
+    (MATERIAL_PLACEHOLDER.diffuse.r(), MATERIAL_PLACEHOLDER.diffuse.g(), MATERIAL_PLACEHOLDER.diffuse.b())
+  );
 }

@@ -134,7 +134,7 @@ fn test_load_gltf_duck_specular_clamped_in_unit_range() {
   let h = e.load_gltf(p.to_str().unwrap()).expect("duck should load");
   let m = e.model(h);
   for mesh in &m.meshes {
-    let (sr, sg, sb) = mesh.material.specular.channels();
+    let (sr, sg, sb) = (mesh.material.specular.r(), mesh.material.specular.g(), mesh.material.specular.b());
     for c in [sr, sg, sb] {
       assert!((-1e-5..=1.0 + 1e-5).contains(&c), "spec channel {c} out of unit range");
     }
@@ -270,7 +270,7 @@ fn test_default_roughness_produces_zero_specular() {
   let h = e.load_gltf_bytes(&glb).expect("minimal glb should load");
   let mesh = &e.model(h).meshes[0];
   // spec_strength = 1 - r^2 = 0 with r=1, so all channels must be zero.
-  let (sr, sg, sb) = mesh.material.specular.channels();
+  let (sr, sg, sb) = (mesh.material.specular.r(), mesh.material.specular.g(), mesh.material.specular.b());
   assert!(sr.abs() < 1e-6, "spec R should be 0, got {sr}");
   assert!(sg.abs() < 1e-6, "spec G should be 0, got {sg}");
   assert!(sb.abs() < 1e-6, "spec B should be 0, got {sb}");
@@ -284,7 +284,7 @@ fn test_default_roughness_diffuse_is_white() {
   let glb = build_minimal_glb_no_roughness();
   let h = e.load_gltf_bytes(&glb).expect("minimal glb should load");
   let mesh = &e.model(h).meshes[0];
-  let (dr, dg, db) = mesh.material.diffuse.channels();
+  let (dr, dg, db) = (mesh.material.diffuse.r(), mesh.material.diffuse.g(), mesh.material.diffuse.b());
   assert!((dr - 1.0).abs() < 1e-5);
   assert!((dg - 1.0).abs() < 1e-5);
   assert!((db - 1.0).abs() < 1e-5);

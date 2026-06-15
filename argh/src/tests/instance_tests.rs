@@ -46,15 +46,6 @@ fn test_instance_default_scale_one() {
   assert_eq!(s.instance(h).scale, Vec3::new(1.0, 1.0, 1.0));
 }
 
-#[test]
-fn test_instance_default_smooth_true() {
-  let (mut e, mh) = dummy_engine_with_triangle();
-  let _ = &mut e;
-  let mut s = Scene::new();
-  let h = s.add_instance(mh);
-  assert!(s.instance(h).smooth);
-}
-
 // --- pos and pos_xyz ---
 
 #[test]
@@ -126,20 +117,6 @@ fn test_scale_z_sets_z_only() {
   assert_eq!(scale.x, 1.0);
   assert_eq!(scale.y, 1.0);
   assert_eq!(scale.z, 3.0);
-}
-
-// --- smooth ---
-
-#[test]
-fn test_smooth_toggle() {
-  let (mut e, mh) = dummy_engine_with_triangle();
-  let _ = &mut e;
-  let mut s = Scene::new();
-  let h = s.add_instance(mh);
-  s.instance_mut(h).smooth(false);
-  assert!(!s.instance(h).smooth);
-  s.instance_mut(h).smooth(true);
-  assert!(s.instance(h).smooth);
 }
 
 // --- model_mat ---
@@ -245,7 +222,6 @@ fn test_add_instance_mut_returns_default_instance() {
   let inst = s.add_instance_mut(mh);
   assert_eq!(inst.pos, V3_ZERO);
   assert_eq!(inst.scale, Vec3::new(1.0, 1.0, 1.0));
-  assert!(inst.smooth);
 }
 
 #[test]
@@ -307,11 +283,10 @@ fn test_builder_chain_pos_scale_rot_returns_same_self() {
   let mut s = Scene::new();
   let h = s.add_instance(mh);
   // All builder methods return &mut Self, so they should chain in a single statement.
-  s.instance_mut(h).pos_xyz(1.0, 2.0, 3.0).scale(2.0).rot_y(0.5).smooth(false);
+  s.instance_mut(h).pos_xyz(1.0, 2.0, 3.0).scale(2.0).rot_y(0.5);
   let i = s.instance(h);
   assert_eq!(i.pos, Vec3::new(1.0, 2.0, 3.0));
   assert_eq!(i.scale, Vec3::new(2.0, 2.0, 2.0));
-  assert!(!i.smooth);
 }
 
 #[test]
@@ -369,16 +344,14 @@ fn test_two_instances_same_model_have_distinct_handles() {
 }
 
 #[test]
-fn test_two_instances_independent_smooth_and_scale() {
+fn test_two_instances_independent_scale() {
   let (mut e, mh) = dummy_engine_with_triangle();
   let _ = &mut e;
   let mut s = Scene::new();
   let h_a = s.add_instance(mh);
   let h_b = s.add_instance(mh);
-  s.instance_mut(h_a).smooth(false).scale(2.0);
-  assert!(!s.instance(h_a).smooth);
+  s.instance_mut(h_a).scale(2.0);
   assert_eq!(s.instance(h_a).scale, Vec3::new(2.0, 2.0, 2.0));
-  assert!(s.instance(h_b).smooth);
   assert_eq!(s.instance(h_b).scale, Vec3::new(1.0, 1.0, 1.0));
 }
 
@@ -656,20 +629,6 @@ fn test_rot_x_and_rot_y_are_not_commutative() {
   assert!(differs, "rot_x;rot_y should not equal rot_y;rot_x for non-trivial angles");
 }
 
-// --- smooth flag isolation ---
-
-#[test]
-fn test_smooth_flag_does_not_affect_model_mat() {
-  let (mut e, mh) = dummy_engine_with_triangle();
-  let _ = &mut e;
-  let mut s = Scene::new();
-  let h = s.add_instance(mh);
-  let m_smooth = s.instance(h).model_mat();
-  s.instance_mut(h).smooth(false);
-  let m_flat = s.instance(h).model_mat();
-  assert_mat4_near(&m_smooth, &m_flat, 1e-7);
-}
-
 // --- handle stability ---
 
 #[test]
@@ -679,7 +638,7 @@ fn test_handle_stable_across_mutations() {
   let mut s = Scene::new();
   let h = s.add_instance(mh);
   let h_before = s.instance(h).handle();
-  s.instance_mut(h).pos_xyz(1.0, 1.0, 1.0).scale(3.0).rot_y(1.0).smooth(false);
+  s.instance_mut(h).pos_xyz(1.0, 1.0, 1.0).scale(3.0).rot_y(1.0);
   let h_after = s.instance(h).handle();
   assert_eq!(h_before, h_after);
 }
@@ -881,11 +840,10 @@ fn test_add_instance_mut_full_chain_then_lookup() {
   let (mut e, mh) = dummy_engine_with_triangle();
   let _ = &mut e;
   let mut s = Scene::new();
-  let h = s.add_instance_mut(mh).pos_xyz(1.0, 2.0, 3.0).scale(4.0).rot_y(0.5).smooth(false).handle();
+  let h = s.add_instance_mut(mh).pos_xyz(1.0, 2.0, 3.0).scale(4.0).rot_y(0.5).handle();
   let i = s.instance(h);
   assert_eq!(i.pos, Vec3::new(1.0, 2.0, 3.0));
   assert_eq!(i.scale, Vec3::new(4.0, 4.0, 4.0));
-  assert!(!i.smooth);
 }
 
 // --- Scene-level instance contracts ---

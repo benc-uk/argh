@@ -51,21 +51,23 @@ impl App for MyApp {
 pub fn new(eng: &mut Engine) -> MyApp {
   let mut scene = Scene::new();
 
-  scene.add_light(Light::new(v3(3.0, 3.0, 4.0), 1.0, WHITE, 0.09, 0.03, false, true));
-  scene.add_light(Light::new(v3(-5.0, 3.0, 4.0), 1.8, BLUE, 0.09, 0.03, false, true));
-  scene.add_light(Light::new(v3(2.0, -1.0, 2.0), 1.0, RED, 0.09, 0.03, false, true));
+  scene.add_light(Light::new_dynamic(v3(3.0, 3.0, 4.0), 1.0, WHITE, 0.09, 0.03));
+  scene.add_light(Light::new_dynamic(v3(-5.0, 3.0, 4.0), 1.8, BLUE, 0.09, 0.03));
+  scene.add_light(Light::new_dynamic(v3(2.0, -1.0, 2.0), 1.0, RED, 0.09, 0.03));
 
   let crate_tex = Texture::new("assets/textures/uv_check.png").unwrap();
   let earth_tex = Texture::new("assets/textures/earth.png").unwrap();
 
   let cube = eng.add_model(primitives::new_cube(Material::new_textured(crate_tex)));
-  let sphere1 = eng.add_model(primitives::new_sphere(Material::new_flat(Colour::rand()), 8, 12));
+  let mut sphere1_model = primitives::new_sphere(Material::new_flat(Colour::rand()), 8, 12);
+  sphere1_model.flatten();
+  let sphere1 = eng.add_model(sphere1_model);
   let sphere2 = eng.add_model(primitives::new_sphere(Material::new_textured(earth_tex), 24, 48));
   let cyl = eng.add_model(primitives::new_cylinder(Material::new_flat(Colour::rand()), 12, true));
   let cone = eng.add_model(primitives::new_cone(Material::new_flat(Colour::rand()), 16, true));
 
   let cube_hdl = scene.add_instance(cube);
-  let sphere1_hdl = scene.add_instance_mut(sphere1).smooth(false).handle();
+  let sphere1_hdl = scene.add_instance(sphere1);
   let sphere2_hdl = scene.add_instance(sphere2);
   let cyl_hdl = scene.add_instance_mut(cyl).scale(1.2).pos_xyz(0.5, -1.0, -0.4).handle();
   let cone_hdl = scene.add_instance_mut(cone).scale(1.3).pos_xyz(-1.0, 0.8, -1.2).handle();

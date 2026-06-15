@@ -75,4 +75,16 @@ impl Model {
       mesh.material = mat.clone();
     }
   }
+
+  /// Split shared vertices across every mesh and assign per-face normals so
+  /// the model renders as faceted (flat-shaded) under the pure Gouraud
+  /// pipeline. Triangle count and surface topology are preserved; only vertex
+  /// sharing is broken. Use this for the classic low-poly look without needing
+  /// any runtime shading toggle.
+  pub fn flatten(&mut self) -> &mut Self {
+    for mesh in &mut self.meshes {
+      mesh.flatten();
+    }
+    self
+  }
 }

@@ -21,7 +21,7 @@ use crate::{
 #[path = "tests/scene_tests.rs"]
 mod scene_tests;
 
-/// Scene holds instances, lights etc to be rendered on demand
+/// Scene holds [Instances][crate::instance::Instance] and [Lights][crate::light::Light] etc to be rendered on demand in your main loop
 pub struct Scene {
   // Things tracked & cached by the engine
   pub(crate) lights: SlotMap<LightHandle, Light>,
@@ -30,7 +30,7 @@ pub struct Scene {
   pub(crate) instance_keys: Vec<InstanceHandle>,
   pub(crate) light_keys: Vec<LightHandle>,
 
-  // Static geometry held in chunks
+  // Static geometry held in BakedMesh
   pub(crate) baked_meshes: Vec<BakedMesh>,
 
   /// Ambient light colour applied to all geometry, beware setting this too high it will look washed out
@@ -86,7 +86,6 @@ impl Scene {
       pos: V3_ZERO,
       scale: V3_ONE,
       rot: Quat::ident(),
-      smooth: true,
     });
 
     self.instance_keys.push(h);
@@ -113,7 +112,6 @@ impl Scene {
         pos,
         scale,
         rot: Quat::ident(),
-        smooth: true,
       };
       i.rot.rot_x(rot.x);
       i.rot.rot_y(rot.y);
@@ -182,11 +180,11 @@ impl Scene {
 
       let baked = BakedMesh {
         material: mesh.material.clone(),
-        verts,
+        positions: verts,
         normals,
-        uvs: mesh.tex_coords.clone(),
+        tex_coords: mesh.tex_coords.clone(),
         indices: mesh.indices.clone(),
-        baked_lighting: vec![], // populated when scene.bake_static_lighting() is called
+        lighting: vec![], // populated when scene.bake_static_lighting() is called
       };
 
       self.baked_meshes.push(baked);
