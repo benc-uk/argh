@@ -437,15 +437,6 @@ fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
             let (texel, a) = tex.sample(u, v);
             alpha = a; // Pull out
 
-            // When alpha cutting, skip this pixel entirely if alpha below cutoff
-            // if tex.alpha_cutout && alpha < tex.cutoff {
-            //   w0 += dx0;
-            //   w1 += dx1;
-            //   w2 += dx2;
-
-            //   continue;
-            // }
-
             texel * mat.diffuse
           }
 

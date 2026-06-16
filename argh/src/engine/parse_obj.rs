@@ -12,7 +12,10 @@ use tobj::Material;
 use crate::{
   colour::Colour,
   engine::ModelHandle,
-  material::{BlendMode::AlphaBlend, Material as ArghMaterial},
+  material::{
+    BlendMode::{AlphaBlend, Mask},
+    Material as ArghMaterial,
+  },
   mesh::Mesh as ArghMesh,
   model::Model as ArghModel,
   prelude::{v2, v3},
@@ -44,7 +47,7 @@ impl Engine {
   /// Load & parse an OBJ file, this will also load any referenced MTL files
   /// Resulting model will be loaded into the engine and handle returned
   /// If material loading fails a placeholder will be used
-  pub fn load_obj(&mut self, path: &str) -> Result<ModelHandle, ObjError> {
+  pub fn load_obj(&mut self, path: &str, alpha_mask: bool) -> Result<ModelHandle, ObjError> {
     let loaded_obj = tobj::load_obj(
       path,
       &tobj::LoadOptions {
@@ -113,7 +116,7 @@ impl Engine {
       // Add matching material to this mesh
       if let Some(mat_id) = in_mesh.material_id {
         let in_material = materials.get(mat_id).unwrap();
-        let m = parse_mtl(in_material, path);
+        let m = parse_mtl(in_material, path, alpha_mask);
         out_mesh.material = m?;
       }
 
@@ -127,7 +130,7 @@ impl Engine {
 }
 
 // Convert tobj::Material (MTL) into argh::Material
-pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, ObjError> {
+pub fn parse_mtl(in_material: &Material, path: &str, alpha_mask: bool) -> Result<ArghMaterial, ObjError> {
   println!("  Material: {}", in_material.name);
 
   // Default to flat colour
@@ -153,6 +156,9 @@ pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, Obj
   // Default to enabling AlphaBlend when opacity below threshold
   if mat.opacity < 0.9 {
     mat.blend_mode = AlphaBlend
+  }
+  if alpha_mask {
+    mat.blend_mode = Mask
   }
 
   println!("        D:{} S:{} H:{}", mat.diffuse, mat.specular, mat.hardness);

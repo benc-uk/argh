@@ -203,7 +203,7 @@ impl Scene {
   }
 }
 
-/// Default to stop linter complaining
+/// Default to stop dumb linter complaining
 impl Default for Scene {
   fn default() -> Self {
     Self::new()

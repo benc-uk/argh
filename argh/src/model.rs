@@ -101,6 +101,7 @@ impl Model {
     self
   }
 
+  // Internal method
   fn recompute_opaque(&mut self) {
     let mut opaque = true;
 
