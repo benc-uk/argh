@@ -44,6 +44,7 @@ impl Buffer {
     self.depth.fill(0.0);
   }
 
+  // Writes a pixel and doesn't check depth, and has bounds checking
   #[inline(always)]
   pub(crate) fn set_pixel(&mut self, x: usize, y: usize, c: Colour) {
     if x < self.w && y < self.h {
@@ -51,6 +52,8 @@ impl Buffer {
     }
   }
 
+  // Writes a pixel only if it passes depth test, no bounds check for speed
+  // Will update and set the depth buffer
   #[inline(always)]
   pub(crate) fn set_pixel_depth(&mut self, x: usize, y: usize, c: Colour, z: f32) {
     let idx = y * self.w + x;
@@ -61,6 +64,28 @@ impl Buffer {
     }
   }
 
+  // Writes a src alpha blended pixel only if it passes depth test, no bounds check for speed
+  // Will NOT update and set the depth buffer
+  #[inline(always)]
+  pub(crate) fn blend_pixel_depth(&mut self, x: usize, y: usize, src: Colour, a: f32, z: f32) {
+    // Save some effort
+    if a <= 0.0 {
+      return;
+    }
+
+    let idx = y * self.w + x;
+    // Depth checked but not set by this method
+    if z <= self.depth[idx] {
+      return;
+    }
+
+    // There's a round trip encode/decode on the dst pixel we can't avoid
+    let dst = Colour::from_packed_0rgb(self.pixels[idx]);
+    let out = src * a + dst * (1.0 - a); // straight alpha "src OVER dst"
+    self.pixels[idx] = out.to_packed_0rgb();
+  }
+
+  // Fills a rectangle yeah, boring
   #[inline(always)]
   pub(crate) fn fill_rect(&mut self, x: usize, y: usize, w: usize, h: usize, c: Colour) {
     for row in y..((y + h).min(self.h)) {

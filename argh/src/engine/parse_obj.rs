@@ -12,7 +12,7 @@ use tobj::Material;
 use crate::{
   colour::Colour,
   engine::ModelHandle,
-  material::Material as ArghMaterial,
+  material::{BlendMode::AlphaBlend, Material as ArghMaterial},
   mesh::Mesh as ArghMesh,
   model::Model as ArghModel,
   prelude::{v2, v3},
@@ -130,11 +130,8 @@ impl Engine {
 pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, ObjError> {
   println!("  Material: {}", in_material.name);
 
-  let diff_col = in_material.diffuse.unwrap_or([1.0, 1.0, 1.0]);
-  let spec_col = in_material.specular.unwrap_or([0.0, 0.0, 0.0]);
-  let hard = in_material.shininess.unwrap_or(20.0);
-
   // Default to flat colour
+  let diff_col = in_material.diffuse.unwrap_or([1.0, 1.0, 1.0]);
   let mut mat = ArghMaterial::new_flat(Colour::from_slice(diff_col));
   println!("    diffuse: {}", mat.diffuse);
 
@@ -149,8 +146,17 @@ pub fn parse_mtl(in_material: &Material, path: &str) -> Result<ArghMaterial, Obj
   }
 
   mat.diffuse = Colour::from_slice(diff_col);
-  mat.specular = Colour::from_slice(spec_col);
-  mat.hardness = hard;
+  mat.specular = Colour::from_slice(in_material.specular.unwrap_or([0.0, 0.0, 0.0]));
+  mat.hardness = in_material.shininess.unwrap_or(20.0);
+  mat.opacity = in_material.dissolve.unwrap_or(1.0);
+
+  // Default to enabling AlphaBlend when opacity below threshold
+  if mat.opacity < 0.9 {
+    mat.blend_mode = AlphaBlend
+  }
+
+  println!("        D:{} S:{} H:{}", mat.diffuse, mat.specular, mat.hardness);
+  println!("        O:{} B:{:?}", mat.opacity, mat.blend_mode);
 
   Ok(mat)
 }

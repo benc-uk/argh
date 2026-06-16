@@ -45,7 +45,8 @@ pub fn new(eng: &mut Engine) -> MyApp {
   let tp1 = eng.load_gltf("assets/gltf/utah_teapot_low.glb").expect("gltf loading failed");
   // Low poly looks cool with flat shading
   eng.model_mut(tp1).flatten();
-  let tp2 = eng.load_gltf("assets/gltf/utah_teapot_med.glb").expect("gltf loading failed");
+  // let tp2 = eng.load_gltf("assets/gltf/utah_teapot_med.glb").expect("gltf loading failed");
+  let tp2 = eng.load_obj("assets/obj/dice/dice.obj").expect("obj loading failed");
   let tp3 = eng.load_gltf("assets/gltf/utah_teapot_high.glb").expect("gltf loading failed");
 
   // Crate is a cube primitive with a custom image texture
@@ -55,7 +56,7 @@ pub fn new(eng: &mut Engine) -> MyApp {
 
   // Build the scene
   scene.add_instance_mut(tp1).pos_xyz(2.8, 0.0, 0.0).scale(1.0);
-  scene.add_instance_mut(tp2).pos_xyz(-2.8, 0.0, -2.8).scale(1.0).rot_y(0.8);
+  scene.add_instance_mut(tp2).pos_xyz(-2.8, 1.5, -2.8).scale(1.5).rot_y(0.8);
   scene.add_instance_mut(tp3).pos_xyz(-2.8, 0.0, 2.8).scale(1.0).rot_y(-1.1);
   scene.add_instance_mut(cube).pos_xyz(0.0, -6.0, 0.0).scale(12.0);
 

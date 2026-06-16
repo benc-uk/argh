@@ -6,7 +6,10 @@
 // Notes:
 // ==============================================================================================
 
-use crate::math::Vec4;
+use crate::{
+  math::{V3_ZERO, Vec3, Vec4},
+  prelude::v3,
+};
 
 #[cfg(test)]
 #[path = "tests/helpers_tests.rs"]
@@ -85,6 +88,57 @@ impl FpsAveragerEight {
       self.sum / self.count as f32
     } else {
       0.0
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct Aabb {
+  pub min: Vec3,
+  pub max: Vec3,
+}
+
+impl Aabb {
+  /// Construct from a vec of Vec3 positions
+  pub fn from_points(positions: &[Vec3]) -> Self {
+    let mut min = v3(f32::INFINITY, f32::INFINITY, f32::INFINITY);
+    let mut max = v3(f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY);
+    for &p in positions {
+      min.x = min.x.min(p.x);
+      min.y = min.y.min(p.y);
+      min.z = min.z.min(p.z);
+      max.x = max.x.max(p.x);
+      max.y = max.y.max(p.y);
+      max.z = max.z.max(p.z);
+    }
+
+    Self { min, max }
+  }
+
+  /// Build an empty AABB
+  pub fn empty() -> Self {
+    Self { min: V3_ZERO, max: V3_ZERO }
+  }
+
+  /// Midpoint of the box. Cheap representative point for sorting.
+  #[inline]
+  pub fn centroid(&self) -> Vec3 {
+    (self.min + self.max) * 0.5
+  }
+
+  /// Computes the smallest AABB enclosing both boxes.
+  pub fn union(&self, other: &Self) -> Self {
+    Self {
+      min: Vec3 {
+        x: self.min.x.min(other.min.x),
+        y: self.min.y.min(other.min.y),
+        z: self.min.z.min(other.min.z),
+      },
+      max: Vec3 {
+        x: self.max.x.max(other.max.x),
+        y: self.max.y.max(other.max.y),
+        z: self.max.z.max(other.max.z),
+      },
     }
   }
 }

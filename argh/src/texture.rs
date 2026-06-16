@@ -37,12 +37,6 @@ pub struct Texture {
   pixels: Vec<u32>, // packed 0RGB to match buffer format
   w: u32,
   h: u32,
-
-  /// Treat alpha transparent pixels as invisible (cut them out). Defaults to true
-  pub(crate) alpha_cutout: bool,
-
-  /// What alpha value will apply alpha_cutout
-  pub(crate) cutoff: f32,
 }
 
 // In Rust enums can have methods and an implementation, which is kinda wild
@@ -63,13 +57,7 @@ impl Texture {
       })
       .collect();
 
-    Ok(Self {
-      pixels,
-      w,
-      h,
-      alpha_cutout: true,
-      cutoff: 0.5,
-    })
+    Ok(Self { pixels, w, h })
   }
 
   /// Load a texture from a byte buffer (e.g. an embedded asset via `include_bytes!`).
@@ -86,13 +74,7 @@ impl Texture {
       })
       .collect();
 
-    Ok(Self {
-      pixels,
-      w,
-      h,
-      alpha_cutout: true,
-      cutoff: 0.5,
-    })
+    Ok(Self { pixels, w, h })
   }
 
   /// Load a texture from a raw byte RGBA8 slice
@@ -107,13 +89,7 @@ impl Texture {
       })
       .collect();
 
-    Self {
-      pixels,
-      w,
-      h,
-      alpha_cutout: true,
-      cutoff: 0.5,
-    }
+    Self { pixels, w, h }
   }
 
   /// Load a texture from a raw byte RGB8 slice (no alpha channel)
@@ -128,18 +104,12 @@ impl Texture {
       })
       .collect();
 
-    Self {
-      pixels,
-      w,
-      h,
-      alpha_cutout: false,
-      cutoff: 0.5, // ignored
-    }
+    Self { pixels, w, h }
   }
 
   /// Sample the texture with wrap-around addressing.
   /// Uses floor() to fold any UV into [0, 1] before scaling to texel space.
-  /// Works for any texture size (pow2 or not)
+  /// Works for any texture size (pow2 or not), returns Colour + alpha
   #[inline(always)]
   pub(crate) fn sample(&self, u: f32, v: f32) -> (Colour, f32) {
     let uf = u - u.floor();
@@ -147,13 +117,10 @@ impl Texture {
     let x = (uf * self.w as f32) as u32;
     let y = (vf * self.h as f32) as u32;
     let p = unsafe { *self.pixels.get_unchecked((y * self.w + x) as usize) };
+
+    // Alpha not part of Colour (yet)
     let a = ((p >> 24) & 0xFF) as f32 * INV_255;
 
     (Colour::from_packed_0rgb(p), a)
-  }
-
-  /// Enable or disable alpha cutout
-  pub fn enable_cutout(&mut self, cutout: bool) {
-    self.alpha_cutout = cutout
   }
 }

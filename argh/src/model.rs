@@ -8,7 +8,7 @@
 
 use std::collections::HashMap;
 
-use crate::{material::Material, mesh::Mesh};
+use crate::{helpers::Aabb, material::Material, mesh::Mesh};
 
 #[cfg(test)]
 #[path = "tests/model_tests.rs"]
@@ -19,6 +19,8 @@ pub struct Model {
   pub(crate) meshes: Vec<Mesh>,
   pub(crate) name: String,
   pub(crate) tri_count: u32,
+  pub(crate) aabb: Aabb,
+  pub(crate) is_opaque: bool,
 }
 
 impl Model {
@@ -28,6 +30,8 @@ impl Model {
       meshes: vec![],
       name: name.to_string(),
       tri_count: 0,
+      aabb: Aabb::empty(),
+      is_opaque: true,
     }
   }
 
@@ -37,6 +41,8 @@ impl Model {
       meshes: vec![],
       name: name.to_string(),
       tri_count: 0,
+      aabb: Aabb::empty(),
+      is_opaque: true,
     };
 
     model.add_mesh(mesh);
@@ -44,12 +50,20 @@ impl Model {
   }
 
   /// Add a mesh to a model
-  pub(crate) fn add_mesh(&mut self, mesh: Mesh) {
+  pub(crate) fn add_mesh(&mut self, mut mesh: Mesh) {
     debug_assert_eq!(mesh.tex_coords.len(), mesh.positions.len(), "UVs must match vert count");
     debug_assert_eq!(mesh.normals.len(), mesh.positions.len(), "normals must match vert count");
 
-    self.tri_count += &mesh.tri_count;
+    // Compute mesh AABB
+    mesh.aabb = Aabb::from_points(mesh.positions.as_slice());
+
+    // Update model AABB to union with new mesh
+    self.aabb = self.aabb.union(&mesh.aabb);
+
+    self.tri_count += mesh.tri_count;
     self.meshes.push(mesh);
+
+    self.recompute_opaque()
   }
 
   /// Get model's name typically this is generated when it's loaded/parsed from a file
@@ -67,6 +81,7 @@ impl Model {
   /// Update a meshes within this model and override it's material
   pub fn set_mesh_material(&mut self, index: usize, mat: Material) {
     self.meshes[index].material = mat;
+    self.recompute_opaque()
   }
 
   /// Update ALL meshes within this model with a new material
@@ -74,17 +89,27 @@ impl Model {
     for mesh in &mut self.meshes {
       mesh.material = mat.clone();
     }
+    self.recompute_opaque()
   }
 
   /// Split shared vertices across every mesh and assign per-face normals so
-  /// the model renders as faceted (flat-shaded) under the pure Gouraud
-  /// pipeline. Triangle count and surface topology are preserved; only vertex
-  /// sharing is broken. Use this for the classic low-poly look without needing
-  /// any runtime shading toggle.
+  /// the model renders as faceted (flat-shaded) under the Gouraud based triangle fill.
   pub fn flatten(&mut self) -> &mut Self {
     for mesh in &mut self.meshes {
       mesh.flatten();
     }
     self
+  }
+
+  fn recompute_opaque(&mut self) {
+    let mut opaque = true;
+
+    for mesh in &self.meshes {
+      if !mesh.material.is_opaque() {
+        opaque = false
+      }
+    }
+
+    self.is_opaque = opaque
   }
 }

@@ -9,12 +9,12 @@
 use gltf::{
   Material, Node,
   image::Format::{R8G8B8, R8G8B8A8},
-  material::AlphaMode::Mask,
+  material,
 };
 
 use crate::{
   engine::ModelHandle,
-  material::{MATERIAL_PLACEHOLDER, Material as ArghMaterial},
+  material::{BlendMode, MATERIAL_PLACEHOLDER, Material as ArghMaterial},
   math::{Mat3, Mat4},
   mesh::Mesh,
   model::Model,
@@ -188,18 +188,17 @@ impl GltfData {
         R8G8B8 => Some(Texture::from_raw_rgb8(&img_data.pixels, w, h)),
         _ => None,
       };
-
-      if let Some(mut tex) = tex_opt {
-        tex.alpha_cutout = mat.alpha_mode() == Mask;
+      if let Some(tex) = tex_opt {
         out_mat = ArghMaterial::new_textured(tex);
       }
     }
 
     let pbr = mat.pbr_metallic_roughness();
-
     let metallic = pbr.metallic_factor(); // 0..1
     let roughness = pbr.roughness_factor(); // 0..1
     let base = pbr.base_color_factor(); // [r,g,b,a]
+
+    // To convert A PBR material into a Blinn-Phong one needs some thought
 
     // Specular colour: white for dielectrics, tinted by base for metals.
     // Modulate by (1 - roughness²) so matte surfaces have weak spec but
@@ -217,11 +216,25 @@ impl GltfData {
     //   roughness 1.0 ->  1 (broad, invisible once spec_strength = 0)
     let hardness = (1.0 - roughness).powi(2) * 63.0 + 1.0;
 
+    // Check blend mode
+    out_mat.blend_mode = match mat.alpha_mode() {
+      material::AlphaMode::Blend => BlendMode::AlphaBlend,
+      material::AlphaMode::Mask => BlendMode::Mask,
+      _ => BlendMode::Opaque,
+    };
+
     out_mat.diffuse = col(base[0], base[1], base[2]);
+    out_mat.opacity = base[3];
+    // Force to enabling AlphaBlend when opacity below threshold
+    if out_mat.opacity < 0.9 {
+      out_mat.blend_mode = BlendMode::AlphaBlend
+    }
+
     out_mat.specular = col(spec_r, spec_g, spec_b);
     out_mat.hardness = hardness;
 
     println!("        D:{} S:{} H:{}", out_mat.diffuse, out_mat.specular, out_mat.hardness);
+    println!("        O:{} B:{:?}", out_mat.opacity, out_mat.blend_mode);
 
     out_mat
   }

@@ -2,9 +2,10 @@
 # www.blender.org
 
 newmtl dice
-Ns 30
+Ns 40
+d 0.5
 Ka 1.0 1.0 1.0
 Kd 1.0 1.0 1.0
-Ks 1.0 1.0 1.0
+Ks 2.0 2.0 2.0
 map_Kd dice.png
 map_bump dice_normal.png

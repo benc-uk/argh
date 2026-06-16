@@ -11,7 +11,7 @@ use crate::colour::WHITE;
 use crate::engine::LightHandle;
 use crate::engine::shade_vert;
 use crate::light::Light;
-use crate::math::{Vec3, Vec4};
+use crate::math::{V3_ZERO, Vec3, Vec4};
 use slotmap::SlotMap;
 
 // --- Helpers ---
@@ -233,4 +233,66 @@ fn test_fps_averager_ring_wraps_repeatedly() {
     a.add_fps(200.0);
   }
   assert!((a.avg_fps() - 200.0).abs() < 1e-4);
+}
+
+// --- Aabb::from_points ---
+
+#[test]
+fn test_aabb_from_single_point_is_a_zero_volume_box() {
+  let p = Vec3::new(1.0, 2.0, 3.0);
+  let aabb = Aabb::from_points(&[p]);
+  assert_eq!(aabb.min, p);
+  assert_eq!(aabb.max, p);
+}
+
+#[test]
+fn test_aabb_from_points_computes_min_and_max_per_axis() {
+  let pts = [Vec3::new(-1.0, 5.0, 2.0), Vec3::new(3.0, -2.0, 8.0), Vec3::new(0.0, 1.0, -4.0)];
+  let aabb = Aabb::from_points(&pts);
+  assert_eq!(aabb.min, Vec3::new(-1.0, -2.0, -4.0));
+  assert_eq!(aabb.max, Vec3::new(3.0, 5.0, 8.0));
+}
+
+#[test]
+fn test_aabb_from_points_all_negative() {
+  let pts = [Vec3::new(-5.0, -1.0, -3.0), Vec3::new(-2.0, -9.0, -1.0)];
+  let aabb = Aabb::from_points(&pts);
+  assert_eq!(aabb.min, Vec3::new(-5.0, -9.0, -3.0));
+  assert_eq!(aabb.max, Vec3::new(-2.0, -1.0, -1.0));
+}
+
+#[test]
+fn test_aabb_from_empty_slice_is_degenerate() {
+  // No points: min seeded to +inf, max to -inf, an inverted (empty) box.
+  let aabb = Aabb::from_points(&[]);
+  assert_eq!(aabb.min.x, f32::INFINITY);
+  assert_eq!(aabb.min.y, f32::INFINITY);
+  assert_eq!(aabb.min.z, f32::INFINITY);
+  assert_eq!(aabb.max.x, f32::NEG_INFINITY);
+  assert_eq!(aabb.max.y, f32::NEG_INFINITY);
+  assert_eq!(aabb.max.z, f32::NEG_INFINITY);
+}
+
+// --- Aabb::empty ---
+
+#[test]
+fn test_aabb_empty_is_zero_sized_at_origin() {
+  let aabb = Aabb::empty();
+  assert_eq!(aabb.min, V3_ZERO);
+  assert_eq!(aabb.max, V3_ZERO);
+}
+
+// --- Aabb::centroid ---
+
+#[test]
+fn test_aabb_centroid_is_midpoint() {
+  // min => (-2, 0, -2), max => (4, 6, 4), midpoint => (1, 3, 1)
+  let aabb = Aabb::from_points(&[Vec3::new(-2.0, 0.0, 4.0), Vec3::new(4.0, 6.0, -2.0)]);
+  assert_eq!(aabb.centroid(), Vec3::new(1.0, 3.0, 1.0));
+}
+
+#[test]
+fn test_aabb_centroid_of_symmetric_box_is_origin() {
+  let aabb = Aabb::from_points(&[Vec3::new(-3.0, -3.0, -3.0), Vec3::new(3.0, 3.0, 3.0)]);
+  assert_eq!(aabb.centroid(), V3_ZERO);
 }

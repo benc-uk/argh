@@ -7,6 +7,7 @@
 // ==============================================================================================
 
 use crate::{
+  helpers::Aabb,
   material::{MATERIAL_PLACEHOLDER, Material},
   math::{Vec2, Vec3},
 };
@@ -24,6 +25,7 @@ pub(crate) struct Mesh {
   pub(crate) indices: Vec<u32>,     // Indices are pointers to verts, in groups of three
   pub(crate) name: String,          // From loaded/parsed models
   pub(crate) tri_count: u32,        // Stats only
+  pub(crate) aabb: Aabb,
 }
 
 impl Mesh {
@@ -37,6 +39,7 @@ impl Mesh {
       indices: vec![],
       name: "".to_string(),
       tri_count: 0,
+      aabb: Aabb::empty(),
     }
   }
 
@@ -50,6 +53,7 @@ impl Mesh {
       indices: vec![],
       name: "".to_string(),
       tri_count: 0,
+      aabb: Aabb::empty(),
     }
   }
 

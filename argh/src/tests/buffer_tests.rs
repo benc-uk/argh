@@ -260,3 +260,91 @@ fn test_draw_char_off_screen_x_noop_panic_free() {
   // Draws clip in x via the inner bounds check.
   b.draw_char('A', 39, 0, RED);
 }
+
+// --- blend_pixel_depth ---
+
+#[test]
+fn test_blend_full_alpha_replaces_dst() {
+  // a = 1.0 => out = src. Fresh buffer depth is 0, so z = 0.5 passes the depth test.
+  let mut b = Buffer::new(4, 4);
+  b.blend_pixel_depth(1, 1, RED, 1.0, 0.5);
+  let idx = 4 + 1;
+  assert_eq!(b.pixels[idx], RED.to_packed_0rgb());
+}
+
+#[test]
+fn test_blend_zero_alpha_keeps_dst() {
+  // a = 0.0 => out = dst. set_pixel leaves depth at 0, so z = 0.5 passes.
+  // RED survives the decode/encode round trip exactly (channel bytes 255/0/0).
+  let mut b = Buffer::new(4, 4);
+  b.set_pixel(1, 1, RED);
+  b.blend_pixel_depth(1, 1, WHITE, 0.0, 0.5);
+  let idx = 4 + 1;
+  assert_eq!(b.pixels[idx], RED.to_packed_0rgb());
+}
+
+#[test]
+fn test_blend_rejected_when_z_below_depth() {
+  let mut b = Buffer::new(4, 4);
+  b.set_pixel_depth(1, 1, RED, 0.8); // pixel RED, depth 0.8
+  b.blend_pixel_depth(1, 1, WHITE, 1.0, 0.5); // 0.5 <= 0.8 -> rejected
+  let idx = 4 + 1;
+  assert_eq!(b.pixels[idx], RED.to_packed_0rgb());
+}
+
+#[test]
+fn test_blend_rejected_when_z_equals_depth() {
+  // Boundary: the test is z <= depth, so an equal z is rejected (not blended).
+  let mut b = Buffer::new(4, 4);
+  b.set_pixel_depth(1, 1, RED, 0.5);
+  b.blend_pixel_depth(1, 1, WHITE, 1.0, 0.5);
+  let idx = 4 + 1;
+  assert_eq!(b.pixels[idx], RED.to_packed_0rgb());
+}
+
+#[test]
+fn test_blend_passes_when_z_above_depth() {
+  let mut b = Buffer::new(4, 4);
+  b.set_pixel_depth(1, 1, RED, 0.3);
+  b.blend_pixel_depth(1, 1, WHITE, 1.0, 0.6); // a = 1.0 => out = WHITE
+  let idx = 4 + 1;
+  assert_eq!(b.pixels[idx], WHITE.to_packed_0rgb());
+}
+
+#[test]
+fn test_blend_does_not_update_depth() {
+  // blend_pixel_depth reads the depth buffer but must never write to it.
+  let mut b = Buffer::new(4, 4);
+  b.set_pixel_depth(1, 1, RED, 0.3);
+  b.blend_pixel_depth(1, 1, WHITE, 1.0, 0.9); // passes the depth test
+  let idx = 4 + 1;
+  assert_eq!(b.depth[idx], 0.3); // depth left untouched
+  assert_eq!(b.pixels[idx], WHITE.to_packed_0rgb()); // colour still written
+}
+
+#[test]
+fn test_blend_half_alpha_produces_intermediate_grey() {
+  // 50% white over black: every channel ends up equal and strictly between 0 and 255.
+  let mut b = Buffer::new(4, 4);
+  b.blend_pixel_depth(1, 1, WHITE, 0.5, 0.5);
+  let idx = 4 + 1;
+  let packed = b.pixels[idx];
+  let r = (packed >> 16) & 0xFF;
+  let g = (packed >> 8) & 0xFF;
+  let bl = packed & 0xFF;
+  assert_eq!(r, g);
+  assert_eq!(g, bl);
+  assert!(r > 0 && r < 255, "expected a mid-grey channel, got {r}");
+}
+
+#[test]
+fn test_blend_only_target_pixel_modified() {
+  let mut b = Buffer::new(4, 4);
+  b.blend_pixel_depth(2, 1, RED, 1.0, 0.5);
+  let idx = 1 * 4 + 2;
+  for (i, p) in b.pixels.iter().enumerate() {
+    if i != idx {
+      assert_eq!(*p, 0);
+    }
+  }
+}

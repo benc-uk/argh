@@ -16,7 +16,7 @@ use crate::{
   engine::LightHandle,
   helpers::{OUT_NEAR, compute_outcode},
   light::Light,
-  material::Material,
+  material::{BlendMode, Material},
   math::{Mat3, Mat4, Vec2, Vec3, Vec4},
   scene::Scene,
 };
@@ -425,6 +425,7 @@ fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         let z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
 
         // Get diffuse colour from texture or from material basic diffuse
+        let mut alpha = 1.0;
         let surface_colour = match &mat.texture {
           Some(tex) => {
             // Texture mapping requires voodoo with inv_w
@@ -433,16 +434,17 @@ fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
             let u = (b0 * v0.u_w + b1 * v1.u_w + b2 * v2.u_w) * w;
             let v = (b0 * v0.v_w + b1 * v1.v_w + b2 * v2.v_w) * w;
 
-            let (texel, alpha) = tex.sample(u, v);
+            let (texel, a) = tex.sample(u, v);
+            alpha = a; // Pull out
 
             // When alpha cutting, skip this pixel entirely if alpha below cutoff
-            if tex.alpha_cutout && alpha < tex.cutoff {
-              w0 += dx0;
-              w1 += dx1;
-              w2 += dx2;
+            // if tex.alpha_cutout && alpha < tex.cutoff {
+            //   w0 += dx0;
+            //   w1 += dx1;
+            //   w2 += dx2;
 
-              continue;
-            }
+            //   continue;
+            // }
 
             texel * mat.diffuse
           }
@@ -453,6 +455,26 @@ fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
         // Pure Gouraud: light is always interpolated across the three verts.
         // For a flat-shaded look, author meshes with per-face normals (Model::flatten).
         let lighting = v0.light * b0 + v1.light * b1 + v2.light * b2;
+
+        match mat.blend_mode {
+          BlendMode::Opaque => {
+            // existing path, also handles alpha_cutout via texture
+            buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z);
+          }
+          BlendMode::AlphaBlend => {
+            let a = mat.opacity * alpha; // texel_alpha = 1.0 if untextured
+            buff.blend_pixel_depth(x as usize, y as usize, surface_colour * lighting, a, z);
+          }
+          BlendMode::Mask => {
+            if alpha < mat.mask_cutoff {
+              w0 += dx0;
+              w1 += dx1;
+              w2 += dx2;
+              continue;
+            }
+          }
+          BlendMode::Additive => { /* TODO: not implemented */ }
+        }
 
         buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z);
       }
