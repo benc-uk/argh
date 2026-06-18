@@ -194,3 +194,55 @@ fn test_nan_hardness_allowed() {
   m.hardness = f32::NAN;
   assert!(m.hardness.is_nan());
 }
+
+// --- Blend mode, opacity & mask cutoff ---
+
+#[test]
+fn test_placeholder_is_opaque() {
+  assert_eq!(MATERIAL_PLACEHOLDER.blend_mode, BlendMode::Opaque);
+  assert!(MATERIAL_PLACEHOLDER.is_opaque());
+}
+
+#[test]
+fn test_new_flat_defaults_opaque() {
+  let m = Material::new_flat(RED);
+  assert_eq!(m.blend_mode, BlendMode::Opaque);
+  assert!(m.is_opaque());
+}
+
+#[test]
+fn test_new_textured_defaults_opaque() {
+  let m = Material::new_textured(small_texture());
+  assert!(m.is_opaque());
+}
+
+#[test]
+fn test_defaults_full_opacity() {
+  let m = Material::new_flat(RED);
+  assert_eq!(m.opacity, 1.0);
+}
+
+#[test]
+fn test_default_mask_cutoff_is_half() {
+  let m = Material::new_flat(RED);
+  assert_eq!(m.mask_cutoff, 0.5);
+  assert_eq!(MATERIAL_PLACEHOLDER.mask_cutoff, 0.5);
+}
+
+#[test]
+fn test_set_opacity_below_threshold_enables_alpha_blend() {
+  let mut m = Material::new_flat(RED);
+  m.set_opacity(0.5);
+  assert_eq!(m.opacity, 0.5);
+  assert_eq!(m.blend_mode, BlendMode::AlphaBlend);
+  assert!(!m.is_opaque());
+}
+
+#[test]
+fn test_set_opacity_fully_opaque_stays_opaque() {
+  let mut m = Material::new_flat(RED);
+  m.set_opacity(1.0);
+  assert_eq!(m.opacity, 1.0);
+  assert_eq!(m.blend_mode, BlendMode::Opaque);
+  assert!(m.is_opaque());
+}

@@ -179,14 +179,35 @@ impl Engine {
 
   /// Render a [Scene] from given [Camera], this is the most common thing to call inside your [App][crate::app::App] update
   pub fn render(&mut self, cam: &Camera, scn: &Scene) {
-    // render all static stuff
+    // Render all the static & baked stuff
     for mesh in &scn.baked_meshes {
       self.render_static(mesh, cam.pers_mat * cam.view_mat, scn, cam.pos());
     }
 
-    // render all dynamic instances
-    for handle in 0..scn.instance_keys.len() {
-      let hdl = scn.instance_keys[handle];
+    let mut non_opaques: Vec<(f32, InstanceHandle)> = vec![];
+    let eye = cam.pos();
+
+    // Render all dynamic instances
+    for &hdl in &scn.instance_keys {
+      // Yes this is duplication with what happens in render_instance, but the overhead is tiny
+      if let Some(inst) = scn.instances.get(hdl)
+        && let Some(model) = self.models.get(inst.model_handle)
+      {
+        if !model.is_opaque {
+          let centre = inst.model_mat().transform_point(&model.aabb.centroid());
+          non_opaques.push((centre.dist(eye), hdl));
+          continue;
+        }
+      };
+
+      self.render_instance(hdl, cam, scn);
+    }
+
+    // Painter's order for alpha blending: farthest first (descending key).
+    non_opaques.sort_unstable_by(|a, b| b.0.total_cmp(&a.0));
+
+    // Second pass for instances with non-opaque models
+    for (_, hdl) in non_opaques {
       self.render_instance(hdl, cam, scn);
     }
   }
@@ -195,15 +216,18 @@ impl Engine {
   /// This starts the full rendering pipeline
   pub fn render_instance(&mut self, hdl: InstanceHandle, cam: &Camera, scn: &Scene) {
     // Shorthand for finding the instance
-    let Some(instance) = scn.instances.get(hdl) else {
+    let Some(inst) = scn.instances.get(hdl) else {
       return;
     };
 
-    // We unwrap here, as model existence is checked when instance is created
-    let model = self.models.get(instance.model_handle).unwrap();
+    // Guard against the model handle not existing which is almost impossible
+    let Some(model) = self.models.get(inst.model_handle) else {
+      debug_assert!(false, "instance {hdl:?} references a missing model handle");
+      return;
+    };
 
     // 0. Get the matrices we need, model and inverse transpose
-    let m = instance.model_mat();
+    let m = inst.model_mat();
     // Inverse transpose of the model matrix in a Mat3 for normals
     let m_inv_t = Mat3::from_mat4_upper(&m).inverse_transpose().unwrap_or_default();
 
@@ -356,16 +380,16 @@ fn render_tri(tri: &[u32], mat: &Material, verts: &[ProcessedVert], buffer: &mut
     let sv1 = ScreenVert::from_clip(&cv_out[ti + 1], size);
     let sv2 = ScreenVert::from_clip(&cv_out[ti + 2], size);
 
+    if is_back_facing(&sv0, &sv1, &sv2) {
+      return;
+    }
+
     rasterize_tri(buffer, sv0, sv1, sv2, mat);
   }
 }
 
 // Fill a triangle between three ScreenVertex points in screen space interpolating lighting, z-depth and texture samples
 fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVert, mat: &Material) {
-  if is_back_facing(&v0, &v1, &v2) {
-    return;
-  }
-
   let area = edge_function(v1, v2, v0.x, v0.y);
 
   // Degenerate triangle, save ourselves a NaN panic
@@ -466,8 +490,6 @@ fn rasterize_tri(buff: &mut Buffer, v0: ScreenVert, v1: ScreenVert, v2: ScreenVe
           }
           BlendMode::Additive => { /* TODO: not implemented */ }
         }
-
-        buff.set_pixel_depth(x as usize, y as usize, surface_colour * lighting, z);
       }
 
       w0 += dx0;

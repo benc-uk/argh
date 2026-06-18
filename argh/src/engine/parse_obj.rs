@@ -130,7 +130,7 @@ impl Engine {
 }
 
 // Convert tobj::Material (MTL) into argh::Material
-pub fn parse_mtl(in_material: &Material, path: &str, alpha_mask: bool) -> Result<ArghMaterial, ObjError> {
+fn parse_mtl(in_material: &Material, path: &str, alpha_mask: bool) -> Result<ArghMaterial, ObjError> {
   println!("  Material: {}", in_material.name);
 
   // Default to flat colour

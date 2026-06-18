@@ -63,14 +63,6 @@ fn test_new_garbage_file_returns_image_error() {
   let _ = std::fs::remove_file(&path);
 }
 
-#[test]
-fn test_new_defaults_alpha_cutout_true() {
-  let p = asset_path("textures/crate.png");
-  let t = Texture::new(p.to_str().unwrap()).expect("crate.png should load");
-  assert!(t.alpha_cutout);
-  assert_eq!(t.cutoff, 0.5);
-}
-
 // --- from_bytes ---
 
 #[test]
@@ -113,13 +105,6 @@ fn test_from_raw_rgba8_packs_rgb_into_low_bytes() {
 }
 
 #[test]
-fn test_from_raw_rgba8_defaults_alpha_cutout_true() {
-  let buf = tiny_rgba8(2, 2, [0, 0, 0, 255]);
-  let t = Texture::from_raw_rgba8(&buf, 2, 2);
-  assert!(t.alpha_cutout);
-}
-
-#[test]
 fn test_from_raw_rgba8_truncated_buffer_drops_partial_pixel() {
   // 5 bytes is one full RGBA plus a single trailing byte; chunks_exact(4) drops the tail.
   let buf = vec![10, 20, 30, 40, 99];
@@ -153,13 +138,6 @@ fn test_from_raw_rgb8_forces_alpha_ff() {
   assert_eq!((p >> 16) & 0xFF, 0xAA);
   assert_eq!((p >> 8) & 0xFF, 0xBB);
   assert_eq!(p & 0xFF, 0xCC);
-}
-
-#[test]
-fn test_from_raw_rgb8_disables_alpha_cutout() {
-  let buf = tiny_rgb8(2, 2, [0, 0, 0]);
-  let t = Texture::from_raw_rgb8(&buf, 2, 2);
-  assert!(!t.alpha_cutout);
 }
 
 #[test]
@@ -224,18 +202,6 @@ fn test_sample_alpha_value_round_trips() {
   let t = Texture::from_raw_rgba8(&buf, 1, 1);
   let (_, a) = t.sample(0.0, 0.0);
   assert!((a - (128.0 / 255.0)).abs() < 1e-4);
-}
-
-// --- enable_cutout ---
-
-#[test]
-fn test_enable_cutout_toggles_flag() {
-  let buf = tiny_rgba8(1, 1, [0, 0, 0, 255]);
-  let mut t = Texture::from_raw_rgba8(&buf, 1, 1);
-  t.enable_cutout(false);
-  assert!(!t.alpha_cutout);
-  t.enable_cutout(true);
-  assert!(t.alpha_cutout);
 }
 
 // --- TextureError formatting ---

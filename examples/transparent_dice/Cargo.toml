@@ -1,0 +1,12 @@
+[package]
+name = "transparent_dice"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "transparent_dice"
+path = "src/main.rs"
+doc = false
+
+[dependencies]
+argh = { path = "../../argh" }

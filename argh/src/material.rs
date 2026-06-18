@@ -49,7 +49,7 @@ pub struct Material {
 
   /// For semi-transparent objects only and blend_mode != Opaque
   /// 1.0 = fully opaque, 0.0 = invisible
-  pub opacity: f32,
+  pub(crate) opacity: f32,
 
   /// Threshold of alpha for masking/discarding to happen, default 0.5
   /// Only used when blend_mode == Mask
@@ -114,5 +114,14 @@ impl Material {
   #[inline]
   pub fn is_opaque(&self) -> bool {
     self.blend_mode == BlendMode::Opaque
+  }
+
+  /// Setter for opacity updates blend mode
+  pub fn set_opacity(&mut self, o: f32) {
+    if o < 0.99 {
+      self.blend_mode = BlendMode::AlphaBlend
+    }
+
+    self.opacity = o;
   }
 }

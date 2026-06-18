@@ -72,14 +72,18 @@ impl Model {
   }
 
   /// Get a map of every mesh in this model, keyed by mesh name, with the value being the
-  /// mesh's index (position) in the model's mesh list. If two meshes share the same name
-  /// the later one in the model wins, since [`HashMap`] keys are unique.
+  /// mesh's index (position) in the model's mesh list. Mesh names are unique
   pub fn mesh_info(&self) -> HashMap<&str, usize> {
     self.meshes.iter().enumerate().map(|(i, mesh)| (mesh.name.as_str(), i)).collect()
   }
 
-  /// Update a meshes within this model and override it's material
-  pub fn set_mesh_material(&mut self, index: usize, mat: Material) {
+  /// Fetch a material from a mesh by index
+  pub fn mesh_material(&self, index: usize) -> Material {
+    self.meshes[index].material.clone()
+  }
+
+  /// Update a mesh within this model and override it's material
+  pub fn set_material(&mut self, index: usize, mat: Material) {
     self.meshes[index].material = mat;
     self.recompute_opaque()
   }

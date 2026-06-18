@@ -210,7 +210,7 @@ impl Engine {
   /// Draw the debug overlay on top of the current frame. Call AFTER app.update.
   pub fn draw_debug(&mut self) {
     self.draw_string(&format!("FPS: {:.2}", self.fps.avg_fps()), 1, 1, WHITE);
-    self.draw_string(&format!("TRI_REND: {:.2}", self.stat_rend_tri_frame), 1, 21, WHITE);
+    self.draw_string(&format!("TRI_REND: {:.2}", self.stat_rend_tri_frame), 1, 11, WHITE);
   }
 
   /// Get engine stats

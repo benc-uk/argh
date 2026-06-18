@@ -134,7 +134,7 @@ fn test_set_mesh_material_replaces_material() {
   let mut model = Model::new("m");
   model.add_mesh(build_triangle_mesh());
   let mat = Material::new_flat(RED);
-  model.set_mesh_material(0, mat);
+  model.set_material(0, mat);
   assert_eq!(
     (
       model.meshes[0].material.diffuse.r(),
@@ -150,7 +150,7 @@ fn test_set_mesh_material_replaces_material() {
 fn test_set_mesh_material_out_of_bounds_panics() {
   let mut model = Model::new("m");
   model.add_mesh(build_triangle_mesh());
-  model.set_mesh_material(99, MATERIAL_PLACEHOLDER.clone());
+  model.set_material(99, MATERIAL_PLACEHOLDER.clone());
 }
 
 // --- set_all_material ---
