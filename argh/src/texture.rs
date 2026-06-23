@@ -15,6 +15,16 @@ use crate::colour::{Colour, INV_255};
 #[path = "tests/texture_tests.rs"]
 mod texture_tests;
 
+/// How should texture wrapping be handled
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TextureWrap {
+  /// Repeat and tile the texture in both U and V (like `GL_REPEAT`)
+  Repeat,
+
+  /// Clamp coords outside 0-1 to the nearest edge texel (like `GL_CLAMP_TO_EDGE`)
+  Clamp,
+}
+
 /// Errors that can occur when loading or decoding a [Texture]
 #[derive(thiserror::Error)]
 pub enum TextureError {
@@ -37,6 +47,10 @@ pub struct Texture {
   pixels: Vec<u32>, // packed 0RGB to match buffer format
   w: u32,
   h: u32,
+  /// Addressing mode used when sampling outside the 0-1 UV range
+  pub wrap: TextureWrap,
+  /// UV multiplier applied before addressing, so >1.0 tiles (Repeat) or stretches (Clamp)
+  pub scale: f32,
 }
 
 // In Rust enums can have methods and an implementation, which is kinda wild
@@ -57,7 +71,13 @@ impl Texture {
       })
       .collect();
 
-    Ok(Self { pixels, w, h })
+    Ok(Self {
+      pixels,
+      w,
+      h,
+      wrap: TextureWrap::Repeat,
+      scale: 1.0,
+    })
   }
 
   /// Load a texture from a byte buffer (e.g. an embedded asset via `include_bytes!`).
@@ -74,7 +94,13 @@ impl Texture {
       })
       .collect();
 
-    Ok(Self { pixels, w, h })
+    Ok(Self {
+      pixels,
+      w,
+      h,
+      wrap: TextureWrap::Repeat,
+      scale: 1.0,
+    })
   }
 
   /// Load a texture from a raw byte RGBA8 slice
@@ -89,7 +115,13 @@ impl Texture {
       })
       .collect();
 
-    Self { pixels, w, h }
+    Self {
+      pixels,
+      w,
+      h,
+      wrap: TextureWrap::Repeat,
+      scale: 1.0,
+    }
   }
 
   /// Load a texture from a raw byte RGB8 slice (no alpha channel)
@@ -104,18 +136,40 @@ impl Texture {
       })
       .collect();
 
-    Self { pixels, w, h }
+    Self {
+      pixels,
+      w,
+      h,
+      wrap: TextureWrap::Repeat,
+      scale: 1.0,
+    }
   }
 
-  /// Sample the texture with wrap-around addressing.
-  /// Uses floor() to fold any UV into [0, 1] before scaling to texel space.
-  /// Works for any texture size (pow2 or not), returns Colour + alpha
+  /// Sample the texture at `(u, v)`, honouring the [`TextureWrap`] addressing mode.
+  ///
+  /// `scale` is applied first (so `scale = 2.0` tiles the image twice under
+  /// [`TextureWrap::Repeat`]). The coords are then folded into `[0, 1]`:
+  /// * [`TextureWrap::Repeat`] keeps the fractional part (`u - u.floor()`) so the
+  ///   image tiles. This also folds negative coords, e.g. `-0.25 -> 0.75`.
+  /// * [`TextureWrap::Clamp`] snaps anything outside `[0, 1]` onto the nearest edge
+  ///   texel, matching `GL_CLAMP_TO_EDGE`.
+  ///
+  /// Works for any texture size (pow2 or not). Returns the texel Colour plus its alpha.
   #[inline(always)]
   pub(crate) fn sample(&self, u: f32, v: f32) -> (Colour, f32) {
-    let uf = u - u.floor();
-    let vf = v - v.floor();
-    let x = (uf * self.w as f32) as u32;
-    let y = (vf * self.h as f32) as u32;
+    let us = u * self.scale;
+    let vs = v * self.scale;
+
+    let (uf, vf) = match self.wrap {
+      TextureWrap::Repeat => (us - us.floor(), vs - vs.floor()),
+      TextureWrap::Clamp => (us.clamp(0.0, 1.0), vs.clamp(0.0, 1.0)),
+    };
+
+    // Clamp the texel index to the last valid texel. In Clamp mode this catches
+    // uf/vf == 1.0; in Repeat it guards against floating-point landing exactly on
+    // the texel count. Keeps the get_unchecked below sound for every input.
+    let x = ((uf * self.w as f32) as u32).min(self.w - 1);
+    let y = ((vf * self.h as f32) as u32).min(self.h - 1);
     let p = unsafe { *self.pixels.get_unchecked((y * self.w + x) as usize) };
 
     // Alpha not part of Colour (yet)

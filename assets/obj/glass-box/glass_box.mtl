@@ -1,0 +1,62 @@
+# Glass box test model materials
+# Flat colours only (Kd), no textures.
+# 'frame' is opaque (d 1.0); the 6 glass panes are semi-transparent (d 0.2)
+# which the loader maps to alpha blending (opacity < 0.9).
+
+# Opaque wooden frame
+newmtl frame
+Ns 64.0
+Ka 0.0 0.0 0.0
+Kd 0.40 0.25 0.12
+Ks 8 8 8
+d 1.0
+illum 2
+
+# Translucent stained-glass panes, one tint each for easy identification
+newmtl glass_front
+Ns 3
+Ka 0.0 0.0 0.0
+Kd 0.85 0.20 0.20
+Ks 1 1 1
+d 0.2
+illum 2
+
+newmtl glass_back
+Ns 3
+Ka 0.0 0.0 0.0
+Kd 0.20 0.85 0.30
+Ks 1 1 1
+d 0.2
+illum 2
+
+newmtl glass_right
+Ns 3
+Ka 0.0 0.0 0.0
+Kd 0.80 0.30 0.85
+Ks 1 1 1
+d 0.2
+illum 2
+
+newmtl glass_left
+Ns 3
+Ka 0.0 0.0 0.0
+Kd 0.95 0.80 0.20
+Ks 1 1 1
+d 0.2
+illum 2
+
+newmtl glass_top
+Ns 3
+Ka 0.0 0.0 0.0
+Kd 0.20 0.80 0.85
+Ks 1 1 1
+d 0.2
+illum 2
+
+newmtl glass_bottom
+Ns 3
+Ka 0.0 0.0 0.0
+Kd 0.20 0.40 0.90
+Ks 1 1 1
+d 0.2
+illum 2

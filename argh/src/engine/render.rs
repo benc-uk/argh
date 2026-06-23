@@ -12,7 +12,7 @@ use crate::{
   baked_mesh::BakedMesh,
   buffer::Buffer,
   camera::Camera,
-  colour::{BLACK, Colour},
+  colour::{BLACK, Colour, WHITE},
   engine::LightHandle,
   helpers::{OUT_NEAR, compute_outcode},
   light::Light,
@@ -249,7 +249,12 @@ impl Engine {
         let uv = mesh.tex_coords[i];
 
         // We shade early, probably faster than after back face culling due to tris sharing verts
-        let (d, s) = shade_vert(&scn.lights, world, normal, cam.pos(), mesh.material.hardness);
+        let (mut d, mut s) = (WHITE, WHITE);
+        if !mesh.material.unshaded {
+          (d, s) = shade_vert(&scn.lights, world, normal, cam.pos(), mesh.material.hardness);
+        }
+
+        // let (d, s) = shade_vert(&scn.lights, world, normal, cam.pos(), mesh.material.hardness);
         let light = d * mesh.material.diffuse + s * mesh.material.specular + scn.ambient_light;
 
         let inv_w = 1.0 / clip.w;
@@ -300,7 +305,10 @@ impl Engine {
       let uv = mesh.tex_coords[i];
 
       // Dynamic lights also get lighting from dynamic lights too
-      let (d, s) = shade_vert(&scn.lights, world, mesh.normals[i], eye, mesh.material.hardness);
+      let (mut d, mut s) = (WHITE, WHITE);
+      if !mesh.material.unshaded {
+        (d, s) = shade_vert(&scn.lights, world, mesh.normals[i], eye, mesh.material.hardness);
+      }
       let light = d * mesh.material.diffuse + s * mesh.material.specular + scn.ambient_light;
 
       let inv_w = 1.0 / clip.w;

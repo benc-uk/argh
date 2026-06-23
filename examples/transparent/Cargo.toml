@@ -1,10 +1,10 @@
 [package]
-name = "transparent_dice"
+name = "transparent"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "transparent_dice"
+name = "transparent"
 path = "src/main.rs"
 doc = false
 

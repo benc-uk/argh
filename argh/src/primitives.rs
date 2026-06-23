@@ -3,7 +3,7 @@
 // Purpose:         Helper functions for generating meshes of primitive and simple shapes
 // Author & Date:   Ben Coleman, 2026
 // License:         MIT
-// Notes:
+// Notes:           This module has been AI generated as it served as a distraction from the goals
 // ==============================================================================================
 
 use crate::{material::Material, math::*, mesh::Mesh, model::Model};
@@ -11,6 +11,82 @@ use crate::{material::Material, math::*, mesh::Mesh, model::Model};
 #[cfg(test)]
 #[path = "tests/primitives_tests.rs"]
 mod primitives_tests;
+
+/// Which axis-aligned plane a generated [`new_plane`] quad lies in, and the
+/// direction its single (front) face normal points.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlaneOrientation {
+  /// Horizontal: lies in the XZ plane with its normal pointing up (+Y). Like a floor or ground.
+  XZ,
+
+  /// Vertical: lies in the XY plane with its normal pointing forward (+Z). Faces the camera.
+  XY,
+
+  /// Vertical: lies in the YZ plane with its normal pointing right (+X).
+  YZ,
+}
+
+/// Create a flat 1x1 quad (plane) centred at the origin, subdivided into an
+/// `subdivisions` x `subdivisions` grid of cells.
+///
+/// # Arguments
+/// * `subdivisions` - Number of cells along each axis. Min 1. With 1 you get the
+///   classic two-triangle quad; with N you get `2 * N * N` triangles, useful for
+///   per-vertex lighting or vertex displacement where a single quad is too coarse.
+/// * `orientation` - Which axis-aligned plane the quad lies in and which way its
+///   face normal points. See [`PlaneOrientation`].
+///
+/// All verts share the same flat normal (the orientation's front direction), so
+/// the plane is single-sided: it is only lit and (with back-face culling) only
+/// visible from the front. UVs map 0..1 across the quad. Triangles are wound CCW
+/// when viewed from the front, matching the other primitives.
+pub fn new_plane(mat: Material, subdivisions: usize, orientation: PlaneOrientation) -> Model {
+  let n = subdivisions.max(1);
+
+  // Two in-plane unit axes (axis_u, axis_v) plus the face normal, chosen so that
+  // normal == cross(axis_u, axis_v). That right-handed set keeps the generated
+  // triangles CCW / front-facing under the engine's winding convention.
+  let (axis_u, axis_v, normal) = match orientation {
+    PlaneOrientation::XZ => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 0.0, -1.0), Vec3::new(0.0, 1.0, 0.0)),
+    PlaneOrientation::XY => (Vec3::new(1.0, 0.0, 0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0)),
+    PlaneOrientation::YZ => (Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 0.0, 1.0), Vec3::new(1.0, 0.0, 0.0)),
+  };
+
+  let mut mesh = Mesh::new_with_material(mat);
+
+  // --- 1. Verts: an (n+1) x (n+1) grid spanning -0.5..0.5 along each in-plane axis.
+  let vert_count = (n + 1) * (n + 1);
+  mesh.positions = Vec::with_capacity(vert_count);
+  mesh.normals = Vec::with_capacity(vert_count);
+  mesh.tex_coords = Vec::with_capacity(vert_count);
+
+  for j in 0..=n {
+    let fv = j as f32 / n as f32; // 0..1 along axis_v
+    for i in 0..=n {
+      let fu = i as f32 / n as f32; // 0..1 along axis_u
+      mesh.positions.push(axis_u * (fu - 0.5) + axis_v * (fv - 0.5));
+      mesh.normals.push(normal);
+      mesh.tex_coords.push(Vec2::new(fu, fv));
+    }
+  }
+
+  // --- 2. Indices: two CCW triangles per grid cell.
+  let row_stride = (n + 1) as u32;
+  mesh.indices = Vec::with_capacity(n * n * 6);
+  for j in 0..n as u32 {
+    for i in 0..n as u32 {
+      let v00 = j * row_stride + i; // bottom-left
+      let v10 = v00 + 1; // bottom-right (+axis_u)
+      let v01 = v00 + row_stride; // top-left (+axis_v)
+      let v11 = v01 + 1; // top-right
+      mesh.indices.extend_from_slice(&[v00, v10, v11, v00, v11, v01]);
+    }
+  }
+
+  mesh.tri_count = (2 * n * n) as u32;
+
+  Model::from_mesh(mesh, format!("plane_{}", n).as_str())
+}
 
 /// Create a mesh for a unit cube, two triangles per face.
 ///

@@ -8,5 +8,5 @@ fn main() {
 
   eng.debug = true;
 
-  eng.start_window(&mut app, "Argh: transparent_dice", 2, 0);
+  eng.start_window(&mut app, "Argh: transparent", 2, 0);
 }

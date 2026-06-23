@@ -85,6 +85,8 @@ static SRGB_TO_LINEAR: [f32; 256] = [
 
 /// Solid black (0, 0, 0)
 pub const BLACK: Colour = Colour::new(0.0, 0.0, 0.0);
+/// Solid black (0, 0, 0)
+pub const NONE: Colour = Colour::new(0.0, 0.0, 0.0);
 /// Solid white (1, 1, 1)
 pub const WHITE: Colour = Colour::new(1.0, 1.0, 1.0);
 /// Pure red (1, 0, 0)

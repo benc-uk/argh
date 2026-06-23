@@ -4,7 +4,7 @@
 - [x] Texture mapping
 - [x] Specular lighting
 - [x] Light handles
-- [x] Monomorphizing the dyn texture
+- [x] Handle textures better
 - [x] More inputs like mouse
 - [x] Scene / engine refactor
 - [x] Make ESC to exit optional
@@ -13,9 +13,9 @@
 - [x] Sub-meshes, complex models
 - [x] OBJ loader
 - [x] Static geometry
-- [ ] More primitives
+- [x] More primitives
 - [ ] Skyboxes
-- [ ] Transparency
+- [x] Transparency
 - [ ] Texture cache
 
 # PS1 Info

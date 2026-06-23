@@ -204,6 +204,90 @@ fn test_sample_alpha_value_round_trips() {
   assert!((a - (128.0 / 255.0)).abs() < 1e-4);
 }
 
+// --- sample addressing modes (Repeat vs Clamp) ---
+
+// A 2x1 texture whose two texels carry distinct alpha (0.25 vs 0.75), so a test
+// can tell which texel was hit purely from the returned alpha (Colour channels
+// aren't directly inspectable here). Left texel x=0, right texel x=1.
+fn two_texel_distinct() -> Texture {
+  // pixel0 alpha = 64 (~0.251), pixel1 alpha = 192 (~0.753)
+  let buf = vec![10, 10, 10, 64, 20, 20, 20, 192];
+  Texture::from_raw_rgba8(&buf, 2, 1)
+}
+
+const A_LEFT: f32 = 64.0 / 255.0;
+const A_RIGHT: f32 = 192.0 / 255.0;
+
+#[test]
+fn test_default_wrap_mode_is_repeat() {
+  let t = two_texel_distinct();
+  assert_eq!(t.wrap, TextureWrap::Repeat);
+}
+
+#[test]
+fn test_repeat_tiles_across_integer_boundary() {
+  // Repeat: u and u+1 must address the same texel.
+  let t = two_texel_distinct();
+  let (_, a0) = t.sample(0.25, 0.0);
+  let (_, a1) = t.sample(1.25, 0.0);
+  assert!((a0 - a1).abs() < 1e-5);
+  // And the two halves of the texture really are different texels.
+  let (_, right) = t.sample(0.75, 0.0);
+  assert!((a0 - A_LEFT).abs() < 1e-4);
+  assert!((right - A_RIGHT).abs() < 1e-4);
+}
+
+#[test]
+fn test_repeat_folds_negative_coords() {
+  // -0.25 should fold to 0.75 -> right texel.
+  let t = two_texel_distinct();
+  let (_, a) = t.sample(-0.25, 0.0);
+  assert!((a - A_RIGHT).abs() < 1e-4, "expected right texel, got alpha {a}");
+}
+
+#[test]
+fn test_clamp_snaps_over_one_to_last_texel() {
+  let mut t = two_texel_distinct();
+  t.wrap = TextureWrap::Clamp;
+  let (_, a) = t.sample(1.5, 0.0);
+  assert!((a - A_RIGHT).abs() < 1e-4, "u>1 should clamp to the right edge texel, got {a}");
+}
+
+#[test]
+fn test_clamp_snaps_below_zero_to_first_texel() {
+  let mut t = two_texel_distinct();
+  t.wrap = TextureWrap::Clamp;
+  let (_, a) = t.sample(-3.0, 0.0);
+  assert!((a - A_LEFT).abs() < 1e-4, "u<0 should clamp to the left edge texel, got {a}");
+}
+
+#[test]
+fn test_clamp_at_exactly_one_is_in_bounds() {
+  // Regression: u == 1.0 used to index x == w (out of bounds). Must hit the last texel.
+  let mut t = two_texel_distinct();
+  t.wrap = TextureWrap::Clamp;
+  let (_, a) = t.sample(1.0, 0.0);
+  assert!((a - A_RIGHT).abs() < 1e-4, "u==1.0 should land on the last texel, got {a}");
+}
+
+#[test]
+fn test_repeat_at_exactly_one_wraps_to_first_texel() {
+  // Repeat: u == 1.0 folds to 0.0 -> first texel, and must stay in bounds.
+  let t = two_texel_distinct();
+  let (_, a) = t.sample(1.0, 0.0);
+  assert!((a - A_LEFT).abs() < 1e-4, "u==1.0 should wrap to the first texel, got {a}");
+}
+
+#[test]
+fn test_clamp_uses_edge_colour_not_wrap() {
+  // With Clamp, sampling well past the right edge stays on the right texel
+  // rather than tiling back to the left one.
+  let mut t = two_texel_distinct();
+  t.wrap = TextureWrap::Clamp;
+  let (_, a) = t.sample(5.9, 0.0);
+  assert!((a - A_RIGHT).abs() < 1e-4, "clamp should hold the edge texel, got {a}");
+}
+
 // --- TextureError formatting ---
 
 #[test]

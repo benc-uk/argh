@@ -255,6 +255,111 @@ fn test_cone_sectors_clamped_to_three() {
   assert_eq!(m.tri_count, 3);
 }
 
+// --- Plane ---
+
+#[test]
+fn test_plane_single_subdivision_vert_count() {
+  let m = new_plane(Material::default_placeholder(), 1, PlaneOrientation::XZ);
+  // (1+1) * (1+1) = 4 verts
+  assert_eq!(m.meshes[0].positions.len(), 4);
+}
+
+#[test]
+fn test_plane_grid_vert_count_formula() {
+  let m = new_plane(Material::default_placeholder(), 4, PlaneOrientation::XZ);
+  assert_eq!(m.meshes[0].positions.len(), (4 + 1) * (4 + 1));
+}
+
+#[test]
+fn test_plane_single_subdivision_tri_count() {
+  let m = new_plane(Material::default_placeholder(), 1, PlaneOrientation::XY);
+  assert_eq!(m.tri_count, 2);
+}
+
+#[test]
+fn test_plane_tri_count_formula() {
+  let m = new_plane(Material::default_placeholder(), 5, PlaneOrientation::XY);
+  assert_eq!(m.tri_count, 2 * 5 * 5);
+}
+
+#[test]
+fn test_plane_index_count_matches_tri_count() {
+  let m = new_plane(Material::default_placeholder(), 3, PlaneOrientation::YZ);
+  assert_eq!(m.meshes[0].indices.len() as u32, m.tri_count * 3);
+}
+
+#[test]
+fn test_plane_normals_and_uvs_match_vert_count() {
+  let m = new_plane(Material::default_placeholder(), 3, PlaneOrientation::XZ);
+  let verts = m.meshes[0].positions.len();
+  assert_eq!(m.meshes[0].normals.len(), verts);
+  assert_eq!(m.meshes[0].tex_coords.len(), verts);
+}
+
+#[test]
+fn test_plane_subdivisions_clamped_to_one() {
+  let m = new_plane(Material::default_placeholder(), 0, PlaneOrientation::XZ);
+  assert_eq!(m.meshes[0].positions.len(), 4);
+  assert_eq!(m.tri_count, 2);
+}
+
+#[test]
+fn test_plane_xz_lies_flat_with_up_normal() {
+  let m = new_plane(Material::default_placeholder(), 2, PlaneOrientation::XZ);
+  for p in &m.meshes[0].positions {
+    assert!(p.y.abs() < EPS_LEN, "XZ plane should have y == 0, got {}", p.y);
+  }
+  for n in &m.meshes[0].normals {
+    assert!((n.y - 1.0).abs() < EPS_LEN, "XZ plane normal should be +Y, got {:?}", n);
+  }
+}
+
+#[test]
+fn test_plane_xy_faces_forward() {
+  let m = new_plane(Material::default_placeholder(), 2, PlaneOrientation::XY);
+  for p in &m.meshes[0].positions {
+    assert!(p.z.abs() < EPS_LEN, "XY plane should have z == 0, got {}", p.z);
+  }
+  for n in &m.meshes[0].normals {
+    assert!((n.z - 1.0).abs() < EPS_LEN, "XY plane normal should be +Z, got {:?}", n);
+  }
+}
+
+#[test]
+fn test_plane_yz_faces_right() {
+  let m = new_plane(Material::default_placeholder(), 2, PlaneOrientation::YZ);
+  for p in &m.meshes[0].positions {
+    assert!(p.x.abs() < EPS_LEN, "YZ plane should have x == 0, got {}", p.x);
+  }
+  for n in &m.meshes[0].normals {
+    assert!((n.x - 1.0).abs() < EPS_LEN, "YZ plane normal should be +X, got {:?}", n);
+  }
+}
+
+#[test]
+fn test_plane_positions_in_unit_range() {
+  let m = new_plane(Material::default_placeholder(), 4, PlaneOrientation::XZ);
+  for p in &m.meshes[0].positions {
+    assert!(p.x >= -0.5 - EPS_LEN && p.x <= 0.5 + EPS_LEN);
+    assert!(p.z >= -0.5 - EPS_LEN && p.z <= 0.5 + EPS_LEN);
+  }
+}
+
+#[test]
+fn test_plane_uvs_in_unit_range() {
+  let m = new_plane(Material::default_placeholder(), 4, PlaneOrientation::XY);
+  for uv in &m.meshes[0].tex_coords {
+    assert!(uv.x >= 0.0 - EPS_LEN && uv.x <= 1.0 + EPS_LEN);
+    assert!(uv.y >= 0.0 - EPS_LEN && uv.y <= 1.0 + EPS_LEN);
+  }
+}
+
+#[test]
+fn test_plane_name_includes_subdivisions() {
+  let m = new_plane(Material::default_placeholder(), 4, PlaneOrientation::XZ);
+  assert_eq!(m.name(), "plane_4");
+}
+
 // --- Material default helper for tests ---
 
 // Helper trait to avoid building a Material from scratch in every test.

@@ -60,6 +60,9 @@ pub struct Material {
 
   // Defaults to Opaque
   pub(crate) blend_mode: BlendMode,
+
+  /// Don't apply any shading or lighting to this material
+  pub unshaded: bool,
 }
 
 /// Most basic Material possible
@@ -71,6 +74,7 @@ pub const MATERIAL_PLACEHOLDER: Material = Material {
   blend_mode: Opaque,
   mask_cutoff: 0.5,
   opacity: 1.0,
+  unshaded: false,
 };
 
 impl Material {
@@ -84,6 +88,7 @@ impl Material {
       blend_mode: Opaque,
       mask_cutoff: 0.5,
       opacity: 1.0,
+      unshaded: false,
     }
   }
 
@@ -97,6 +102,7 @@ impl Material {
       blend_mode: Opaque,
       mask_cutoff: 0.5,
       opacity: 1.0,
+      unshaded: false,
     }
   }
 

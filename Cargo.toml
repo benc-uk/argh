@@ -10,7 +10,7 @@ members = [
   "examples/scenes",
   "examples/dungeon",
   "examples/benchmark",
-  "examples/transparent_dice",
+  "examples/transparent",
 ]
 resolver = "3"
 
